@@ -1,0 +1,18 @@
+{% extends "base.html" %}{% block body %}
+<p><a href="/">← back to my job search</a></p>
+<div class="card">
+  <h2 style="margin-top:0">My account</h2>
+  <p>Signed in as <b>{{ email }}</b> · workspace <code>{{ t.slug }}</code> · created {{ t.created_at[:10] }}</p>
+</div>
+<div class="card">
+  <h3 style="margin-top:0">Download my data</h3>
+  <p class="muted">Everything in your workspace: profile, settings, jobs and applications (SQLite), generated CVs and letters.</p>
+  <a class="btn" href="/_platform/me/export">Download (.tar.gz)</a>
+</div>
+<div class="card">
+  <h3 style="margin-top:0">Delete my workspace</h3>
+  <p class="muted">Removes your workspace and all its data. This can't be undone from here.</p>
+  <form method="post" action="/_platform/me/delete"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <input name="confirm" placeholder="Type DELETE" autocomplete="off"> <button class="danger" type="submit">Delete everything</button></form>
+</div>
+{% endblock %}

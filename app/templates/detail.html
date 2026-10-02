@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% from "_chip.html" import chip %}
+{% block body %}
+<p><a href="/jobs?status={{ job.status }}">← back to {{ job.status }}</a></p>
+
+<div class="card">
+  <h2 style="margin-top:0">{{ job.title }}</h2>
+  <div class="muted">
+    {{ job.company }}{% if job.location %} · {{ job.location }}{% endif %} · {{ job.source }}{% if job.salary %} · {{ job.salary }}{% endif %}
+  </div>
+  <div class="actions">
+    {% if job.url | safe_url %}<a class="btn apply-link" href="{{ job.url | safe_url }}" target="_blank" rel="noopener" data-job="{{ job.id }}">Open &amp; apply ↗</a>{% endif %}
+    {% if job.status != "applied" %}
+    <form method="post" action="/job/{{ job.id }}/status">
+      <input type="hidden" name="status" value="applied">
+      <button class="ghost" type="submit">✓ Mark as applied</button>
+    </form>
+    {% else %}<span class="muted">✓ Applied{% if job.applied_date %} on {{ job.applied_date }}{% endif %}</span>{% endif %}
+  </div>
+  {% if job.status != "applied" %}{% with j = job, back = "/job/" ~ job.id %}{% include "_apply_prompt.html" %}{% endwith %}{% endif %}
+  {% if can_tailor %}
+  <p>
+    {% if has_cv %}<a class="btn" href="/job/{{ job.id }}/cv" target="_blank" rel="noopener">View tailored CV ↗</a>
+      &nbsp;<a href="/job/{{ job.id }}/cv?dl=1">Download PDF</a>{% endif %}
+    <form method="post" action="/job/{{ job.id }}/cv" style="display:inline">
+      <button type="submit">{% if has_cv %}Regenerate{% else %}Generate tailored CV{% endif %}</button>
+    </form>
+    <span class="muted">{{ cv_note }}</span>
+  </p>
+  {% endif %}
+  {% if job.score is not none %}<p><strong>Score {{ job.score }}</strong> — {{ job.score_rationale }}</p>{% endif %}
+  {% if have or missing or avoided %}
+  {% set back = "/job/" ~ job.id %}
+  <div class="skills" style="margin:10px 0 0">
+    {% if have %}<div><span class="muted">In your CV:</span> {% for k in have %}{{ chip(k, "have", back) }}{% endfor %}</div>{% endif %}
+    {% if missing %}<div><span class="muted">Not in your CV:</span> {% for k in missing %}{{ chip(k, "miss", back) }}{% endfor %}</div>{% endif %}
+    {% if avoided %}<div><span class="muted">You avoid:</span> {% for k in avoided %}{{ chip(k, "avoid", back) }}{% endfor %}</div>{% endif %}
+    <p class="muted" style="margin:4px 0 0">Your choices re-rank the list now and steer every future scan.</p>
+  </div>
+  {% endif %}
+  {% if job.description %}<pre class="desc">{{ desc_html }}</pre>{% endif %}
+</div>
+
+<div class="card">
+  <form method="post" action="/job/{{ job.id }}/status">
+    <label>Status</label>
+    <div class="row">
+      <div>
+        <select name="status">
+          {% for s in statuses %}<option value="{{ s }}" {% if s == job.status %}selected{% endif %}>{{ s }}</option>{% endfor %}
+        </select>
+      </div>
+      <div><button type="submit">Update status</button></div>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <form method="post" action="/job/{{ job.id }}/fields">
+    <div class="row">
+      <div><label>Contact</label><input name="contact" value="{{ job.contact or '' }}"></div>
+      <div><label>Recruiter / search firm</label><input name="recruiter" value="{{ job.recruiter or '' }}"></div>
+    </div>
+    <div class="row">
+      <div><label>CV version sent</label><input name="cv_version" value="{{ job.cv_version or '' }}"></div>
+      <div><label>Applied date</label><input name="applied_date" type="date" value="{{ job.applied_date or '' }}"></div>
+      <div><label>Follow-up date</label><input name="followup_date" type="date" value="{{ job.followup_date or '' }}"></div>
+    </div>
+    <div class="row">
+      <div><label>Employment rate</label><input name="work_rate" value="{{ job.work_rate or '' }}" placeholder="100% / 80%"></div>
+      <div><label>How you applied (for the ORP report)</label>
+        <select name="apply_method">{% for k, v in methods.items() %}<option value="{{ k }}" {% if (job.apply_method or 'written') == k %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></div>
+      <div><label>Refusal reason (if rejected)</label><input name="outcome_note" value="{{ job.outcome_note or '' }}"></div>
+    </div>
+    <label><input type="checkbox" name="orp_assigned" value="1" style="width:auto" {% if job.orp_assigned %}checked{% endif %}> Assigned by the ORP (assignation)</label>
+    <label>Notes</label>
+    <textarea name="notes" rows="4">{{ job.notes or '' }}</textarea>
+    <p><button type="submit">Save details</button></p>
+  </form>
+</div>
+
+<div class="card" id="letter">
+  <strong>Cover letter</strong> <span class="muted">· {{ letter_engine }}</span>
+  {% if can_tailor %}
+  <form method="post" action="/job/{{ job.id }}/letter" style="margin:8px 0">
+    <button type="submit">{% if job.letter %}Rewrite letter{% else %}Write cover letter{% endif %}</button>
+  </form>
+  {% if job.letter %}
+  <form method="post" action="/job/{{ job.id }}/letter/save">
+    <textarea name="text" rows="18">{{ job.letter }}</textarea>
+    <p><button class="ghost" type="submit">Save edits</button> &nbsp;<a href="/job/{{ job.id }}/letter.pdf">Download PDF</a></p>
+  </form>
+  {% endif %}
+  {% else %}<p class="muted">Add a candidate profile (data/profile.json) to write letters.</p>{% endif %}
+</div>
+
+<div class="card">
+  <strong>Status history</strong>
+  <table>
+  {% for h in job.history %}<tr><td>{{ h.status }}</td><td class="muted">{{ h.changed_at }}</td></tr>{% endfor %}
+  {% if not job.history %}<tr><td class="muted">No changes yet.</td></tr>{% endif %}
+  </table>
+</div>
+{% endblock %}

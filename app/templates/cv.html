@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% from "_chip.html" import chip %}
+{% block body %}
+<div class="card">
+  <h2 style="margin-top:0">Skills &amp; preferences</h2>
+  <p class="muted">These drive the match score and the ranking of every scan. Refine them here or with the
+    buttons on each job page. Skills you add count for scoring; they are only put on a generated CV if your profile mentions them.</p>
+  <div>{% for k in prefs.skills %}{{ chip(k, "have", "/cv") }}{% endfor %}</div>
+  {% if prefs.avoided %}<p style="margin:10px 0 0"><span class="muted">Avoided:</span>
+    {% for k in prefs.avoided %}{{ chip(k, "avoid", "/cv") }}{% endfor %}</p>{% endif %}
+  {% if prefs.removed %}<p style="margin:10px 0 0"><span class="muted">Removed from your profile keywords:</span>
+    {% for k in prefs.removed %}<span class="chip">{{ k }}
+      <form method="post" action="/skills" class="chip-actions"><input type="hidden" name="term" value="{{ k }}">
+        <input type="hidden" name="next" value="/cv"><button name="action" value="restore" title="Count it again">restore</button></form></span>{% endfor %}</p>{% endif %}
+  <form method="post" action="/skills" class="row" style="margin-top:12px;align-items:flex-end">
+    <div><label>Skill or word</label><input name="term" placeholder="e.g. kubernetes, allemand" required></div>
+    <div style="flex:0 0 auto"><input type="hidden" name="next" value="/cv">
+      <button name="action" value="have">+ Add skill</button>
+      <button class="ghost" name="action" value="avoid">⛔ Avoid</button></div>
+  </form>
+</div>
+
+{% if versions %}
+<div class="card">
+  <strong>CV languages</strong>
+  <p class="muted" style="margin:4px 0 8px">A job's CV and cover letter use the posting's language when your profile has a version in it; otherwise the original.</p>
+  {% for lang, state in versions | dictsort %}
+    <span class="chip {{ 'have' if state.startswith('ok') else 'miss' }}">{{ lang | upper }} · {{ state }}</span>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="card">
+  <h2 style="margin-top:0">CV for a role</h2>
+  {% if not profile %}<p class="muted">No candidate profile yet.</p>{% else %}
+  <p class="muted">A CV aimed at a type of job rather than one posting: it leads with your skills that matter
+    for the role (the role's usual requirements, plus what the jobs already found for it ask for most) and
+    orders your experience for it. Nothing is invented.</p>
+  <form method="post" action="/cv/role" class="row" style="align-items:flex-end">
+    <div><label>Role</label><select name="role">{% for r in roles %}<option value="{{ r.id }}" {{ 'selected' if r.id == (role_built.id if role_built else role_default) }}>{{ r.label }}</option>{% endfor %}</select></div>
+    <div style="flex:0 0 auto"><button type="submit">Generate</button></div>
+  </form>
+  {% if role_built %}
+    <p><a class="btn" href="/cv/role/{{ role_built.id }}.pdf" target="_blank" rel="noopener">Open CV for {{ role_built.label }} (PDF) ↗</a></p>
+    <p>{% for k in role_built.supported %}<span class="chip have">✓ {{ k }}</span>{% endfor %}</p>
+    {% if role_built.missing %}<p><span class="muted">Often asked for this role, not in your profile (not added):</span>
+      {% for k in role_built.missing %}{{ chip(k, "miss", "/cv") }}{% endfor %}</p>{% endif %}
+  {% endif %}
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0">CV from keywords</h2>
+  {% if not profile %}<p class="muted">No candidate profile yet (data/profile.json).</p>{% else %}
+  <p class="muted">Type the keywords you want the CV to put forward (comma or one per line), for example the
+    requirements of a posting. Keywords your profile already mentions get a <b>Key skills</b> section and move
+    the matching bullets to the top of each role. Nothing is invented: keywords your CV doesn't support are listed below, not added.</p>
+  <form method="post" action="/cv">
+    <textarea name="keywords" rows="5" placeholder="terraform, azure, iso 27001, stakeholder">{{ keywords }}</textarea>
+    <p><button type="submit">Generate CV</button></p>
+  </form>
+  {% if supported is defined %}
+    <p>{% for k in supported %}<span class="chip have">✓ {{ k }}</span>{% endfor %}</p>
+    {% if unsupported %}<p><span class="muted">Not in your CV, not added:</span>
+      {% for k in unsupported %}<span class="chip miss">✗ {{ k }}</span>{% endfor %}</p>{% endif %}
+  {% endif %}
+  {% if built %}<p><a class="btn" href="/cv/custom.pdf" target="_blank" rel="noopener">Open CV (PDF) ↗</a></p>{% endif %}
+  {% endif %}
+</div>
+{% endblock %}

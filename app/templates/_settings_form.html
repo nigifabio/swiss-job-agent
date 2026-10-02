@@ -1,0 +1,25 @@
+{# settings_fields(s): editable search settings (config.EDITABLE); lists are shown one per line. #}
+{% macro field(name, label, help, s, rows=3) -%}
+  <label>{{ label }}</label>
+  <textarea name="{{ name }}" rows="{{ rows }}">{{ s[name] | join("\n") if s[name] is iterable and s[name] is not string else s[name] }}</textarea>
+  {% if help %}<p class="muted" style="margin:2px 0 0">{{ help }}</p>{% endif %}
+{%- endmacro %}
+{% macro settings_fields(s, compact=False) -%}
+  {{ field("SEARCH_TERMS", "Search terms", "Typed into the job boards, one per line.", s, 5) }}
+  {{ field("TITLE_KEYWORDS", "A job title must contain one of", "Whole words; a trailing * matches the start of a word (coordinat* = coordinateur, coordinatrice).", s, 4) }}
+  {{ field("TITLE_EXCLUDE", "Skip job titles containing", "", s, 3) }}
+  {{ field("LOCATION_KEYWORDS", "Job location must mention one of", "Towns within your commute, their cantons and regions.", s, 4) }}
+  <div class="row">
+    <div>{{ field("WHERE", "Regions for the job boards", "", s, 2) }}</div>
+    <div>{{ field("JOBROOM_CANTONS", "Cantons (Job-Room)", "Two-letter codes: VD, GE…", s, 2) }}</div>
+  </div>
+  {{ field("SCORE_KEYWORDS", "Your skills (ranking)", "A job scores higher the more of these it mentions. Refined by your clicks on job pages.", s, 5) }}
+  <div class="row">
+    <div>{{ field("LANGUAGES", "Posting languages", "fr, de, it, en", s, 2) }}</div>
+    <div>{{ field("PROVIDERS", "Sources", "ats, jobup, jobroom, remote, adzuna, careerjet, jooble, email", s, 2) }}</div>
+  </div>
+  <div class="row">
+    <div><label class="check" style="display:flex;gap:8px;margin-top:14px"><input type="checkbox" style="width:auto" name="ALLOW_REMOTE" value="1" {{ 'checked' if s.ALLOW_REMOTE }}> Include remote jobs (Switzerland / Europe)</label></div>
+    <div><label>Scan every (hours)</label><input name="FETCH_INTERVAL_HOURS" value="{{ s.FETCH_INTERVAL_HOURS | int }}" inputmode="numeric"></div>
+  </div>
+{%- endmacro %}

@@ -1,0 +1,63 @@
+# Swiss Job Agent platform: gateway (public, port 8090) + provisioner (Docker socket, internal).
+# Tenants are NOT in this file: the provisioner creates them (jat-<slug>-web / -sched).
+# Install: platform/install.sh   Upgrade (platform + every tenant): platform/upgrade.sh
+name: jobplatform
+
+x-hardening: &hardening
+  read_only: true
+  tmpfs: [/tmp]
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  restart: unless-stopped
+  logging: { driver: json-file, options: { max-size: "5m", max-file: "3" } }
+
+services:
+  gateway:
+    <<: *hardening
+    build: .
+    image: jobplatform:latest
+    container_name: jobplatform-gateway
+    command: ["uvicorn", "jobplatform.gateway:app", "--host", "0.0.0.0", "--port", "8090",
+              "--proxy-headers", "--forwarded-allow-ips", "*"]
+    env_file: .env
+    environment:
+      PLATFORM_DB: /state/platform.db
+      PROVISIONER_URL: http://provisioner:8091
+    user: "1000:1000"
+    ports: ["8090:8090"]
+    volumes: [state:/state]
+    networks: [platform]
+    depends_on: [provisioner]
+    mem_limit: 384m
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8090/_platform/healthz', timeout=4)"]
+      interval: 30s
+      timeout: 5s
+
+  provisioner:
+    <<: *hardening
+    image: jobplatform:latest
+    container_name: jobplatform-provisioner
+    command: ["uvicorn", "jobplatform.provisioner:app", "--host", "0.0.0.0", "--port", "8091"]
+    env_file: .env
+    environment:
+      GATEWAY_CONTAINER: jobplatform-gateway
+      ARCHIVE_DIR: /archives
+    # root inside the container only to use the Docker socket; no capabilities, not published
+    user: "0:0"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - archives:/archives
+    networks: [platform]
+    mem_limit: 256m
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8091/healthz', timeout=4)"]
+      interval: 30s
+      timeout: 5s
+
+volumes:
+  state: {}
+  archives: {}
+
+networks:
+  platform: {}

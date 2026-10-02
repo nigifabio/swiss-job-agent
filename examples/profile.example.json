@@ -1,0 +1,38 @@
+{
+  "name": "Alex Example",
+  "headline": "Operations Coordinator",
+  "contact": {
+    "email": "alex@example.com",
+    "phone": "+41 79 000 00 00",
+    "linkedin": "linkedin.com/in/alex-example",
+    "location": "Lausanne, Switzerland"
+  },
+  "summary": "Operations coordinator with eight years in logistics and customer service. Runs daily planning for a team of twelve and keeps suppliers, customers and warehouse aligned.",
+  "expertise": ["Operations planning", "Customer service", "Supplier management", "SAP", "Excel", "French", "English"],
+  "experience": [
+    {
+      "title": "Operations Coordinator",
+      "org": "Example Logistics SA",
+      "loc": "Lausanne",
+      "dates": "2021 – Present",
+      "bullets": [
+        "Plan daily deliveries for a team of 12 drivers across Vaud and Geneva.",
+        "Cut late deliveries from 9% to 3% by reorganising the morning dispatch.",
+        "Handle escalations from key customers in French and English."
+      ]
+    },
+    {
+      "title": "Customer Service Agent",
+      "org": "Example Retail AG",
+      "loc": "Geneva",
+      "dates": "2017 – 2021",
+      "bullets": [
+        "Answered about 60 customer requests a day by phone, e-mail and chat.",
+        "Trained 5 new team members on the order system."
+      ]
+    }
+  ],
+  "education": ["CFC Employé de commerce, Lausanne, 2016"],
+  "extras_title": "Languages",
+  "extras": ["French (native)", "English (C1)", "German (A2)"]
+}

@@ -1,0 +1,9 @@
+{# Shown after "Open & apply" is clicked: j is the job, status the tab to come back to. #}
+<div class="apply-prompt" id="prompt-{{ j.id }}" hidden>
+  <span>Did you apply to <b>{{ j.title }}</b>?</span>
+  <form method="post" action="/job/{{ j.id }}/status">
+    <input type="hidden" name="status" value="applied"><input type="hidden" name="next" value="{{ back }}">
+    <button class="small" type="submit">✓ Yes, add to Applied</button>
+  </form>
+  <button class="small ghost" type="button" onclick="this.parentElement.hidden = true">Not yet</button>
+</div>

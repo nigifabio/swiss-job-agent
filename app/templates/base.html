@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Swiss Job Agent</title>
+{% block head %}{% endblock %}
+<style>
+  :root { --bg:#0f1419; --card:#1a1f29; --fg:#e6e6e6; --muted:#8a94a6; --accent:#4a9eff; --border:#2a3240;
+          --bar:#3a86e0; --have:#1e4d2b; --have-fg:#8ee6a4; --miss:#5a1f24; --miss-fg:#ffa3a8; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--fg); }
+  header { padding:14px 20px; border-bottom:1px solid var(--border); display:flex; flex-wrap:wrap; align-items:center; gap:10px 16px; }
+  header h1 { white-space:nowrap; }
+  header h1 { font-size:17px; margin:0; }
+  a { color:var(--accent); text-decoration:none; }
+  .wrap { max-width:1000px; margin:0 auto; padding:20px; }
+  .tabs { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px; }
+  .tab { padding:6px 12px; border:1px solid var(--border); border-radius:6px; color:var(--fg); }
+  .tab.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:14px 16px; margin-bottom:10px; }
+  .muted { color:var(--muted); font-size:13px; }
+  .banner { background:#3a2e10; border:1px solid #6b5418; border-radius:8px; padding:12px 16px; margin-bottom:16px; }
+  input,select,textarea { width:100%; padding:8px; background:#0f1419; border:1px solid var(--border); border-radius:6px; color:var(--fg); font:inherit; }
+  label { display:block; margin:10px 0 4px; font-size:13px; color:var(--muted); }
+  button,.btn { display:inline-block; padding:8px 14px; background:var(--accent); color:#fff; border:none; border-radius:6px; cursor:pointer; font:inherit; }
+  .row { display:flex; gap:14px; flex-wrap:wrap; }
+  .row > div { flex:1; min-width:200px; }
+  table { width:100%; border-collapse:collapse; }
+  td { padding:4px 8px; border-bottom:1px solid var(--border); vertical-align:top; }
+  pre.desc { white-space:pre-wrap; font:inherit; margin:8px 0 0; }
+  .actions { display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-top:8px; }
+  .actions form { margin:0; }
+  .small { padding:4px 10px; font-size:13px; }
+  .ghost { background:transparent; border:1px solid var(--border); color:var(--fg); }
+  button:disabled { opacity:.6; cursor:default; }
+  .scanbar { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:14px; }
+  .scanbar form { margin:0; }
+  .apply-prompt { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:10px; padding:10px 12px;
+                  background:#10283f; border:1px solid var(--accent); border-radius:6px; }
+  .apply-prompt[hidden] { display:none; }
+  .apply-prompt form { margin:0; }
+  .nav { display:flex; gap:14px; }
+  .nav a { color:var(--muted); } .nav a:hover { color:var(--fg); }
+  mark.have { background:var(--have); color:var(--have-fg); border-radius:3px; padding:0 2px; }
+  mark.miss { background:var(--miss); color:var(--miss-fg); border-radius:3px; padding:0 2px; }
+  .chip { display:inline-block; margin:2px 4px 2px 0; padding:1px 8px; border-radius:10px; font-size:13px; }
+  .chip.have { background:var(--have); color:var(--have-fg); } .chip.miss { background:var(--miss); color:var(--miss-fg); }
+  .chip { background:var(--border); } .chip.avoid { background:#3a3f4a; color:var(--muted); text-decoration:line-through; }
+  .chip-actions { display:inline; margin:0 0 0 4px; }
+  .chip-actions button { padding:0 6px; font-size:12px; line-height:18px; border-radius:8px; background:rgba(255,255,255,.12); color:inherit; }
+  .chip-actions button:hover { background:rgba(255,255,255,.25); }
+  mark.avoid { background:#3a3f4a; color:var(--muted); text-decoration:line-through; border-radius:3px; padding:0 2px; }
+  .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:14px; }
+  .kpi { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:12px 14px; }
+  .kpi .v { font-size:26px; font-weight:600; } .kpi .l { color:var(--muted); font-size:13px; }
+  .bars { display:flex; align-items:flex-end; gap:4px; height:140px; padding-top:18px; }
+  .bars .b { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; min-width:0; }
+  .bars .fill { width:100%; background:var(--bar); border-radius:4px 4px 0 0; min-height:0; }
+  .bars .fill:hover { outline:2px solid var(--fg); }
+  .bars .n { font-size:11px; color:var(--fg); margin-bottom:2px; }
+  .bars .x { font-size:11px; color:var(--muted); margin-top:4px; white-space:nowrap; }
+  .hbar { display:flex; align-items:center; gap:8px; margin:4px 0; }
+  .hbar .lab { width:110px; color:var(--muted); font-size:13px; }
+  .hbar .track { flex:1; } .hbar .fill { height:14px; background:var(--bar); border-radius:0 4px 4px 0; }
+  table.data th { text-align:left; font-size:12px; color:var(--muted); padding:4px 8px; border-bottom:1px solid var(--border); }
+  @media print {
+    :root { --bg:#fff; --card:#fff; --fg:#000; --muted:#444; --border:#999; }
+    header, .noprint { display:none !important; } body { font-size:11px; } .wrap { max-width:none; padding:0; }
+    .card { border:none; padding:0; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1><a href="/" style="color:var(--fg)">🇨🇭 Swiss Job Agent</a></h1>
+  <nav class="nav"><a href="/jobs?status=new">Jobs</a><a href="/stats">Stats</a><a href="/report">ORP report</a><a href="/cv">CV</a><a href="/settings">Settings</a></nav>
+  <a class="btn" href="/add">+ Add application</a>
+  {% if user or platform %}<span class="muted" style="margin-left:auto">{{ user }}{% if platform %} · <a href="/_platform/me">Account</a>{% endif %}</span>{% endif %}
+</header>
+<div class="wrap">
+{% block body %}{% endblock %}
+</div>
+<script>
+  // "Open & apply" opens the posting in a new tab; ask here whether to move it to Applied.
+  document.querySelectorAll(".apply-link").forEach(function (a) {
+    a.addEventListener("click", function () {
+      var p = document.getElementById("prompt-" + a.dataset.job);
+      if (p) { p.hidden = false; }
+    });
+  });
+</script>
+</body>
+</html>

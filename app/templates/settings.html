@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% from "_settings_form.html" import settings_fields %}
+{% block body %}
+{% if saved %}<div class="banner">Saved. The next scan uses these settings{% if rescored %}; jobs already found were re-ranked{% endif %}.</div>{% endif %}
+<div class="card">
+  <h2 style="margin-top:0">Search settings</h2>
+  <form method="post" action="/settings">
+    {{ settings_fields(s) }}
+    <p style="margin-top:14px"><button type="submit">Save</button></p>
+  </form>
+</div>
+<div class="card">
+  <h3 style="margin-top:0">Profile &amp; setup</h3>
+  <p class="muted">Your profile is what CVs and letters are built from.</p>
+  <form method="post" action="/onboarding/edit" style="display:inline"><button class="ghost" type="submit">Edit my profile</button></form>
+  <form method="post" action="/onboarding/restart" style="display:inline"><button class="ghost" type="submit">Re-run the setup wizard (new CV / new target)</button></form>
+</div>
+{% endblock %}

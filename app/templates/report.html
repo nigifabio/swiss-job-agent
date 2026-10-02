@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="noprint" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
+  <a href="/report?{{ kind }}={{ prev }}">← previous</a>
+  <a href="/report?{{ kind }}={{ next }}">next →</a>
+  <span class="muted">·</span>
+  <a href="/report">this month</a>
+  <span class="muted">·</span>
+  <a class="btn small" href="/report.pdf?{{ qs }}">PDF</a>
+  <a class="btn small ghost" href="/report.csv?{{ qs }}">CSV (Excel)</a>
+  <button class="small ghost" type="button" onclick="window.print()">Print</button>
+</div>
+<div class="card">
+  <h2 style="margin:0 0 4px">Preuves des recherches personnelles en vue de trouver un emploi</h2>
+  <p style="margin:0 0 10px">Nom, prénom : <b>{{ name or "—" }}</b> &nbsp;·&nbsp; Période : <b>{{ label }}</b>
+    &nbsp;·&nbsp; Recherches : <b>{{ rows | length }}</b>{% if kind == "month" %} / objectif {{ target }}{% endif %}</p>
+  <div style="overflow-x:auto">
+  <table class="data">
+    <tr>{% for c in cols %}<th>{{ c }}</th>{% endfor %}</tr>
+    {% for r in rows %}<tr>{% for c in cols %}<td>{% if c == "Poste" %}<a href="/job/{{ r.id }}">{{ r[c] }}</a>{% else %}{{ r[c] }}{% endif %}</td>{% endfor %}</tr>{% endfor %}
+    {% if not rows %}<tr><td colspan="{{ cols | length }}" class="muted">No applications in this period. Mark jobs as applied to fill it.</td></tr>{% endif %}
+  </table>
+  </div>
+  <p class="muted" style="margin-top:12px">Copy these rows into Job-Room (work.swiss) or attach the PDF to the official form, as your ORP asks,
+    by the 5th of the following month. Contact person, employment rate, how you applied and ORP assignment come from each job's page.</p>
+</div>
+{% endblock %}

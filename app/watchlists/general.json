@@ -1,0 +1,47 @@
+[
+  {
+    "company": "Logitech",
+    "ats": "workday",
+    "slug": "logitech/wd5/Logitech"
+  },
+  {
+    "company": "Richemont",
+    "ats": "workday",
+    "slug": "richemont/wd3/Richemont"
+  },
+  {
+    "company": "Audemars Piguet",
+    "ats": "smartrecruiters",
+    "slug": "audemarspiguet"
+  },
+  {
+    "company": "SGS",
+    "ats": "smartrecruiters",
+    "slug": "sgs"
+  },
+  {
+    "company": "Zara",
+    "ats": "recruitee",
+    "slug": "zara"
+  },
+  {
+    "company": "Swisscom",
+    "ats": "recruitee",
+    "slug": "swisscom"
+  },
+  {
+    "company": "Accor",
+    "ats": "smartrecruiters",
+    "slug": "accor"
+  },
+  {
+    "company": "EHL",
+    "ats": "workday",
+    "slug": "ehl/wd3/Ehl"
+  },
+  {
+    "company": "Airbnb",
+    "ats": "greenhouse",
+    "slug": "airbnb"
+  }
+]

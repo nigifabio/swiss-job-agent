@@ -1,0 +1,41 @@
+{% extends "base.html" %}{% block body %}
+{% if new_link %}<div class="card" style="border-color:var(--accent)"><b>New invite link</b> (shown once; send it to the person):
+  <p><code>{{ new_link }}</code></p><p class="muted">If PUBLIC_URL isn't set, prefix it with this site's address.</p></div>{% endif %}
+{% if live_err %}<div class="card bad">Provisioner unreachable: {{ live_err }}</div>{% endif %}
+<div class="card">
+  <h2 style="margin-top:0">Workspaces ({{ tenants | length }} / {{ max }})</h2>
+  <table><tr><th>Workspace</th><th>Email</th><th>Created</th><th>Status</th><th>App</th><th>Scheduler</th><th>Image</th><th></th></tr>
+  {% for t in tenants %}<tr>
+    <td><code>{{ t.slug }}</code></td><td>{{ t.email }}</td><td>{{ t.created_at[:10] }}</td>
+    <td class="{{ 'ok' if t.status == 'active' else 'bad' }}">{{ t.status }}</td>
+    <td class="{{ 'ok' if 'healthy' in t.web else 'bad' }}">{{ t.web }}</td><td>{{ t.sched }}</td><td class="muted">{{ t.image }}</td>
+    <td style="white-space:nowrap">
+      {% for a, lab in ([("stop", "Pause")] if t.status == "active" else [("start", "Resume")]) + [("recreate", "Re-create")] %}
+      <form class="inline" method="post" action="/_platform/admin/tenant/{{ t.slug }}/{{ a }}"><input type="hidden" name="csrf" value="{{ csrf }}">
+        <button class="ghost small">{{ lab }}</button></form>{% endfor %}
+      <details style="display:inline-block"><summary class="muted" style="cursor:pointer">delete</summary>
+        <form method="post" action="/_platform/admin/tenant/{{ t.slug }}/delete"><input type="hidden" name="csrf" value="{{ csrf }}">
+          <input name="confirm" placeholder="{{ t.slug }}" size="12" autocomplete="off"> <button class="danger small">Delete</button></form></details>
+    </td></tr>{% endfor %}
+  </table>
+  {% if orphans %}<p class="bad">Containers without an owner in the gateway DB: {{ orphans | join(", ") }}</p>{% endif %}
+  <p class="muted">Pause stops both containers; the data stays. Re-create rebuilds the containers on the current image (data kept).
+    Delete archives the data (kept 30 days on the host), then removes everything.</p>
+</div>
+<div class="card">
+  <h3 style="margin-top:0">Invite someone</h3>
+  <form method="post" action="/_platform/admin/invite"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <input name="note" placeholder="Who (note for you)" size="22">
+    <input name="email" placeholder="Restrict to email (optional)" size="26">
+    <select name="days">{% for d in [3, 7, 14, 30] %}<option value="{{ d }}" {{ 'selected' if d == 7 }}>valid {{ d }} days</option>{% endfor %}</select>
+    <button type="submit">Create invite link</button></form>
+  <table style="margin-top:10px"><tr><th>#</th><th>Note</th><th>For</th><th>Created</th><th>Expires</th><th>State</th><th></th></tr>
+  {% for i in invites %}<tr><td>{{ i.id }}</td><td>{{ i.note or "" }}</td><td>{{ i.email or "anyone" }}</td><td>{{ i.created_at[:10] }}</td><td>{{ i.expires_at[:10] }}</td>
+    <td>{% if i.used_at %}used by {{ i.used_by }}{% elif i.revoked %}revoked{% else %}open{% endif %}</td>
+    <td>{% if not i.used_at and not i.revoked %}<form class="inline" method="post" action="/_platform/admin/invite/{{ i.id }}/revoke">
+      <input type="hidden" name="csrf" value="{{ csrf }}"><button class="ghost small">Revoke</button></form>{% endif %}</td></tr>{% endfor %}
+  </table>
+</div>
+<div class="card"><h3 style="margin-top:0">Recent activity</h3>
+  <table>{% for a in audit %}<tr><td class="muted">{{ a.ts[:16] }}</td><td>{{ a.actor }}</td><td>{{ a.action }}</td><td>{{ a.detail }}</td></tr>{% endfor %}</table></div>
+{% endblock %}

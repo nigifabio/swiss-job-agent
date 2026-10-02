@@ -1,0 +1,109 @@
+# Geneva / Vaud employers with infra, cloud or security teams (seed for app.discover)
+SITA
+dsm-firmenich
+Firmenich
+Richemont
+Pictet
+Lombard Odier
+Mirabaud
+UBP
+SGS
+MSC
+Vitol
+Trafigura
+Gunvor
+Mercuria
+JTI
+Procter & Gamble
+Kudelski
+Temenos
+Nexthink
+Logitech
+Swissquote
+Infomaniak
+Merck
+Philip Morris International
+Nestlé
+Edmond de Rothschild
+Syngenta
+Honeywell
+Caterpillar
+Takeda
+Medtronic
+Bobst
+Swisscom
+Sophia Genetics
+Proton
+Ledgy
+Cisco
+Salesforce
+Datadog
+Elastic
+HashiCorp
+GitLab
+Cloudflare
+Palo Alto Networks
+CrowdStrike
+Snowflake
+MongoDB
+Veeam
+Nutanix
+Kyndryl
+Accenture
+Capgemini
+Sword Group
+Elca
+Wefox
+Lemania
+Ringier
+Swiss Re
+Zurich Insurance
+Sonar
+SonarSource
+DeepJudge
+Scandit
+Beekeeper
+# International organisations and research (Geneva/Vaud)
+CERN
+World Health Organization
+UNHCR
+International Organization for Migration
+ICRC
+International Committee of the Red Cross
+World Economic Forum
+Gavi
+The Global Fund
+World Intellectual Property Organization
+International Telecommunication Union
+International Labour Organization
+Medecins Sans Frontieres
+World Trade Organization
+European Broadcasting Union
+IFRC
+Unitaid
+DNDi
+FIND
+# More Geneva/Vaud employers with IT, cloud or security teams
+Nestle
+Philip Morris
+Firmenich
+Givaudan
+Cargill
+Bunge
+Louis Dreyfus
+Tetra Pak
+Ferring
+Debiopharm
+Swiss Post
+SBB
+Retraites Populaires
+Vaudoise
+Banque Cantonale de Geneve
+Pictet
+EPFL
+Swissport
+Dufry
+Avolta
+Manor
+Migros
+Coop

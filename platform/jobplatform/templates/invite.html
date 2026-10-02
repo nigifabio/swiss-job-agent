@@ -1,0 +1,13 @@
+{% extends "base.html" %}{% block body %}
+<div class="card">
+  <h2 style="margin-top:0">You're invited</h2>
+  <p>Create your private job-search workspace as <b>{{ email }}</b>{% if note %} ({{ note }}){% endif %}.</p>
+  <ul class="muted">
+    <li>It runs in its own isolated space: nobody else using this service can see your data.</li>
+    <li>You'll set it up in a few minutes from your CV and/or your LinkedIn profile.</li>
+    <li>You can download or delete all your data at any time (Account page).</li>
+  </ul>
+  <form method="post"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <button type="submit">Create my workspace →</button></form>
+</div>
+{% endblock %}

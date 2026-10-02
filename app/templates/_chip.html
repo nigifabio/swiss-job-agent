@@ -1,0 +1,17 @@
+{# chip(term, kind, back): kind = have | miss | avoid. Buttons refine the skill lists. #}
+{% macro chip(term, kind, back) -%}
+<span class="chip {{ kind }}">
+  {%- if kind == "have" %}✓{% elif kind == "miss" %}✗{% else %}⛔{% endif %} {{ term }}
+  <form method="post" action="/skills" class="chip-actions">
+    <input type="hidden" name="term" value="{{ term }}"><input type="hidden" name="next" value="{{ back }}">
+    {%- if kind == "have" %}
+    <button name="action" value="remove" title="Not one of my skills: stop counting it">✕</button>
+    {%- elif kind == "miss" %}
+    <button name="action" value="have" title="I have this skill: count it from now on">+ I have it</button>
+    <button name="action" value="avoid" title="Push jobs that ask for this down the list">⛔ Avoid</button>
+    {%- else %}
+    <button name="action" value="unavoid" title="Stop penalising this">undo</button>
+    {%- endif %}
+  </form>
+</span>
+{%- endmacro %}

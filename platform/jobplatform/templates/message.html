@@ -1,0 +1,4 @@
+{% extends "base.html" %}{% block body %}
+<div class="card"><h2 style="margin-top:0">{{ title }}</h2><p>{{ text }}</p>
+{% if link %}<p><a class="btn" href="{{ link[0] }}">{{ link[1] }}</a></p>{% endif %}</div>
+{% endblock %}

@@ -1,0 +1,152 @@
+[
+  {
+    "company": "SGS",
+    "ats": "smartrecruiters",
+    "slug": "sgs"
+  },
+  {
+    "company": "Vitol",
+    "ats": "smartrecruiters",
+    "slug": "vitol"
+  },
+  {
+    "company": "Nexthink",
+    "ats": "smartrecruiters",
+    "slug": "nexthink"
+  },
+  {
+    "company": "Swissquote",
+    "ats": "smartrecruiters",
+    "slug": "swissquote"
+  },
+  {
+    "company": "Proton",
+    "ats": "greenhouse",
+    "slug": "proton"
+  },
+  {
+    "company": "Ledgy",
+    "ats": "greenhouse",
+    "slug": "ledgy"
+  },
+  {
+    "company": "Datadog",
+    "ats": "greenhouse",
+    "slug": "datadog"
+  },
+  {
+    "company": "Elastic",
+    "ats": "greenhouse",
+    "slug": "elastic"
+  },
+  {
+    "company": "GitLab",
+    "ats": "greenhouse",
+    "slug": "gitlab"
+  },
+  {
+    "company": "Cloudflare",
+    "ats": "greenhouse",
+    "slug": "cloudflare"
+  },
+  {
+    "company": "Snowflake",
+    "ats": "ashby",
+    "slug": "snowflake"
+  },
+  {
+    "company": "MongoDB",
+    "ats": "greenhouse",
+    "slug": "mongodb"
+  },
+  {
+    "company": "SonarSource",
+    "ats": "lever",
+    "slug": "sonarsource"
+  },
+  {
+    "company": "DeepJudge",
+    "ats": "ashby",
+    "slug": "deepjudge"
+  },
+  {
+    "company": "Scandit",
+    "ats": "greenhouse",
+    "slug": "scandit"
+  },
+  {
+    "company": "Crealogix",
+    "ats": "smartrecruiters",
+    "slug": "crealogix"
+  },
+  {
+    "company": "21Shares",
+    "ats": "greenhouse",
+    "slug": "21shares"
+  },
+  {
+    "company": "ANYbotics",
+    "ats": "lever",
+    "slug": "anybotics"
+  },
+  {
+    "company": "Auterion",
+    "ats": "greenhouse",
+    "slug": "auterion"
+  },
+  {
+    "company": "Neon",
+    "ats": "lever",
+    "slug": "neon"
+  },
+  {
+    "company": "Smallpdf",
+    "ats": "ashby",
+    "slug": "smallpdf"
+  },
+  {
+    "company": "Richemont",
+    "ats": "workday",
+    "slug": "richemont/wd3/Richemont"
+  },
+  {
+    "company": "Gunvor",
+    "ats": "workday",
+    "slug": "gunvor/wd3/Gunvor_Careers"
+  },
+  {
+    "company": "Logitech",
+    "ats": "workday",
+    "slug": "logitech/wd5/Logitech"
+  },
+  {
+    "company": "Swisscom",
+    "ats": "recruitee",
+    "slug": "swisscom"
+  },
+  {
+    "company": "Cisco",
+    "ats": "workday",
+    "slug": "cisco/wd5/Cisco_Careers"
+  },
+  {
+    "company": "CERN",
+    "ats": "smartrecruiters",
+    "slug": "cern"
+  },
+  {
+    "company": "UNHCR",
+    "ats": "workday",
+    "slug": "unhcr/wd3/External"
+  },
+  {
+    "company": "International Committee of the Red Cross",
+    "ats": "smartrecruiters",
+    "slug": "internationalcommitteeoftheredcross"
+  },
+  {
+    "company": "Ferring",
+    "ats": "workday",
+    "slug": "ferring/wd3/Ferring"
+  }
+]

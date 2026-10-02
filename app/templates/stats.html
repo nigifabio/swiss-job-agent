@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block body %}
+<h2 style="margin-top:0">Job search statistics</h2>
+<div class="kpis">
+  <div class="kpi"><div class="v">{{ s.this_month }} / {{ s.target }}</div><div class="l">applications this month (ORP target)</div></div>
+  <div class="kpi"><div class="v">{{ s.this_week }}</div><div class="l">this week</div></div>
+  <div class="kpi"><div class="v">{{ s.applied }}</div><div class="l">applications in total</div></div>
+  <div class="kpi"><div class="v">{{ s.response_rate if s.response_rate is not none else "–" }}{% if s.response_rate is not none %}%{% endif %}</div><div class="l">got an answer</div></div>
+  <div class="kpi"><div class="v">{{ s.interview_rate if s.interview_rate is not none else "–" }}{% if s.interview_rate is not none %}%{% endif %}</div><div class="l">led to an interview</div></div>
+  <div class="kpi"><div class="v">{{ s.avg_wait if s.avg_wait is not none else "–" }}</div><div class="l">days to first answer (avg)</div></div>
+  <div class="kpi"><div class="v">{{ s.pending }}</div><div class="l">waiting for an answer</div></div>
+</div>
+
+<div class="card">
+  <strong>Applications per week</strong> <span class="muted">· last 12 weeks · click a week for its ORP report</span>
+  <div class="bars">
+    {% for k, n in s.weeks %}
+    <a class="b" href="/report?week={{ k }}" title="Week {{ k[-2:] }}: {{ n }} application{{ 's' if n != 1 }}">
+      <span class="n">{{ n if n else "" }}</span>
+      <span class="fill" style="height:{{ (100 * n / wmax) | round(1) }}%"></span>
+      <span class="x">W{{ k[-2:] }}</span>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="card">
+  <strong>Applications per month</strong> <span class="muted">· last 12 months · target {{ s.target }}/month</span>
+  <div class="bars">
+    {% for k, n in s.months %}
+    <a class="b" href="/report?month={{ k }}" title="{{ k }}: {{ n }} application{{ 's' if n != 1 }}">
+      <span class="n">{{ n if n else "" }}</span>
+      <span class="fill" style="height:{{ (100 * n / mmax) | round(1) }}%"></span>
+      <span class="x">{{ k[5:] }}.{{ k[2:4] }}</span>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="row">
+  <div class="card">
+    <strong>Funnel</strong>
+    {% set top = s.funnel[0][1] or 1 %}
+    {% for label, n in s.funnel %}
+    <div class="hbar" title="{{ label }}: {{ n }}"><span class="lab">{{ label }}</span>
+      <span class="track"><span class="fill" style="display:block;width:{{ (100 * n / top) | round(1) }}%"></span></span><b>{{ n }}</b></div>
+    {% endfor %}
+    <p class="muted" style="margin-bottom:0">Rejected: {{ s.rejected }} · pending: {{ s.pending }}</p>
+  </div>
+  <div class="card">
+    <strong>Where your applications came from</strong>
+    <table class="data">{% for src, n in s.by_source %}<tr><td>{{ src }}</td><td>{{ n }}</td></tr>{% endfor %}
+      {% if not s.by_source %}<tr><td class="muted">No applications yet.</td></tr>{% endif %}</table>
+    <strong style="display:block;margin-top:10px">How you applied</strong>
+    <table class="data">{% for m, n in s.by_method %}<tr><td>{{ m }}</td><td>{{ n }}</td></tr>{% endfor %}</table>
+  </div>
+</div>
+<p><a class="btn" href="/report">ORP report for this month →</a> &nbsp;<a href="/report?week={{ s.this_week_key }}">this week</a></p>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block body %}
+<p><a href="/">← back</a></p>
+<div class="card">
+  <h2 style="margin-top:0">+ Add application</h2>
+  <p class="muted">For roles you found yourself — LinkedIn, a recruiter, a referral, or a direct posting.</p>
+  <form method="post" action="/add">
+    <label>Title *</label>
+    <input name="title" required>
+    <div class="row">
+      <div><label>Company</label><input name="company"></div>
+      <div><label>Location</label><input name="location"></div>
+    </div>
+    <label>URL</label>
+    <input name="url" placeholder="LinkedIn / direct posting link">
+    <div class="row">
+      <div><label>Source</label><input name="source" value="linkedin"></div>
+      <div>
+        <label>Status</label>
+        <select name="status">
+          {% for s in statuses %}<option value="{{ s }}" {% if s == 'shortlisted' %}selected{% endif %}>{{ s }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+    <label>Notes / description</label>
+    <textarea name="description" rows="4"></textarea>
+    <p><button type="submit">Add</button></p>
+  </form>
+</div>
+{% endblock %}

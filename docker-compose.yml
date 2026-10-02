@@ -1,0 +1,23 @@
+services:
+  web:
+    build: .
+    image: swiss-job-agent:latest
+    ports:
+      # localhost only by default; set BIND_ADDR=0.0.0.0 in .env when a reverse proxy on
+      # another machine (or Cloudflare Access) sits in front
+      - "${BIND_ADDR:-127.0.0.1}:${PORT:-8080}:8080"
+    env_file: .env
+    volumes:
+      - ./data:/data
+    restart: unless-stopped
+
+  scheduler:
+    image: swiss-job-agent:latest
+    depends_on: [web]
+    command: python -m app.scheduler
+    healthcheck:
+      disable: true
+    env_file: .env
+    volumes:
+      - ./data:/data
+    restart: unless-stopped

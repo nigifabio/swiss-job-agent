@@ -1,0 +1,95 @@
+# Swiss Job Agent — company watchlist seed (ZH + VD, listed first)
+# Run: docker compose run --rm scheduler python -m app.discover
+ABB
+Adecco Group
+Barry Callebaut
+Belimo
+Bellevue Group
+Bucher Industries
+Cembra Money Bank
+Crealogix
+DKSH
+Dormakaba
+EFG International
+Flughafen Zürich
+GAM Holding
+Implenia
+Julius Bär
+Kardex
+Leonteq
+Lindt & Sprüngli
+On Holding
+Orior
+Schweiter Technologies
+Sonova
+Sunrise
+Swiss Life
+Swiss Re
+Tecan
+u-blox
+UBS Group
+Vontobel
+Zurich Insurance Group
+AC Immune
+ADC Therapeutics
+Banque Cantonale Vaudoise
+Edwards Lifesciences
+Incyte
+Kudelski
+Leclanché
+Logitech
+Medtronic
+Nestlé
+Philip Morris International
+Romande Energie
+Sophia Genetics
+Swissquote
+Temenos
+21Shares
+9T Labs
+Anapaya Systems
+ANYbotics
+Auterion
+Avaloq
+Beekeeper
+Climeworks
+DeepJudge
+Doodle
+LatticeFlow AI
+Ledgy
+Nanoleq
+Neon
+Oviva
+Planted
+Relai
+Scandit
+Selma Finance
+Sevensense Robotics
+Sherpany
+Smallpdf
+Squirro
+Sygnum Bank
+Verity
+Wingtra
+Yokoy
+Abionic
+Bobst Group
+Debiopharm
+Distalmotion
+ELCA Informatique
+Exoscale
+Ferring Pharmaceuticals
+Flyability
+Gamaya
+Lunaphore
+MindMaze
+Nexthink
+Pix4D
+Tetra Pak
+Unit8
+Visium
+Pictet Group
+Proton
+SonarSource
+Taurus
+Wecan Group

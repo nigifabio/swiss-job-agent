@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Swiss Job Agent{% endblock %}</title>
+<style>
+  :root { --bg:#0f1419; --card:#1a1f29; --fg:#e6e6e6; --muted:#8a94a6; --accent:#4a9eff; --border:#2a3240; --bad:#ffa3a8; --ok:#8ee6a4; }
+  * { box-sizing:border-box; } body { margin:0; font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--fg); }
+  header { padding:14px 20px; border-bottom:1px solid var(--border); display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
+  header h1 { font-size:17px; margin:0; } a { color:var(--accent); text-decoration:none; }
+  .wrap { max-width:1000px; margin:0 auto; padding:20px; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:14px 16px; margin-bottom:12px; overflow-x:auto; }
+  .muted { color:var(--muted); font-size:13px; } input,select { padding:8px; background:#0f1419; border:1px solid var(--border); border-radius:6px; color:var(--fg); font:inherit; }
+  button,.btn { display:inline-block; padding:8px 14px; background:var(--accent); color:#fff; border:none; border-radius:6px; cursor:pointer; font:inherit; }
+  .ghost { background:transparent; border:1px solid var(--border); color:var(--fg); } .danger { background:#8b2a31; }
+  .small { padding:3px 9px; font-size:13px; } table { width:100%; border-collapse:collapse; font-size:14px; }
+  td,th { padding:5px 8px; border-bottom:1px solid var(--border); text-align:left; vertical-align:top; } th { color:var(--muted); font-size:12px; }
+  form.inline { display:inline; } .ok { color:var(--ok); } .bad { color:var(--bad); } code { word-break:break-all; }
+</style></head>
+<body><header><h1><a href="/" style="color:var(--fg)">🇨🇭 Swiss Job Agent</a></h1>
+<span class="muted" style="margin-left:auto">{{ email }}{% if is_admin %} · <a href="/_platform/admin">admin</a>{% endif %}</span></header>
+<div class="wrap">{% block body %}{% endblock %}</div></body></html>
