@@ -29,6 +29,9 @@ The installer:
 4. waits for `/healthz` and prints the address.
 
 An existing `.env` is never overwritten; re-run `./install.sh` any time to rebuild and restart.
+Day-to-day commands (scan, logs, backup, discover…) are in the [`jobagent` wrapper](docker.md#jobagent-commands).
+
+Prefer not to clone and build? Use the [prebuilt Docker image](docker.md#run-the-prebuilt-image).
 
 ## First steps
 

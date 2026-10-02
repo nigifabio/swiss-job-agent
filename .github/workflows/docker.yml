@@ -1,0 +1,69 @@
+# GitHub only (Gitea runs .gitea/workflows and ignores this folder).
+# Tests, then builds the app image for amd64 + arm64 and pushes it to the GitHub Container Registry:
+#   ghcr.io/<owner>/swiss-job-agent:latest    every push to main
+#   ghcr.io/<owner>/swiss-job-agent:1.2.3, :1.2  tags v1.2.3
+#   ghcr.io/<owner>/swiss-job-agent:sha-abc1234  every build
+name: docker-image
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.13" }
+      - name: app tests
+        run: |
+          pip install -q -r requirements.txt pytest
+          python -m pytest -q -p no:cacheprovider tests
+      - name: platform tests
+        working-directory: platform
+        run: |
+          pip install -q -r requirements.txt
+          python -m pytest -q -p no:cacheprovider tests
+
+  image:
+    needs: test
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/swiss-job-agent
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,format=short
+          labels: |
+            org.opencontainers.image.title=Swiss Job Agent
+            org.opencontainers.image.description=Self-hosted job search assistant for Switzerland
+            org.opencontainers.image.licenses=MIT
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

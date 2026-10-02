@@ -56,10 +56,12 @@ configure() {
   if [ "$(envget ONBOARDING)" != 1 ]; then
     setup_search
   fi
-  ask PORT "Port for the web interface" "8080"
+  until ask PORT "Port for the web interface" "8080"; [[ "$(envget PORT)" =~ ^[0-9]{2,5}$ ]] && [ "$(envget PORT)" -le 65535 ]; do
+    [ "$YES" = 0 ] || die "invalid PORT"; echo "A number between 10 and 65535, please."; done
   echo "Listen on localhost only (safe), or on every network interface (needed behind a"
   echo "reverse proxy on another machine; then protect it with Cloudflare Access or similar)."
-  ask BIND_ADDR "Address to listen on (127.0.0.1 or 0.0.0.0)" "127.0.0.1"
+  until ask BIND_ADDR "Address to listen on (127.0.0.1 or 0.0.0.0)" "127.0.0.1"; [[ "$(envget BIND_ADDR)" =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ ]]; do
+    [ "$YES" = 0 ] || die "invalid BIND_ADDR"; echo "An IPv4 address such as 127.0.0.1 or 0.0.0.0, please."; done
   [ "$(envget BIND_ADDR)" = 127.0.0.1 ] || [ -n "$(envget CF_ACCESS_AUD)" ] ||
     printf '\033[33mWarning:\033[0m the app has no login of its own. Put it behind Cloudflare Access (CF_TEAM_DOMAIN + CF_ACCESS_AUD in .env), a VPN or an authenticating proxy.\n'
 }
@@ -90,7 +92,7 @@ install() {
   healthy || die "The app didn't become healthy. Logs: docker compose logs web"
   say "Running: http://127.0.0.1:$(port)  (first scan: Scan now on the homepage)"
   echo "    Next: put your CV facts in data/profile.json for tailored CVs and letters (see docs/)."
-  echo "    Upgrade later with: ./install.sh upgrade"
+  echo "    Day to day: ./jobagent help   (scan, logs, update, backup, discover...)"
 }
 
 upgrade() {
@@ -119,7 +121,7 @@ backup() {
   mkdir -p backups
   local out="backups/$(date +%Y%m%d-%H%M%S).tar.gz" skip=()
   if [ -f data/jobs.db ] && docker compose ps --status running web 2>/dev/null | grep -q web &&
-     docker compose exec -T web python -c "import sqlite3; s=sqlite3.connect('/data/jobs.db'); d=sqlite3.connect('/data/jobs.backup.db'); s.backup(d); d.close()"; then
+     docker compose exec -T web python -c "import sqlite3; s=sqlite3.connect('/data/jobs.db'); d=sqlite3.connect('/data/jobs.backup.db'); s.backup(d); d.close()" </dev/null; then
     skip=(--exclude=data/jobs.db)      # live database: the consistent copy above goes in instead
   fi
   tar -czf "$out" "${skip[@]+"${skip[@]}"}" --exclude='data/*.lock' data

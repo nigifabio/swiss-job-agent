@@ -34,6 +34,17 @@ or LinkedIn export, suggests target roles and builds the search for you.
 
 Full guide: [docs/installation.md](docs/installation.md).
 
+**No clone, prebuilt image** (amd64 + arm64, from `ghcr.io`):
+
+```bash
+mkdir swiss-job-agent && cd swiss-job-agent
+curl -fsSLO https://raw.githubusercontent.com/nigifabio/swiss-job-agent/main/jobagent && chmod +x jobagent
+./jobagent init && ./jobagent up
+```
+
+Day to day, in either setup: `./jobagent scan`, `logs`, `update`, `backup`, `discover`…
+see [docs/docker.md](docs/docker.md).
+
 ## What it does
 
 | | |
@@ -54,10 +65,12 @@ Full guide: [docs/installation.md](docs/installation.md).
 ## Documentation
 
 - [Installation, upgrade, backup, remote access](docs/installation.md)
+- [Docker image and the `jobagent` wrapper](docs/docker.md)
 - [User guide](docs/user-guide.md)
 - [Job sources and the crawler](docs/sources.md)
 - [Settings, profile, CVs and letters](docs/profiles-cv-letters.md)
 - [Multi-tenant platform](docs/platform.md)
+- [Releasing and the Docker image build](docs/releasing.md)
 - [Security model](SECURITY.md)
 - Every setting: [.env.example](.env.example)
 

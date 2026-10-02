@@ -1,0 +1,24 @@
+# Swiss Job Agent with the prebuilt image (no clone, no build). Used by ./jobagent in a folder
+# without the source code; see docs/docker.md.
+#   IMAGE  ghcr.io/nigifabio/swiss-job-agent:latest by default; pin a version with :1.2 or :1.2.3
+services:
+  web:
+    image: ${IMAGE:-ghcr.io/nigifabio/swiss-job-agent:latest}
+    ports:
+      # localhost only by default; BIND_ADDR=0.0.0.0 only behind an authenticating proxy
+      - "${BIND_ADDR:-127.0.0.1}:${PORT:-8080}:8080"
+    env_file: .env
+    volumes:
+      - ./data:/data
+    restart: unless-stopped
+
+  scheduler:
+    image: ${IMAGE:-ghcr.io/nigifabio/swiss-job-agent:latest}
+    depends_on: [web]
+    command: python -m app.scheduler
+    healthcheck:
+      disable: true
+    env_file: .env
+    volumes:
+      - ./data:/data
+    restart: unless-stopped
