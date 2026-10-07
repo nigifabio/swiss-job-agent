@@ -157,6 +157,24 @@ def set_status(jid: int, status: str = Form(...), next: str = Form("")):
     return RedirectResponse(_local(next, f"/job/{jid}"), status_code=303)
 
 
+def _quick(request, state, next, default):
+    """Answer of a one-click list button: JSON when the page asked with fetch, else back to the list."""
+    if request.headers.get("x-requested-with") == "fetch":
+        return {"state": state, "counts": store.counts()}
+    return RedirectResponse(_local(next, default), status_code=303)
+
+
+@app.post("/job/{jid}/dismiss")
+def dismiss(request: Request, jid: int, next: str = Form("")):
+    return _quick(request, store.dismiss(jid), next, "/jobs?status=new")
+
+
+@app.post("/job/{jid}/keep")
+def keep(request: Request, jid: int, next: str = Form("")):
+    store.keep(jid)
+    return _quick(request, "kept", next, "/jobs?status=new")
+
+
 def _start_background(fn):
     threading.Thread(target=fn, daemon=True).start()
 

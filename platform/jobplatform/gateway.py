@@ -13,6 +13,7 @@ import hashlib
 import hmac
 import os
 import re
+import urllib.parse
 
 import httpx
 import jwt
@@ -116,7 +117,10 @@ PUBLIC_HOME = "/welcome"
 
 def home(request, status=200):
     email = getattr(request.state, "email", "")
+    # signing out of Cloudflare Access, then straight back to the sign-in page: the way to change address
+    back = urllib.parse.quote((C.public_url or str(request.base_url).rstrip("/")) + "/", safe="")
     return page(request, "welcome.html", {"project_url": C.project_url, "contact": C.contact,
+                                          "switch_url": f"https://{C.team}/cdn-cgi/access/logout?returnTo={back}",
                                           "has_workspace": bool(email and db.tenant_for(email))}, status)
 
 

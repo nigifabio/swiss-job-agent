@@ -226,3 +226,43 @@ def test_translation_that_changes_the_facts_is_ignored(env):
     assert env.tailor.profile_versions()["fr"].startswith("ignored")
     Path(env.tailor.translated_path("fr")).write_text("{not json")
     assert env.tailor.localized(PROFILE, dict(FR_JOB)) == (PROFILE, "en")
+
+
+def test_list_button_greys_a_job_then_removes_it(env):
+    c = TestClient(env.web.app)
+    jid = env.store.add_manual({"title": "Architect", "company": "Acme SA"})
+    other = env.store.add_manual({"title": "Planner", "company": "Other SA"})
+    st = env.store.get_job(jid)["status"]
+    page = c.get(f"/jobs?status={st}").text
+    assert f'id="job-{jid}"' in page and f'/job/{jid}/dismiss' in page and 'class="card dim"' not in page
+    # first click: greyed out, still in the list
+    r = c.post(f"/job/{jid}/dismiss", data={"next": f"/jobs?status={st}#job-{jid}"}, follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"].endswith(f"#job-{jid}")
+    j = env.store.get_job(jid)
+    assert j["dimmed"] == 1 and j["status"] == st
+    assert f'<div class="card dim" id="job-{jid}">' in c.get(f"/jobs?status={st}").text
+    # "Keep" undoes it
+    assert c.post(f"/job/{jid}/keep", headers={"x-requested-with": "fetch"}).json()["state"] == "kept"
+    assert env.store.get_job(jid)["dimmed"] == 0
+    # two clicks: gone from the list, into "discarded"; the page gets the new tab counts
+    assert c.post(f"/job/{jid}/dismiss", headers={"x-requested-with": "fetch"}).json()["state"] == "dimmed"
+    d = c.post(f"/job/{jid}/dismiss", headers={"x-requested-with": "fetch"}).json()
+    assert d["state"] == "discarded" and d["counts"]["discarded"] == 1 and d["counts"][st] == 1
+    assert env.store.get_job(jid)["status"] == "discarded" and env.store.get_job(other)["status"] == st
+    assert c.post(f"/job/{jid}/dismiss", headers={"x-requested-with": "fetch"}).json()["state"] is None   # already gone
+    # back from "discarded": normal again, not grey
+    page = c.get("/jobs?status=discarded").text
+    assert "Back to new" in page and f"/job/{jid}/dismiss" not in page
+    c.post(f"/job/{jid}/status", data={"status": "new"})
+    assert env.store.get_job(jid)["dimmed"] == 0
+    assert c.post("/job/999999/dismiss", follow_redirects=False).status_code == 303                       # unknown job: no error
+
+
+def test_database_from_before_the_grey_out_gets_the_column(env):
+    import sqlite3
+    c = sqlite3.connect(env.config.DB_PATH)
+    c.execute("ALTER TABLE jobs DROP COLUMN dimmed")
+    c.commit(); c.close()
+    env.store.init_db()
+    jid = env.store.add_manual({"title": "Architect", "company": "Acme SA"})
+    assert env.store.dismiss(jid) == "dimmed"

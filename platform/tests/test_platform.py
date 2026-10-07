@@ -269,6 +269,9 @@ def test_public_home_page_is_the_only_page_without_a_login(gw):
 def test_signed_in_without_a_workspace_sees_how_to_get_one(gw):
     r = gw.get("/", headers=as_("new@example.org"))
     assert r.status_code == 403 and "don't have a workspace yet" in r.text and "new@example.org" in r.text
+    # stuck on the wrong address for a month otherwise: sign out of Access and come back to the sign-in
+    assert "team.cloudflareaccess.com/cdn-cgi/access/logout?returnTo=http" in r.text and "Sign in with another address" in r.text
+    assert "cdn-cgi/access/logout" not in gw.get("/welcome").text and 'href="/">Sign in' in gw.get("/welcome").text
     gw.db.add_tenant("marie", "marie@example.org")
     r = gw.get("/welcome", headers=as_("marie@example.org"))
     assert r.status_code == 200 and "Open my workspace" in r.text

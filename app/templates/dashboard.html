@@ -33,13 +33,13 @@
 
 <div class="tabs">
   {% for s in statuses %}
-  <a class="tab {% if s == status %}active{% endif %}" href="/jobs?status={{ s }}">{{ s }} ({{ counts.get(s, 0) }})</a>
+  <a class="tab {% if s == status %}active{% endif %}" href="/jobs?status={{ s }}">{{ s }} (<span data-count="{{ s }}">{{ counts.get(s, 0) }}</span>)</a>
   {% endfor %}
 </div>
 
 {% if jobs %}
   {% for j in jobs %}
-  <div class="card">
+  <div class="card{% if j.dimmed %} dim{% endif %}" id="job-{{ j.id }}">
     <div>
       <a href="/job/{{ j.id }}"><strong>{{ j.title or "(untitled)" }}</strong></a>
       {% if j.score is not none %}<span class="muted">· score {{ j.score }}</span>{% endif %}
@@ -50,16 +50,46 @@
     </div>
     <div class="actions">
       {% if j.url | safe_url %}<a class="btn small apply-link" href="{{ j.url | safe_url }}" target="_blank" rel="noopener" data-job="{{ j.id }}">Open &amp; apply ↗</a>{% endif %}
-      {% for s, label in [("applied", "✓ Applied"), ("shortlisted", "☆ Shortlist"), ("discarded", "✕ Discard")] if s != status %}
+      {% for s, label in [("applied", "✓ Applied"), ("shortlisted", "☆ Shortlist")] + ([("new", "↩ Back to new")] if status == "discarded" else []) if s != status %}
       <form method="post" action="/job/{{ j.id }}/status">
         <input type="hidden" name="status" value="{{ s }}"><input type="hidden" name="next" value="/jobs?status={{ status }}">
         <button class="small ghost" type="submit">{{ label }}</button>
       </form>
       {% endfor %}
+      {% if status != "discarded" %}
+      {# one click greys the job out, a second click removes it from the list (into "discarded") #}
+      <form method="post" action="/job/{{ j.id }}/dismiss" class="quick">
+        <input type="hidden" name="next" value="/jobs?status={{ status }}#job-{{ j.id }}">
+        <button class="small ghost" type="submit" title="Not for me: grey it out. Click again to remove it from the list.">
+          <span class="when-live">✕ Not for me</span><span class="when-dim">✕ Remove</span></button>
+      </form>
+      <form method="post" action="/job/{{ j.id }}/keep" class="quick when-dim">
+        <input type="hidden" name="next" value="/jobs?status={{ status }}#job-{{ j.id }}">
+        <button class="small ghost" type="submit" title="Bring it back to normal">↩ Keep</button>
+      </form>
+      {% endif %}
     </div>
     {% with back = "/jobs?status=" ~ status %}{% include "_apply_prompt.html" %}{% endwith %}
   </div>
   {% endfor %}
+  <script>
+  // "Not for me" / "Remove" / "Keep" without reloading the page (they work as plain forms without JavaScript)
+  document.querySelectorAll("form.quick").forEach(function (f) {
+    f.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var card = f.closest(".card");
+      fetch(f.action, {method: "POST", body: new FormData(f), headers: {"X-Requested-With": "fetch"}})
+        .then(function (r) { if (!r.ok) throw 0; return r.json(); })
+        .then(function (d) {
+          if (d.state === "discarded") card.remove(); else card.classList.toggle("dim", d.state === "dimmed");
+          Object.keys(d.counts || {}).forEach(function (s) {
+            var el = document.querySelector('[data-count="' + s + '"]'); if (el) el.textContent = d.counts[s];
+          });
+        })
+        .catch(function () { f.submit(); });
+    });
+  });
+  </script>
 {% else %}
   <p class="muted">Nothing in “{{ status }}”.
     {% if status == 'new' %}Press <b>Scan now</b> or add one by hand.{% endif %}</p>

@@ -13,7 +13,9 @@
 ## Tracking applications
 
 - Tabs: new · shortlisted · applied · interview · offer · rejected · discarded.
-- On every job: **✓ Applied**, **☆ Shortlist**, **✕ Discard**.
+- On every job in a list: **✓ Applied**, **☆ Shortlist**, and **✕ Not for me**: the first click greys the job out (it
+  stays where it is, **↩ Keep** brings it back), a second click (**✕ Remove**) moves it to *discarded*. From the
+  *discarded* tab, **↩ Back to new** restores it.
 - **Open & apply ↗** opens the posting in a new tab, then asks **"Did you apply?"**: *Yes* moves the
   job to Applied and records the date.
 - The job page keeps the contact, recruiter, CV version sent, applied and follow-up dates, notes, and

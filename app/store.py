@@ -38,7 +38,8 @@ CREATE TABLE IF NOT EXISTS jobs (
   outcome_note    TEXT,
   enriched_at     TEXT,
   letter          TEXT,
-  loose_key       TEXT
+  loose_key       TEXT,
+  dimmed          INTEGER DEFAULT 0
 );
 CREATE TABLE IF NOT EXISTS status_history (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -96,6 +97,7 @@ def conn():
 MIGRATIONS = [
     ("work_rate", "TEXT"), ("apply_method", "TEXT"), ("orp_assigned", "INTEGER DEFAULT 0"),
     ("outcome_note", "TEXT"), ("enriched_at", "TEXT"), ("letter", "TEXT"), ("loose_key", "TEXT"),
+    ("dimmed", "INTEGER DEFAULT 0"),
 ]
 
 # How an application was made, as the ORP "preuves de recherches" form asks it.
@@ -201,7 +203,7 @@ def update_status(jid, status):
     if status not in STATUSES:
         return
     with conn() as c:
-        c.execute("UPDATE jobs SET status=? WHERE id=?", (status, jid))
+        c.execute("UPDATE jobs SET status=?, dimmed=0 WHERE id=?", (status, jid))
         if status == "applied":
             c.execute("UPDATE jobs SET applied_date=COALESCE(NULLIF(applied_date,''),?), "
                       "apply_method=COALESCE(NULLIF(apply_method,''),'written') WHERE id=?", (today(), jid))
@@ -210,6 +212,26 @@ def update_status(jid, status):
                 c.execute("UPDATE jobs SET work_rate=? WHERE id=?", (guess_work_rate(row["title"]), jid))
         c.execute("INSERT INTO status_history (job_id, status, changed_at) VALUES (?,?,?)",
                   (jid, status, now()))
+
+
+def dismiss(jid):
+    """The "not for me" button of the list: the first click greys the job out (it stays where it is),
+    a click on a greyed job discards it. Returns the new state: "dimmed", "discarded" or None."""
+    with conn() as c:
+        row = c.execute("SELECT dimmed, status FROM jobs WHERE id=?", (jid,)).fetchone()
+        if not row or row["status"] == "discarded":
+            return None
+        if not row["dimmed"]:
+            c.execute("UPDATE jobs SET dimmed=1 WHERE id=?", (jid,))
+            return "dimmed"
+    update_status(jid, "discarded")
+    return "discarded"
+
+
+def keep(jid):
+    """Undo the grey-out."""
+    with conn() as c:
+        c.execute("UPDATE jobs SET dimmed=0 WHERE id=?", (jid,))
 
 
 def update_fields(jid, fields):

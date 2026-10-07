@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Swiss Job Agent: your private job-search assistant{% endblock %}
-{% block nav %}<a href="{{ project_url }}" rel="noopener">GitHub</a>{% if email %} · {% endif %}{% endblock %}
+{% block nav %}<a href="{{ project_url }}" rel="noopener">GitHub</a> · {% if not email %}<a class="btn small" href="/">Sign in</a>{% elif has_workspace %}<a class="btn small" href="/">My workspace</a> · <a href="{{ switch_url }}">sign out</a> · {% else %}<a href="{{ switch_url }}">sign in with another address</a> · {% endif %}{% endblock %}
 {% block body %}
 <style>
   .hero { padding:26px 4px 10px; } .hero h2 { font-size:30px; line-height:1.2; margin:0 0 10px; max-width:24ch; }
@@ -16,7 +16,8 @@
   <b>You're signed in as {{ email }}, but you don't have a workspace yet.</b>
   <p class="muted" style="margin:6px 0 0">This service is by invitation. Open the invite link you were sent while signed in
     with this address{% if contact %}, or <a href="mailto:{{ contact }}">ask for an invite</a>{% endif %}.
-    Signed in with the wrong address? Sign out of Cloudflare Access (close the browser or use a private window) and sign in again.</p>
+    If your workspace is under another address (for example your Hotmail instead of your Gmail), sign in with that one:</p>
+  <p style="margin:10px 0 0"><a class="btn" href="{{ switch_url }}">Sign in with another address →</a></p>
 </div>
 {% endif %}
 
@@ -27,7 +28,8 @@
     the monthly proof-of-search report is one click.</p>
   <div class="cta">
     {% if has_workspace %}<a class="btn" href="/">Open my workspace →</a>
-    {% elif not email %}<a class="btn" href="/">Sign in →</a><span class="muted">with Google or a code sent to your e-mail</span>{% endif %}
+    {% elif not email %}<a class="btn" href="/">Sign in →</a><span class="muted">with Google or a code sent to your e-mail</span>
+    {% else %}<a class="btn" href="{{ switch_url }}">Sign in with another address →</a>{% endif %}
     <a class="btn ghost" href="{{ project_url }}" rel="noopener">Source code on GitHub</a>
   </div>
 </div>
