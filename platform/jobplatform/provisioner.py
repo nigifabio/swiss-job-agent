@@ -381,6 +381,21 @@ def api_delete(slug: str):
     return delete(client(), check_slug(slug))
 
 
+class Notice(BaseModel):
+    msg: str
+
+
+@app.post("/notify", dependencies=[Depends(auth)])
+def api_notify(body: Notice):
+    """Pass a short admin notice to the chat bridge (NOTIFY_WEBHOOK). The gateway can't reach the LAN itself."""
+    url = env("NOTIFY_WEBHOOK")
+    if not url:
+        return {"sent": False}
+    import httpx
+    httpx.post(url, json={"msg": body.msg[:1500]}, timeout=10).raise_for_status()
+    return {"sent": True}
+
+
 @app.post("/sync", dependencies=[Depends(auth)])
 def api_sync():
     return sync(client())

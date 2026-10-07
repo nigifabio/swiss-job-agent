@@ -353,3 +353,59 @@ def test_extra_addresses_reach_the_tenant_and_survive_an_upgrade(prov):
     assert e["environment"]["ALLOWED_EMAILS"] == "marie@example.org,marie@gmail.example"
     assert e["labels"]["jobagent.extra_emails"] == "marie@gmail.example"
     assert prov.spec("marie", "marie@example.org", "web", "img")["environment"]["ALLOWED_EMAILS"] == "marie@example.org"
+
+
+def test_account_request_approval_and_workspace(gw, monkeypatch):
+    sent = []
+    monkeypatch.setattr(gw.g.notify, "admins", lambda prov, subject, body: sent.append(body))
+    who, admin = as_("Zoe@Gmail.example"), as_("admin@example.org")
+    assert gw.get("/_platform/request").status_code == 403                      # sign in first: no anonymous requests
+    assert "Request an account" in gw.get("/welcome").text and "Request an account" in gw.get("/", headers=who).text
+    assert gw.get("/_platform/request", headers=who).status_code == 200
+    assert gw.post("/_platform/request", headers=who, data={"csrf": "x", "name": "Zoe"}).status_code == 403
+    r = gw.post("/_platform/request", headers=who, follow_redirects=False,
+                data={"csrf": csrf(gw, "zoe@gmail.example"), "name": "  Zoe   Test ", "note": "Admin jobs\nin Vaud <b>"})
+    assert r.status_code == 303 and gw.db.request_for("zoe@gmail.example")["name"] == "Zoe Test"
+    assert "zoe@gmail.example" in sent[0] and "Admin jobs in Vaud" in sent[0] and "/_platform/admin" in sent[0]   # told once
+    gw.post("/_platform/request", headers=who, data={"csrf": csrf(gw, "zoe@gmail.example"), "name": "again"})
+    assert len(sent) == 1 and gw.db.request_for("zoe@gmail.example")["name"] == "Zoe Test"
+    home = gw.get("/", headers=who)
+    assert home.status_code == 403 and "waiting for approval" in home.text
+    # not approved: no workspace
+    assert gw.post("/_platform/request/create", headers=who, data={"csrf": csrf(gw, "zoe@gmail.example")}).status_code == 403
+    page = gw.get("/_platform/admin", headers=admin).text
+    assert "1 waiting" in page and "Zoe Test" in page and "&lt;b&gt;" in page and "<b>" not in page.split("Admin jobs")[1][:20]
+    # only an admin decides
+    assert gw.post("/_platform/admin/request", headers=who, data={"csrf": csrf(gw, "zoe@gmail.example"),
+                   "email": "zoe@gmail.example", "decision": "approved"}).status_code == 403
+    r = gw.post("/_platform/admin/request", headers=admin, follow_redirects=False,
+                data={"csrf": csrf(gw, "admin@example.org"), "email": "zoe@gmail.example", "decision": "approved"})
+    assert r.status_code == 303 and len(sent) == 1
+    assert "Create my workspace" in gw.get("/", headers=who).text
+    r = gw.post("/_platform/request/create", headers=who, data={"csrf": csrf(gw, "zoe@gmail.example")}, follow_redirects=False)
+    assert r.status_code == 303 and gw.db.tenant_for("zoe@gmail.example") and gw.db.request_for("zoe@gmail.example")["status"] == "done"
+    assert gw.get("/jobs", headers=who).status_code == 200
+    # declined: nothing to create, and no second request from the same address
+    other = as_("max@example.org")
+    gw.post("/_platform/request", headers=other, data={"csrf": csrf(gw, "max@example.org"), "name": "Max"})
+    gw.post("/_platform/admin/request", headers=admin, data={"csrf": csrf(gw, "admin@example.org"), "email": "max@example.org", "decision": "declined"})
+    assert gw.post("/_platform/request/create", headers=other, data={"csrf": csrf(gw, "max@example.org")}).status_code == 403
+    assert gw.get("/_platform/request", headers=other, follow_redirects=False).status_code == 303
+
+
+def test_notice_goes_through_the_provisioner_and_never_breaks_a_request(gw, prov, monkeypatch):
+    n = gw.g.notify
+    calls = []
+    n.admins(lambda *a, **k: calls.append(a), "s", "b")
+    assert not n.configured() and not calls                                    # silent until configured
+    n._run(lambda m, p, json: calls.append((m, p, json["msg"])), "hello")
+    n._run(lambda *a, **k: (_ for _ in ()).throw(RuntimeError("down")), "x")   # a failure is swallowed
+    assert calls == [("POST", "/notify", "hello")]
+    # provisioner side: nothing without NOTIFY_WEBHOOK, else one POST to the bridge
+    assert prov.api_notify(prov.Notice(msg="hi")) == {"sent": False}
+    posted = []
+    monkeypatch.setenv("NOTIFY_WEBHOOK", "http://bridge.test/alert")
+    import httpx as hx
+    monkeypatch.setattr(hx, "post", lambda url, json, timeout: posted.append((url, json)) or type("R", (), {"raise_for_status": lambda self: None})())
+    assert prov.api_notify(prov.Notice(msg="x" * 3000)) == {"sent": True}
+    assert posted[0][0] == "http://bridge.test/alert" and len(posted[0][1]["msg"]) == 1500

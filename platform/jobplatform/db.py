@@ -18,6 +18,9 @@ CREATE TABLE IF NOT EXISTS invites (
   used_by TEXT, used_at TEXT, revoked INTEGER NOT NULL DEFAULT 0,
   max_uses INTEGER NOT NULL DEFAULT 1, uses INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS aliases (email TEXT PRIMARY KEY, slug TEXT NOT NULL, added_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS requests (
+  email TEXT PRIMARY KEY, name TEXT, note TEXT, status TEXT NOT NULL DEFAULT 'pending',
+  created_at TEXT NOT NULL, decided_at TEXT, decided_by TEXT);
 CREATE TABLE IF NOT EXISTS audit (ts TEXT NOT NULL, actor TEXT, action TEXT, detail TEXT);
 """
 
@@ -115,6 +118,43 @@ def remove_tenant(slug):
     with conn() as c:
         c.execute("DELETE FROM tenants WHERE slug=?", (slug,))
         c.execute("DELETE FROM aliases WHERE slug=?", (slug,))
+
+
+# ---- account requests (from the home page; the address is the verified sign-in address) --------
+def request_for(email):
+    with conn() as c:
+        r = c.execute("SELECT * FROM requests WHERE email=?", ((email or "").lower(),)).fetchone()
+        return dict(r) if r else None
+
+
+def add_request(email, name, note, max_pending=100):
+    """"created", "exists" (one request per address) or "full" (too many waiting)."""
+    email = (email or "").lower()
+    with conn() as c:
+        if c.execute("SELECT 1 FROM requests WHERE email=?", (email,)).fetchone():
+            return "exists"
+        if c.execute("SELECT COUNT(*) FROM requests WHERE status='pending'").fetchone()[0] >= max_pending:
+            return "full"
+        c.execute("INSERT INTO requests (email, name, note, created_at) VALUES (?,?,?,?)", (email, name, note, now()))
+    return "created"
+
+
+def decide_request(email, status, by):
+    with conn() as c:
+        cur = c.execute("UPDATE requests SET status=?, decided_at=?, decided_by=? WHERE email=? AND status='pending'",
+                        (status, now(), by, (email or "").lower()))
+        return cur.rowcount == 1
+
+
+def close_request(email):
+    with conn() as c:
+        c.execute("UPDATE requests SET status='done' WHERE email=? AND status='approved'", ((email or "").lower(),))
+
+
+def requests(limit=100):
+    with conn() as c:
+        return [dict(r) for r in c.execute(
+            "SELECT * FROM requests ORDER BY (status='pending') DESC, created_at DESC LIMIT ?", (limit,)).fetchall()]
 
 
 def _hash(token):

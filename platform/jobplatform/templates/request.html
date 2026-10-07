@@ -1,0 +1,14 @@
+{% extends "base.html" %}{% block title %}Request an account · Swiss Job Agent{% endblock %}{% block body %}
+<p><a href="/welcome">← back</a></p>
+<div class="card">
+  <h2 style="margin-top:0">Request an account</h2>
+  <p>You're signed in as <b>{{ email }}</b>. Your workspace will be created under this address once the request is approved.</p>
+  <form method="post" action="/_platform/request"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <p><label>Your name<br><input name="name" maxlength="80" size="34" required autocomplete="name"></label></p>
+    <p><label>What kind of job are you looking for, and where? <span class="muted">(optional)</span><br>
+      <textarea name="note" maxlength="400" rows="3" style="width:100%; max-width:520px; padding:8px; background:#0f1419; border:1px solid var(--border); border-radius:6px; color:var(--fg); font:inherit"></textarea></label></p>
+    <button type="submit">Send my request →</button>
+  </form>
+  <p class="muted">Only your name, this address and your message are sent to the person who runs the service.</p>
+</div>
+{% endblock %}

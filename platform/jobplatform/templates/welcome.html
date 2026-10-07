@@ -11,13 +11,28 @@
   .cta { display:flex; gap:10px; flex-wrap:wrap; align-items:center; } .notice { border-color:var(--accent); }
 </style>
 
-{% if email and not has_workspace %}
+{% if email and not has_workspace and req and req.status == "approved" %}
+<div class="card notice">
+  <b>Your request was approved, {{ req.name or email }}.</b>
+  <p class="muted" style="margin:6px 0 0">Create your private workspace as {{ email }}; you'll set it up from your CV in a few minutes.</p>
+  {% if full %}<p class="bad">All workspaces are taken at the moment. Please come back later.</p>{% else %}
+  <form method="post" action="/_platform/request/create" style="margin-top:10px"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <button type="submit">Create my workspace →</button></form>{% endif %}
+</div>
+{% elif email and not has_workspace and req and req.status == "pending" %}
+<div class="card notice">
+  <b>Your request is waiting for approval.</b>
+  <p class="muted" style="margin:6px 0 0">You asked for an account as {{ email }} on {{ req.created_at[:10] }}. Come back to this page in a day
+    or two: once approved, a button to create your workspace will be here.</p>
+</div>
+{% elif email and not has_workspace %}
 <div class="card notice">
   <b>You're signed in as {{ email }}, but you don't have a workspace yet.</b>
   <p class="muted" style="margin:6px 0 0">This service is by invitation. Open the invite link you were sent while signed in
     with this address{% if contact %}, or <a href="mailto:{{ contact }}">ask for an invite</a>{% endif %}.
-    If your workspace is under another address (for example your Hotmail instead of your Gmail), sign in with that one:</p>
-  <p style="margin:10px 0 0"><a class="btn" href="{{ switch_url }}">Sign in with another address →</a></p>
+    If your workspace is under another address (for example your Hotmail instead of your Gmail), sign in with that one.</p>
+  <p class="cta" style="margin:10px 0 0">{% if not req %}<a class="btn" href="/_platform/request">Request an account →</a>{% endif %}
+    <a class="btn ghost" href="{{ switch_url }}">Sign in with another address</a></p>
 </div>
 {% endif %}
 
@@ -28,8 +43,8 @@
     the monthly proof-of-search report is one click.</p>
   <div class="cta">
     {% if has_workspace %}<a class="btn" href="/">Open my workspace →</a>
-    {% elif not email %}<a class="btn" href="/">Sign in →</a><span class="muted">with Google or a code sent to your e-mail</span>
-    {% else %}<a class="btn" href="{{ switch_url }}">Sign in with another address →</a>{% endif %}
+    {% elif not email %}<a class="btn" href="/">Sign in →</a><a class="btn ghost" href="/_platform/request">Request an account</a>
+    {% elif not req %}<a class="btn" href="/_platform/request">Request an account →</a>{% endif %}
     <a class="btn ghost" href="{{ project_url }}" rel="noopener">Source code on GitHub</a>
   </div>
 </div>
@@ -49,7 +64,8 @@
 <div class="card">
   <h3>How to start</h3>
   <ol class="steps">
-    <li><b>Open your invite link</b> and sign in with your Google account, or with a code sent to your e-mail. No new password.</li>
+    <li><b>Request an account</b> (or open the invite link you were sent) and sign in with your Google account, or with a
+      code sent to your e-mail. No new password.</li>
     <li><b>Upload your CV</b> (PDF or Word) and/or your LinkedIn profile. Check what was read and correct it.</li>
     <li><b>Choose what you're looking for</b>: roles, town, how far you'd commute, languages. Your search is built from that.</li>
     <li><b>Read your first results</b> a few minutes later, and generate your first CV and letter.</li>

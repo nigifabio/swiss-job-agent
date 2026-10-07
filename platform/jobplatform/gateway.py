@@ -22,7 +22,7 @@ from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse,
 from fastapi.templating import Jinja2Templates
 from starlette.background import BackgroundTask
 
-from . import db
+from . import db, notify
 
 
 class Config:
@@ -119,7 +119,9 @@ def home(request, status=200):
     email = getattr(request.state, "email", "")
     # signing out of Cloudflare Access, then straight back to the sign-in page: the way to change address
     back = urllib.parse.quote((C.public_url or str(request.base_url).rstrip("/")) + "/", safe="")
+    req = db.request_for(email) if email else None
     return page(request, "welcome.html", {"project_url": C.project_url, "contact": C.contact,
+                                          "req": req, "full": len(db.tenants()) >= C.max_tenants,
                                           "switch_url": f"https://{C.team}/cdn-cgi/access/logout?returnTo={back}",
                                           "has_workspace": bool(email and db.tenant_for(email))}, status)
 
@@ -211,6 +213,77 @@ async def forward(request, email):
 @app.get(PUBLIC_HOME, response_class=HTMLResponse)
 def welcome(request: Request):
     return home(request)
+
+
+# ---- account requests --------------------------------------------------------------------------
+def _create_workspace(request, email, invite_id=None):
+    """Shared by invites and approved requests. Returns (slug, None) or (None, error page)."""
+    slug = db.new_slug(email)
+    db.add_tenant(slug, email, invite_id)
+    try:
+        prov("PUT", f"/tenants/{slug}", json={"email": email})
+    except Exception as e:  # noqa: BLE001
+        db.remove_tenant(slug)
+        db.audit(email, "tenant.create_failed", f"{slug}: {e}")
+        return None, message(request, "Something went wrong", "Your workspace couldn't be created. The administrator "
+                                                              "can see it in the log; please try again later.", 500)
+    db.audit(email, "tenant.create", slug)
+    return slug, None
+
+
+@app.get("/_platform/request", response_class=HTMLResponse)
+def request_form(request: Request):
+    email = request.state.email
+    if db.tenant_for(email) or db.request_for(email):
+        return RedirectResponse("/", status_code=303)
+    return page(request, "request.html", {})
+
+
+@app.post("/_platform/request")
+def request_send(request: Request, csrf: str = Form(""), name: str = Form(""), note: str = Form("")):
+    email = request.state.email
+    check_csrf(request, email, csrf)
+    if db.tenant_for(email):
+        return RedirectResponse("/", status_code=303)
+    name, note = " ".join(name.split())[:80], " ".join(note.split())[:400]
+    state = db.add_request(email, name, note)
+    if state == "full":
+        return message(request, "Not now", "There are many requests waiting already. Please try again in a few days.", 503)
+    if state == "created":
+        db.audit(email, "request.create", name)
+        notify.admins(prov, "🇨🇭 Job platform: account request",
+                      f"{name or '(no name)'} <{email}> asks for a workspace.\n\n{note or '(no message)'}\n\n"
+                      f"Approve or decline: {C.public_url}/_platform/admin")
+    return RedirectResponse("/", status_code=303)
+
+
+@app.post("/_platform/request/create")
+def request_create(request: Request, csrf: str = Form("")):
+    """An approved person creates their workspace."""
+    email = request.state.email
+    check_csrf(request, email, csrf)
+    if db.tenant_for(email):
+        return RedirectResponse("/", status_code=303)
+    req = db.request_for(email)
+    if not req or req["status"] != "approved":
+        return message(request, "Not approved yet", "Your request hasn't been approved yet.", 403)
+    if len(db.tenants()) >= C.max_tenants:
+        return message(request, "Full", "The platform has reached its number of workspaces. Contact the administrator.", 503)
+    slug, err = _create_workspace(request, email)
+    if err:
+        return err
+    db.close_request(email)
+    return RedirectResponse("/", status_code=303)
+
+
+@app.post("/_platform/admin/request")
+def admin_request(request: Request, csrf: str = Form(""), email: str = Form(""), decision: str = Form("")):
+    require_admin(request)
+    check_csrf(request, request.state.email, csrf)
+    if decision not in ("approved", "declined") or not db.decide_request(email, decision, request.state.email):
+        return message(request, "Not changed", "No such waiting request.", 400, link=("/_platform/admin", "Back"))
+    db.audit(request.state.email, f"request.{decision}", email.lower())
+    return RedirectResponse("/_platform/admin", status_code=303)
 
 
 # ---- invites ------------------------------------------------------------------------------------
@@ -318,6 +391,7 @@ def admin(request: Request, new: str = ""):
     orphans = [s for s in live if not db.tenant(s)]
     link = f"{C.public_url or ''}/_platform/invite/{new}" if new else ""
     return page(request, "admin.html", {"tenants": rows, "orphans": orphans, "invites": db.invites(),
+                                        "requests": db.requests(), "notify_on": notify.configured(),
                                         "audit": db.audit_log(30), "new_link": link, "live_err": live_err,
                                         "max": C.max_tenants})
 

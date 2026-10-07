@@ -57,6 +57,12 @@ Admin page → *Invite someone* → copy the link (shown once) → send it.
 
 The person opens the link, signs in (see below), clicks **Create my workspace** and follows the wizard.
 
+**Account requests:** the home page has a *Request an account* button. The person signs in first (so the
+address is verified), gives a name and a short message; the request appears on the admin page with **Approve** /
+**Decline**. An approved person finds a *Create my workspace* button on the home page at their next visit. Set
+`NOTIFY_WEBHOOK` in `platform/.env` (a URL taking `POST {"msg": "..."}`, e.g. a Telegram bridge) to be told about
+new requests; the provisioner posts it, because the gateway has no access to the LAN.
+
 **Same person, two addresses:** on the admin page, *add an address* under a workspace lets its owner sign in
 with another e-mail too (their Gmail next to their Hotmail). Both open the same workspace; an address can only
 belong to one workspace.

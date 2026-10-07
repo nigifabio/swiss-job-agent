@@ -28,6 +28,18 @@
     Delete archives the data (kept 30 days on the host), then removes everything.</p>
 </div>
 <div class="card">
+  <h3 style="margin-top:0">Account requests{% set waiting = requests | selectattr("status", "equalto", "pending") | list %}{% if waiting %} ({{ waiting | length }} waiting){% endif %}</h3>
+  {% if not notify_on %}<p class="muted">No notification is configured (NOTIFY_WEBHOOK in platform/.env): new requests only show here.</p>{% endif %}
+  {% if requests %}<table><tr><th>When</th><th>Who</th><th>Message</th><th>State</th><th></th></tr>
+  {% for r in requests %}<tr><td class="muted">{{ r.created_at[:10] }}</td><td>{{ r.name or "" }}<br><span class="muted">{{ r.email }}</span></td>
+    <td>{{ r.note or "" }}</td><td>{{ r.status }}{% if r.decided_by %}<br><span class="muted">{{ r.decided_at[:10] }}</span>{% endif %}</td>
+    <td style="white-space:nowrap">{% if r.status == "pending" %}{% for d, lab, cls in [("approved", "Approve", ""), ("declined", "Decline", "ghost")] %}
+      <form class="inline" method="post" action="/_platform/admin/request"><input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="hidden" name="email" value="{{ r.email }}"><input type="hidden" name="decision" value="{{ d }}">
+        <button class="small {{ cls }}">{{ lab }}</button></form>{% endfor %}{% endif %}</td></tr>{% endfor %}
+  </table>{% else %}<p class="muted">None yet. People ask from the home page after signing in.</p>{% endif %}
+</div>
+<div class="card">
   <h3 style="margin-top:0">Invite someone</h3>
   <form method="post" action="/_platform/admin/invite"><input type="hidden" name="csrf" value="{{ csrf }}">
     <input name="note" placeholder="Who (note for you)" size="22">
