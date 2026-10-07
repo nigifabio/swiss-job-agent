@@ -309,3 +309,20 @@ def test_position_filled_button(env):
     assert any("Refus (Poste déjà pourvu)" in r["Résultat"] for r in rows)
     assert c.post(f"/job/{sent}/filled", headers={"x-requested-with": "fetch"}).json()["state"] is None   # once
     assert "/filled" not in c.get("/jobs?status=rejected").text
+
+
+def test_orp_report_links_to_the_posting(env):
+    c = TestClient(env.web.app)
+    jid = env.store.add_manual({"title": "Coordinator", "company": "Acme SA", "url": "https://jobs.example.org/p/42?a=1&b=2"})
+    bad = env.store.add_manual({"title": "Planner", "company": "Other SA", "url": "javascript:alert(1)"})
+    for j in (jid, bad):
+        env.store.update_status(j, "applied")
+    month = env.store.get_job(jid)["applied_date"][:7]
+    page = c.get(f"/report?month={month}").text
+    assert 'href="https://jobs.example.org/p/42?a=1&amp;b=2"' in page and "javascript:" not in page
+    csv_text = c.get(f"/report.csv?month={month}").text
+    assert "Lien de l'annonce" in csv_text.splitlines()[0] and "https://jobs.example.org/p/42?a=1&b=2" in csv_text
+    assert "javascript" not in csv_text
+    pdf = c.get(f"/report.pdf?month={month}")
+    assert pdf.status_code == 200 and pdf.content[:4] == b"%PDF" and b"jobs.example.org/p/42" in pdf.content
+    assert c.get("/jobs").headers["content-security-policy"].startswith("frame-ancestors 'none'")

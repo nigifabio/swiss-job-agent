@@ -15,6 +15,7 @@ The app holds personal data (your CV, your applications, notes about employers),
   authenticating reverse proxy. See [docs/installation.md](docs/installation.md#reaching-it-from-other-devices).
 - **Cross-site requests are refused:** every state-changing request must come from the app's own
   origin (`Sec-Fetch-Site` / `Origin` check), and pages can't be framed (`X-Frame-Options: DENY`).
+- **HTTPS only on the platform:** a visitor arriving over plain http is redirected, and pages send HSTS.
 - **Output is escaped** (Jinja autoescape); stored links are kept only if they are `http(s)`.
 - **Secrets stay out of git and logs:** `.env` (mode 600) and `data/` are git-ignored; API keys, the
   IMAP password and key-bearing URLs are never written into error messages. The alert mailbox is

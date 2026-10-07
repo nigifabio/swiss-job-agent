@@ -16,9 +16,10 @@
     &nbsp;·&nbsp; Recherches : <b>{{ rows | length }}</b>{% if kind == "month" %} / objectif {{ target }}{% endif %}</p>
   <div style="overflow-x:auto">
   <table class="data">
-    <tr>{% for c in cols %}<th>{{ c }}</th>{% endfor %}</tr>
-    {% for r in rows %}<tr>{% for c in cols %}<td>{% if c == "Poste" %}<a href="/job/{{ r.id }}">{{ r[c] }}</a>{% else %}{{ r[c] }}{% endif %}</td>{% endfor %}</tr>{% endfor %}
-    {% if not rows %}<tr><td colspan="{{ cols | length }}" class="muted">No applications in this period. Mark jobs as applied to fill it.</td></tr>{% endif %}
+    <tr>{% for c in cols %}<th>{{ c }}</th>{% endfor %}<th>{{ link_col }}</th></tr>
+    {% for r in rows %}<tr>{% for c in cols %}<td>{% if c == "Poste" %}<a href="/job/{{ r.id }}">{{ r[c] }}</a>{% else %}{{ r[c] }}{% endif %}</td>{% endfor %}
+      <td>{% if r[link_col] %}<a href="{{ r[link_col] }}" target="_blank" rel="noopener">{{ r[link_col] | replace("https://", "") | replace("http://", "") | truncate(38, true, "…") }} ↗</a>{% endif %}</td></tr>{% endfor %}
+    {% if not rows %}<tr><td colspan="{{ cols | length + 1 }}" class="muted">No applications in this period. Mark jobs as applied to fill it.</td></tr>{% endif %}
   </table>
   </div>
   <p class="muted" style="margin-top:12px">Copy these rows into Job-Room (work.swiss) or attach the PDF to the official form, as your ORP asks,

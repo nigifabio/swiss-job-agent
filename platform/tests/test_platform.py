@@ -409,3 +409,14 @@ def test_notice_goes_through_the_provisioner_and_never_breaks_a_request(gw, prov
     monkeypatch.setattr(hx, "post", lambda url, json, timeout: posted.append((url, json)) or type("R", (), {"raise_for_status": lambda self: None})())
     assert prov.api_notify(prov.Notice(msg="x" * 3000)) == {"sent": True}
     assert posted[0][0] == "http://bridge.test/alert" and len(posted[0][1]["msg"]) == 1500
+
+
+def test_plain_http_is_sent_to_https_and_pages_carry_hsts(gw, monkeypatch):
+    monkeypatch.setattr(gw.g.C, "public_url", "https://jobs.example.org")
+    r = gw.get("/welcome?x=1", headers={"cf-visitor": '{"scheme":"http"}'}, follow_redirects=False)
+    assert r.status_code == 308 and r.headers["location"] == "https://jobs.example.org/welcome?x=1"
+    r = gw.get("/jobs", headers=dict(as_("admin@example.org"), **{"cf-visitor": '{"scheme": "http"}'}), follow_redirects=False)
+    assert r.status_code == 308                                                 # before anything else, signed in or not
+    r = gw.get("/welcome", headers={"cf-visitor": '{"scheme":"https"}'})
+    assert r.status_code == 200 and r.headers["strict-transport-security"].startswith("max-age=")
+    assert "frame-ancestors 'none'" in r.headers["content-security-policy"]

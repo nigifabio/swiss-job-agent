@@ -19,7 +19,7 @@ templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), "t
 
 
 SECURITY_HEADERS = {"X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff",
-                    "Referrer-Policy": "same-origin"}
+                    "Referrer-Policy": "same-origin", "Content-Security-Policy": "frame-ancestors 'none'; base-uri 'self'; object-src 'none'"}
 
 
 def _cross_site(request):
@@ -311,7 +311,7 @@ def report_page(request: Request, month: str = "", week: str = ""):
     kind, key, start, end, label = _period(month, week)
     profile = tailor.load_profile() or {}
     return render(request, "report.html", {
-        "rows": report.rows(start, end), "cols": report.COLUMNS, "label": label, "kind": kind, "key": key,
+        "rows": report.rows(start, end), "cols": report.COLUMNS, "link_col": report.LINK, "label": label, "kind": kind, "key": key,
         "prev": report.shift(kind, key, -1), "next": report.shift(kind, key, 1),
         "target": report.TARGET, "name": profile.get("name", ""),
         "qs": f"{kind}={key}"})

@@ -60,6 +60,7 @@ enabled you can also **edit your profile** or **re-run the setup wizard** there.
   total, answer rate, interview rate, average days to a first answer, weekly and monthly charts (click
   a bar for that period's report), funnel, sources, how you applied.
 - **ORP report**: "Preuves des recherches personnelles en vue de trouver un emploi" for a week or a
-  month, with **PDF**, **CSV (Excel)** and **Print**. Copy the rows into Job-Room (work.swiss) or attach
+  month, with **PDF**, **CSV (Excel)** and **Print**. Each application carries the link to the posting it was for (a link in the page, the address
+  under the job title in the PDF, a column in the CSV). Copy the rows into Job-Room (work.swiss) or attach
   the PDF, as your ORP/RAV office asks, by the 5th of the following month. The AVS number is left blank
   to fill in by hand.

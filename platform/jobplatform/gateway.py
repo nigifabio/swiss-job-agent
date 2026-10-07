@@ -54,7 +54,8 @@ _jwks = None
 HOP = {"connection", "keep-alive", "proxy-authenticate", "proxy-authorization", "te", "trailers",
        "transfer-encoding", "upgrade", "host", "content-length"}
 SECURITY_HEADERS = {"X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff",
-                    "Referrer-Policy": "same-origin"}
+                    "Referrer-Policy": "same-origin", "Strict-Transport-Security": "max-age=31536000",
+                    "Content-Security-Policy": "frame-ancestors 'none'; base-uri 'self'; object-src 'none'"}
 
 
 def _startup():
@@ -135,6 +136,10 @@ async def gate(request: Request, call_next):
     path = request.url.path
     if path == "/_platform/healthz":
         return await call_next(request)
+    if '"scheme":"http"' in request.headers.get("cf-visitor", "").replace(" ", ""):
+        # the visitor reached Cloudflare over plain http: everything here is https only
+        host = urllib.parse.urlsplit(C.public_url).netloc or request.headers.get("host", "")
+        return RedirectResponse(f"https://{host}{path}" + (f"?{request.url.query}" if request.url.query else ""), status_code=308)
     if path == PUBLIC_HOME and request.method in ("GET", "HEAD"):
         # the one public page: static text, shows the visitor's email only if they are signed in
         request.state.email = identify(request) or ""

@@ -5,6 +5,7 @@ import csv
 import io
 import os
 import datetime
+import urllib.parse
 from collections import Counter
 
 from . import store
@@ -15,6 +16,12 @@ RESULT = {"applied": "En suspens", "shortlisted": "En suspens", "new": "En suspe
           "discarded": "En suspens"}
 COLUMNS = ["Date", "Entreprise, lieu", "Personne de contact", "Poste", "Taux", "Type de candidature",
            "Assign. ORP", "Résultat"]
+LINK = "Lien de l'annonce"          # the posting applied to: extra column in the CSV, a link in the page and the PDF
+
+
+def _http_url(u):
+    u = (u or "").strip()
+    return u if urllib.parse.urlsplit(u).scheme in ("http", "https") else ""
 
 
 # ---- periods -------------------------------------------------------------
@@ -64,6 +71,7 @@ def rows(start, end):
             "Entreprise, lieu": ", ".join(x for x in (j.get("company"), j.get("location")) if x),
             "Personne de contact": j.get("contact") or "",
             "Poste": j.get("title") or "",
+            LINK: _http_url(j.get("url")),
             "Taux": j.get("work_rate") or store.guess_work_rate(j.get("title")),
             "Type de candidature": store.APPLY_METHODS.get(j.get("apply_method") or "written"),
             "Assign. ORP": "Oui" if j.get("orp_assigned") else "Non",
@@ -74,7 +82,7 @@ def rows(start, end):
 
 def to_csv(rs):
     buf = io.StringIO()
-    w = csv.DictWriter(buf, fieldnames=COLUMNS, extrasaction="ignore", delimiter=";")
+    w = csv.DictWriter(buf, fieldnames=COLUMNS + [LINK], extrasaction="ignore", delimiter=";")
     w.writeheader()
     w.writerows(rs)
     return "﻿" + buf.getvalue()   # BOM so Excel opens accents correctly
@@ -86,12 +94,18 @@ def to_pdf(rs, label, name, out):
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.lib.units import mm
     from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-    from xml.sax.saxutils import escape as esc
+    from xml.sax.saxutils import escape as esc, quoteattr
 
     ss = getSampleStyleSheet()
     cell = ParagraphStyle("c", parent=ss["Normal"], fontSize=8, leading=10)
     head = [Paragraph(f"<b>{esc(c)}</b>", cell) for c in COLUMNS]
-    data = [head] + [[Paragraph(esc(str(r[c])), cell) for c in COLUMNS] for r in rs]
+    def text(r, c):          # the posting's address under the job title, clickable
+        t = esc(str(r[c]))
+        if c == "Poste" and r.get(LINK):
+            shown = esc(r[LINK].split("://", 1)[-1])          # readable on paper too
+            t += f'<br/><link href={quoteattr(r[LINK])} color="#1F4E78"><font size="6">{shown}</font></link>'
+        return t
+    data = [head] + [[Paragraph(text(r, c), cell) for c in COLUMNS] for r in rs]
     widths = [22 * mm, 55 * mm, 38 * mm, 54 * mm, 18 * mm, 32 * mm, 24 * mm, 34 * mm]
     t = Table(data, colWidths=widths, repeatRows=1)
     t.setStyle(TableStyle([("GRID", (0, 0), (-1, -1), 0.4, colors.grey),
