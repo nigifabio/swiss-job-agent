@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS invites (
   email TEXT, created_by TEXT, created_at TEXT NOT NULL, expires_at TEXT NOT NULL,
   used_by TEXT, used_at TEXT, revoked INTEGER NOT NULL DEFAULT 0,
   max_uses INTEGER NOT NULL DEFAULT 1, uses INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE IF NOT EXISTS aliases (email TEXT PRIMARY KEY, slug TEXT NOT NULL, added_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS audit (ts TEXT NOT NULL, actor TEXT, action TEXT, detail TEXT);
 """
 
@@ -49,9 +50,32 @@ def audit(actor, action, detail=""):
 
 
 def tenant_for(email):
+    """The workspace this verified address opens: its owner address, or one of its extra addresses."""
+    email = (email or "").lower()
     with conn() as c:
-        r = c.execute("SELECT * FROM tenants WHERE email=?", ((email or "").lower(),)).fetchone()
+        r = c.execute("SELECT * FROM tenants WHERE email=?", (email,)).fetchone() or c.execute(
+            "SELECT t.* FROM tenants t JOIN aliases a ON a.slug = t.slug WHERE a.email=?", (email,)).fetchone()
         return dict(r) if r else None
+
+
+def aliases(slug):
+    with conn() as c:
+        return [r["email"] for r in c.execute("SELECT email FROM aliases WHERE slug=? ORDER BY added_at", (slug,)).fetchall()]
+
+
+def add_alias(slug, email):
+    """False when the address already opens a workspace (its own or someone else's)."""
+    email = (email or "").strip().lower()
+    if not email or tenant_for(email) or not tenant(slug):
+        return False
+    with conn() as c:
+        c.execute("INSERT INTO aliases (email, slug, added_at) VALUES (?,?,?)", (email, slug, now()))
+    return True
+
+
+def remove_alias(slug, email):
+    with conn() as c:
+        c.execute("DELETE FROM aliases WHERE slug=? AND email=?", (slug, (email or "").lower()))
 
 
 def tenant(slug):
@@ -90,6 +114,7 @@ def set_status(slug, status):
 def remove_tenant(slug):
     with conn() as c:
         c.execute("DELETE FROM tenants WHERE slug=?", (slug,))
+        c.execute("DELETE FROM aliases WHERE slug=?", (slug,))
 
 
 def _hash(token):

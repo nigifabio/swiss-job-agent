@@ -309,7 +309,8 @@ def admin(request: Request, new: str = ""):
         live, live_err = {}, str(e)
     rows = []
     for t in db.tenants():
-        rows.append(dict(t, **{k: live.get(t["slug"], {}).get(k, "?") for k in ("web", "sched", "image")}))
+        rows.append(dict(t, aliases=db.aliases(t["slug"]),
+                         **{k: live.get(t["slug"], {}).get(k, "?") for k in ("web", "sched", "image")}))
     orphans = [s for s in live if not db.tenant(s)]
     link = f"{C.public_url or ''}/_platform/invite/{new}" if new else ""
     return page(request, "admin.html", {"tenants": rows, "orphans": orphans, "invites": db.invites(),
@@ -338,6 +339,30 @@ def admin_revoke(request: Request, iid: int, csrf: str = Form("")):
     return RedirectResponse("/_platform/admin", status_code=303)
 
 
+@app.post("/_platform/admin/tenant/{slug}/address")
+def admin_address(request: Request, slug: str, csrf: str = Form(""), email: str = Form(""), remove: str = Form("")):
+    """Add (or remove) another sign-in address for the same person, e.g. their Gmail next to their Hotmail."""
+    require_admin(request)
+    check_csrf(request, request.state.email, csrf)
+    t = db.tenant(slug)
+    email = (remove or email).strip().lower()
+    if not t or not re.fullmatch(r"[^@\s,]+@[^@\s,]+\.[^@\s,]+", email):
+        return message(request, "Not changed", "Unknown workspace or not an e-mail address.", 400, link=("/_platform/admin", "Back"))
+    if remove:
+        db.remove_alias(slug, email)
+    elif len(db.aliases(slug)) >= 5 or not db.add_alias(slug, email):
+        return message(request, "Not added", f"{email} already opens a workspace, or this one has 5 extra addresses.", 400,
+                       link=("/_platform/admin", "Back"))
+    try:                                   # the workspace re-checks who may enter: tell it
+        prov("PUT", f"/tenants/{slug}", json={"email": t["email"], "extra_emails": db.aliases(slug)})
+    except Exception as e:  # noqa: BLE001
+        if not remove:
+            db.remove_alias(slug, email)
+        return message(request, "Not changed", f"The workspace couldn't be updated: {e}", 500, link=("/_platform/admin", "Back"))
+    db.audit(request.state.email, "tenant.address." + ("remove" if remove else "add"), f"{slug} {email}")
+    return RedirectResponse("/_platform/admin", status_code=303)
+
+
 @app.post("/_platform/admin/tenant/{slug}/{action}")
 def admin_tenant(request: Request, slug: str, action: str, csrf: str = Form(""), confirm: str = Form("")):
     require_admin(request)
@@ -352,7 +377,7 @@ def admin_tenant(request: Request, slug: str, action: str, csrf: str = Form(""),
         prov("DELETE", f"/tenants/{slug}")
         db.remove_tenant(slug)
     elif action == "recreate":
-        prov("PUT", f"/tenants/{slug}", json={"email": t["email"]})
+        prov("PUT", f"/tenants/{slug}", json={"email": t["email"], "extra_emails": db.aliases(slug)})
     else:
         prov("POST", f"/tenants/{slug}/{action}")
         db.set_status(slug, "active" if action == "start" else "suspended")

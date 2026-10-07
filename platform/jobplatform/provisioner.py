@@ -125,11 +125,14 @@ def ensure_volume(d, slug, image):
     return vol
 
 
-def spec(slug, email, role, image):
-    """The fixed, locked-down container spec. Nothing here comes from the tenant."""
+def spec(slug, email, role, image, extra=()):
+    """The fixed, locked-down container spec. Nothing here comes from the tenant.
+    extra: more sign-in addresses of the same person (the owner's Gmail next to their Hotmail...)."""
     import docker.types
     n = names(slug)
-    environment = dict(S.passthrough, DB_PATH="/data/jobs.db", ONBOARDING="1", PLATFORM_TENANT="1", ALLOWED_EMAILS=email,
+    extra = [e for e in extra if e and e != email]
+    environment = dict(S.passthrough, DB_PATH="/data/jobs.db", ONBOARDING="1", PLATFORM_TENANT="1",
+                       ALLOWED_EMAILS=",".join([email] + extra),
                        HOME="/tmp", PYTHONDONTWRITEBYTECODE="1", PROVIDERS="")
     common = dict(
         image=image, detach=True, environment=environment, user="1000:1000",
@@ -137,7 +140,7 @@ def spec(slug, email, role, image):
         read_only=True, tmpfs={"/tmp": "size=128m,mode=1777"}, cap_drop=["ALL"],
         security_opt=["no-new-privileges:true"], pids_limit=128, nano_cpus=int(S.cpus * 1e9),
         restart_policy={"Name": "unless-stopped"},
-        labels={LABEL: slug, "jobagent.role": role, "jobagent.email": email},
+        labels={LABEL: slug, "jobagent.role": role, "jobagent.email": email, "jobagent.extra_emails": ",".join(extra)},
         log_config=docker.types.LogConfig(type="json-file", config={"max-size": "5m", "max-file": "2"}),
     )
     if role == "web":
@@ -184,15 +187,19 @@ def healthy(d, name, timeout=90):
     return False
 
 
-def create(d, slug, email, image=None):
-    """Create or re-create a tenant (data is kept: it lives in the volume)."""
+def create(d, slug, email, image=None, extra=None):
+    """Create or re-create a tenant (data is kept: it lives in the volume).
+    extra=None keeps the extra sign-in addresses the tenant already has (upgrades, rollbacks)."""
     image = image or S.image
     ensure_network(d, slug)
     ensure_volume(d, slug, image)
     n = names(slug)
+    if extra is None:
+        old = _get(d.containers, n["web"])
+        extra = [e for e in ((old.labels.get("jobagent.extra_emails") if old else "") or "").split(",") if e]
     for role in ("web", "sched"):
         _remove(d, n[role])
-        d.containers.run(**spec(slug, email, role, image))
+        d.containers.run(**spec(slug, email, role, image, extra))
     attach_gateway(d, slug)
     return status(d, slug)
 
@@ -335,6 +342,7 @@ def auth(authorization: str = Header("")):
 
 class NewTenant(BaseModel):
     email: str
+    extra_emails: list[str] | None = None      # None: keep the ones the tenant has
 
 
 @app.get("/healthz")
@@ -349,9 +357,10 @@ def api_list():
 
 @app.put("/tenants/{slug}", dependencies=[Depends(auth)])
 def api_create(slug: str, body: NewTenant):
-    if not EMAIL.match(body.email):
+    extra = None if body.extra_emails is None else [e.lower() for e in body.extra_emails]
+    if not EMAIL.match(body.email) or len(extra or []) > 5 or not all(EMAIL.match(e) and "," not in e for e in extra or []):
         raise HTTPException(400, "bad email")
-    return create(client(), check_slug(slug), body.email.lower())
+    return create(client(), check_slug(slug), body.email.lower(), extra=extra)
 
 
 @app.post("/tenants/{slug}/{action}", dependencies=[Depends(auth)])

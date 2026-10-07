@@ -57,6 +57,10 @@ Admin page → *Invite someone* → copy the link (shown once) → send it.
 
 The person opens the link, signs in (see below), clicks **Create my workspace** and follows the wizard.
 
+**Same person, two addresses:** on the admin page, *add an address* under a workspace lets its owner sign in
+with another e-mail too (their Gmail next to their Hotmail). Both open the same workspace; an address can only
+belong to one workspace.
+
 ## Who can sign in, and the public home page
 
 Signing in is Cloudflare Access; *having a workspace* is the gateway's invites. Two ways to set the

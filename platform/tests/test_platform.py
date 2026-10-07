@@ -205,7 +205,7 @@ def test_subnets_never_overlap(prov):
 
 def test_api_requires_the_token_and_valid_ids(prov, monkeypatch):
     monkeypatch.setattr(prov, "client", lambda: None)
-    monkeypatch.setattr(prov, "create", lambda d, slug, email, image=None: {"slug": slug, "email": email})
+    monkeypatch.setattr(prov, "create", lambda d, slug, email, image=None, extra=None: {"slug": slug, "email": email})
     c = TestClient(prov.app)
     assert c.get("/tenants").status_code == 401
     assert c.get("/tenants", headers={"Authorization": "Bearer nope"}).status_code == 401
@@ -238,7 +238,7 @@ def test_upgrade_rolls_back_an_unhealthy_tenant_and_stops(prov, monkeypatch):
         {"slug": "b", "email": "b@x.ch", "web": "running (healthy)"}])
     monkeypatch.setattr(prov, "_get", lambda coll, name: Web())
     made = []
-    monkeypatch.setattr(prov, "create", lambda d, slug, email, image=None: made.append((slug, image)))
+    monkeypatch.setattr(prov, "create", lambda d, slug, email, image=None, extra=None: made.append((slug, image)))
     monkeypatch.setattr(prov, "healthy", lambda d, name, timeout=90: made[-1][1] == "old")
     logs = []
     assert prov.upgrade(D(), log=logs.append) is False
@@ -315,3 +315,38 @@ def test_invites_table_from_before_shareable_links_is_migrated(gw, tmp_path):
     gw.db.init()
     rows = {r["token_hash"]: r for r in gw.db.invites()}
     assert (rows["h1"]["uses"], rows["h1"]["max_uses"], rows["h2"]["uses"]) == (1, 1, 0)
+
+
+def test_a_second_address_opens_the_same_workspace(gw):
+    admin, a = as_("admin@example.org"), {"csrf": None}
+    gw.db.add_tenant("marie", "marie@example.org")
+    gw.db.add_tenant("bob", "bob@example.org")
+    tok = csrf(gw, "admin@example.org")
+    assert gw.get("/jobs", headers=as_("marie@gmail.example")).status_code == 403            # not yet
+    r = gw.post("/_platform/admin/tenant/marie/address", headers=admin, data={"csrf": tok, "email": "Marie@Gmail.example"},
+                follow_redirects=False)
+    assert r.status_code == 303 and gw.db.aliases("marie") == ["marie@gmail.example"]
+    assert ("PUT", "/tenants/marie", {"email": "marie@example.org", "extra_emails": ["marie@gmail.example"]}) in gw.calls
+    for who in ("marie@example.org", "marie@gmail.example"):                                  # both reach marie, only marie
+        gw.seen.clear()
+        assert gw.get("/jobs", headers=as_(who)).status_code == 200 and gw.seen[0].url.host == "jat-marie-web"
+    assert "marie@gmail.example" in gw.get("/_platform/admin", headers=admin).text
+    # an address that already opens a workspace can't be added to another one; strangers can't add anything
+    for taken in ("bob@example.org", "marie@gmail.example", "marie@example.org"):
+        assert gw.post("/_platform/admin/tenant/bob/address", headers=admin, data={"csrf": tok, "email": taken}).status_code == 400
+    assert gw.post("/_platform/admin/tenant/marie/address", headers=as_("bob@example.org"),
+                   data={"csrf": csrf(gw, "bob@example.org"), "email": "bob@gmail.example"}).status_code == 403
+    assert gw.post("/_platform/admin/tenant/marie/address", headers=admin, data={"csrf": tok, "email": "a@b.co,evil@x.y"}).status_code == 400
+    # removed again -> no access; deleting the workspace drops its extra addresses
+    gw.post("/_platform/admin/tenant/marie/address", headers=admin, data={"csrf": tok, "remove": "marie@gmail.example"})
+    assert gw.get("/jobs", headers=as_("marie@gmail.example")).status_code == 403
+    gw.db.add_alias("marie", "m2@example.org")
+    gw.db.remove_tenant("marie")
+    assert gw.db.tenant_for("m2@example.org") is None
+
+
+def test_extra_addresses_reach_the_tenant_and_survive_an_upgrade(prov):
+    e = prov.spec("marie", "marie@example.org", "web", "img", ["marie@gmail.example", "marie@example.org"])
+    assert e["environment"]["ALLOWED_EMAILS"] == "marie@example.org,marie@gmail.example"
+    assert e["labels"]["jobagent.extra_emails"] == "marie@gmail.example"
+    assert prov.spec("marie", "marie@example.org", "web", "img")["environment"]["ALLOWED_EMAILS"] == "marie@example.org"
