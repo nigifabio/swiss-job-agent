@@ -266,3 +266,46 @@ def test_database_from_before_the_grey_out_gets_the_column(env):
     env.store.init_db()
     jid = env.store.add_manual({"title": "Architect", "company": "Acme SA"})
     assert env.store.dismiss(jid) == "dimmed"
+
+
+def test_an_applied_date_puts_the_job_in_applied_and_back(env):
+    """The report and stats count by applied date: the Applied tab must agree with them."""
+    import sqlite3
+    c = TestClient(env.web.app)
+    jid = env.store.add_manual({"title": "Coordinator", "company": "Acme SA"})
+    env.store.update_status(jid, "new")
+    env.store.update_fields(jid, {"applied_date": "2026-09-23", "notes": "sent by e-mail"})       # the job page form
+    j = env.store.get_job(jid)
+    assert j["status"] == "applied" and j["applied_date"] == "2026-09-23" and j["apply_method"] == "written"
+    assert "Coordinator" in c.get("/jobs?status=applied").text and [h["status"] for h in j["history"]][-1] == "applied"
+    # "not applied after all": out of the report too
+    env.store.update_status(jid, "new")
+    assert env.store.get_job(jid)["applied_date"] is None and not env.store.applications("2026-01-01", "2026-12-31")
+    # databases that already hold such a job are repaired at start-up
+    db = sqlite3.connect(env.config.DB_PATH)
+    db.execute("UPDATE jobs SET status='new', applied_date='2026-09-23' WHERE id=?", (jid,))
+    db.commit(); db.close()
+    env.store.init_db()
+    assert env.store.get_job(jid)["status"] == "applied"
+
+
+def test_position_filled_button(env):
+    c = TestClient(env.web.app)
+    fresh = env.store.add_manual({"title": "Planner", "company": "Other SA"})
+    env.store.update_status(fresh, "new")
+    sent = env.store.add_manual({"title": "Coordinator", "company": "Acme SA"})
+    env.store.update_status(sent, "applied")
+    assert f"/job/{fresh}/filled" in c.get("/jobs?status=new").text and f"/job/{sent}/filled" in c.get(f"/job/{sent}").text
+    # not applied: leaves the list
+    assert c.post(f"/job/{fresh}/filled", headers={"x-requested-with": "fetch"}).json()["state"] == "moved"
+    j = env.store.get_job(fresh)
+    assert j["status"] == "discarded" and j["outcome_note"] == "Poste déjà pourvu"
+    assert "Poste déjà pourvu" in c.get("/jobs?status=discarded").text
+    # applied: a refusal with the reason, still in the ORP report
+    assert c.post(f"/job/{sent}/filled", follow_redirects=False).status_code == 303
+    j = env.store.get_job(sent)
+    assert j["status"] == "rejected" and j["outcome_note"] == "Poste déjà pourvu" and j["applied_date"]
+    rows = env.report.rows(*env.report.period(j["applied_date"][:7], "")[2:4])
+    assert any("Refus (Poste déjà pourvu)" in r["Résultat"] for r in rows)
+    assert c.post(f"/job/{sent}/filled", headers={"x-requested-with": "fetch"}).json()["state"] is None   # once
+    assert "/filled" not in c.get("/jobs?status=rejected").text

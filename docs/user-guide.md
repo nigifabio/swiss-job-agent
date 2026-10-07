@@ -16,6 +16,10 @@
 - On every job in a list: **✓ Applied**, **☆ Shortlist**, and **✕ Not for me**: the first click greys the job out (it
   stays where it is, **↩ Keep** brings it back), a second click (**✕ Remove**) moves it to *discarded*. From the
   *discarded* tab, **↩ Back to new** restores it.
+- **⊘ Position filled** (list and job page): the posting is no longer open. If you had applied, the job becomes a
+  refusal with the reason "Poste déjà pourvu" and stays in your ORP report; if not, it leaves the list.
+- Entering an **applied date** on the job page moves the job to *Applied* (the report and the stats count by that
+  date); moving a job back to *new* or *shortlisted* removes the date.
 - **Open & apply ↗** opens the posting in a new tab, then asks **"Did you apply?"**: *Yes* moves the
   job to Applied and records the date.
 - The job page keeps the contact, recruiter, CV version sent, applied and follow-up dates, notes, and

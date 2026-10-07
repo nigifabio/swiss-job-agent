@@ -111,6 +111,12 @@ def init_db():
             if have and col not in have:
                 c.execute(f"ALTER TABLE jobs ADD COLUMN {col} {decl}")
         c.executescript(SCHEMA)
+        # an application recorded only by its date (job page) belongs in "applied", like the report counts it
+        for r in c.execute("SELECT id FROM jobs WHERE status IN ('new','shortlisted') "
+                           "AND COALESCE(applied_date,'') != ''").fetchall():
+            c.execute("UPDATE jobs SET status='applied', dimmed=0, apply_method=COALESCE(NULLIF(apply_method,''),'written') "
+                      "WHERE id=?", (r["id"],))
+            c.execute("INSERT INTO status_history (job_id, status, changed_at) VALUES (?,?,?)", (r["id"], "applied", now()))
         # backfill the loose fingerprint for rows stored before it existed
         for r in c.execute("SELECT id, title, company, location FROM jobs WHERE loose_key IS NULL "
                            "AND origin != 'manual'").fetchall():
@@ -204,6 +210,8 @@ def update_status(jid, status):
         return
     with conn() as c:
         c.execute("UPDATE jobs SET status=?, dimmed=0 WHERE id=?", (status, jid))
+        if status in ("new", "shortlisted"):      # not applied after all: out of the report and the stats too
+            c.execute("UPDATE jobs SET applied_date=NULL WHERE id=?", (jid,))
         if status == "applied":
             c.execute("UPDATE jobs SET applied_date=COALESCE(NULLIF(applied_date,''),?), "
                       "apply_method=COALESCE(NULLIF(apply_method,''),'written') WHERE id=?", (today(), jid))
@@ -247,6 +255,26 @@ def update_fields(jid, fields):
     vals.append(jid)
     with conn() as c:
         c.execute(f"UPDATE jobs SET {', '.join(sets)} WHERE id=?", vals)
+        row = c.execute("SELECT status, applied_date FROM jobs WHERE id=?", (jid,)).fetchone()
+    # an applied date means "I applied": the job moves to Applied (the report and stats go by the date)
+    if row and row["applied_date"] and row["status"] in ("new", "shortlisted"):
+        update_status(jid, "applied")
+
+
+FILLED_NOTE = "Poste déjà pourvu"      # in French: it is shown in the ORP report's "Résultat" column
+
+
+def mark_filled(jid):
+    """The position is no longer open. Applied to already: it becomes a refusal with that reason
+    (it stays in the report); not applied: it leaves the list. Returns the new status, or None."""
+    job = get_job(jid)
+    if not job or job["status"] in ("rejected", "discarded"):
+        return None
+    status = "rejected" if job["status"] in ("applied", "interview", "offer") or job.get("applied_date") else "discarded"
+    update_status(jid, status)
+    with conn() as c:
+        c.execute("UPDATE jobs SET outcome_note=? WHERE id=? AND COALESCE(outcome_note,'')=''", (FILLED_NOTE, jid))
+    return status
 
 
 def known_hashes():

@@ -169,6 +169,12 @@ def dismiss(request: Request, jid: int, next: str = Form("")):
     return _quick(request, store.dismiss(jid), next, "/jobs?status=new")
 
 
+@app.post("/job/{jid}/filled")
+def filled(request: Request, jid: int, next: str = Form("")):
+    """One click: the position is filled already (refusal if applied to, else out of the list)."""
+    return _quick(request, "moved" if store.mark_filled(jid) else None, next, f"/job/{jid}")
+
+
 @app.post("/job/{jid}/keep")
 def keep(request: Request, jid: int, next: str = Form("")):
     store.keep(jid)

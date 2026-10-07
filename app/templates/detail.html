@@ -16,6 +16,10 @@
       <button class="ghost" type="submit">✓ Mark as applied</button>
     </form>
     {% else %}<span class="muted">✓ Applied{% if job.applied_date %} on {{ job.applied_date }}{% endif %}</span>{% endif %}
+    {% if job.status not in ("discarded", "rejected") %}
+    <form method="post" action="/job/{{ job.id }}/filled">
+      <button class="ghost" type="submit" title="The position is no longer open. If you applied, it counts as a refusal with that reason; otherwise it leaves the list.">⊘ Position filled already</button>
+    </form>{% endif %}
   </div>
   {% if job.status != "applied" %}{% with j = job, back = "/job/" ~ job.id %}{% include "_apply_prompt.html" %}{% endwith %}{% endif %}
   {% if can_tailor %}

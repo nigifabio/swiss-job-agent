@@ -47,6 +47,7 @@
     </div>
     <div class="muted">
       {{ j.company }}{% if j.location %} · {{ j.location }}{% endif %} · {{ j.source }}{% if j.salary %} · {{ j.salary }}{% endif %}
+      {% if j.applied_date and status != "new" %} · applied {{ j.applied_date }}{% endif %}{% if j.outcome_note and status in ("rejected", "discarded") %} · {{ j.outcome_note }}{% endif %}
     </div>
     <div class="actions">
       {% if j.url | safe_url %}<a class="btn small apply-link" href="{{ j.url | safe_url }}" target="_blank" rel="noopener" data-job="{{ j.id }}">Open &amp; apply ↗</a>{% endif %}
@@ -63,6 +64,14 @@
         <button class="small ghost" type="submit" title="Not for me: grey it out. Click again to remove it from the list.">
           <span class="when-live">✕ Not for me</span><span class="when-dim">✕ Remove</span></button>
       </form>
+      {% endif %}
+      {% if status not in ("discarded", "rejected") %}
+      <form method="post" action="/job/{{ j.id }}/filled" class="quick">
+        <input type="hidden" name="next" value="/jobs?status={{ status }}">
+        <button class="small ghost" type="submit" title="The position is no longer open. If you applied, it counts as a refusal with that reason; otherwise it leaves the list.">⊘ Position filled</button>
+      </form>
+      {% endif %}
+      {% if status != "discarded" %}
       <form method="post" action="/job/{{ j.id }}/keep" class="quick when-dim">
         <input type="hidden" name="next" value="/jobs?status={{ status }}#job-{{ j.id }}">
         <button class="small ghost" type="submit" title="Bring it back to normal">↩ Keep</button>
@@ -81,7 +90,7 @@
       fetch(f.action, {method: "POST", body: new FormData(f), headers: {"X-Requested-With": "fetch"}})
         .then(function (r) { if (!r.ok) throw 0; return r.json(); })
         .then(function (d) {
-          if (d.state === "discarded") card.remove(); else card.classList.toggle("dim", d.state === "dimmed");
+          if (d.state === "discarded" || d.state === "moved") card.remove(); else card.classList.toggle("dim", d.state === "dimmed");
           Object.keys(d.counts || {}).forEach(function (s) {
             var el = document.querySelector('[data-count="' + s + '"]'); if (el) el.textContent = d.counts[s];
           });
