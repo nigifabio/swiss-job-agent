@@ -344,3 +344,15 @@ def test_settings_page_and_role_cv_page(env, client):
     assert "kubernetes" in r.text                                   # usual for the role, missing from the profile
     assert c.get("/cv/role/cloud-architect.pdf").content[:5] == b"%PDF-"
     assert c.get("/cv/role/../../etc.pdf").status_code == 404
+
+
+def test_letter_spaced_headings_of_designed_cvs_are_read(env):
+    from app.importers import cvparse
+    assert cvparse._unspace("C O N T A C T") == "CONTACT" and cvparse._unspace("CO M P É T E N C E S") == "COMPÉTENCES"
+    assert cvparse._unspace("M A R I E  E X E M P L E") == "MARIE EXEMPLE"
+    for keep in ("BSc in IT", "A B C", "Plans de A à Z", "AWS | GCP | K8S | CI"):
+        assert cvparse._unspace(keep) == keep
+    d = cvparse.parse("P R O F I L\nAssistante polyvalente avec six ans d'expérience.\n\nC O M P É T E N C E S\n"
+                      "• Accueil des clients\n• Facturation\n\nL A N G U E S\nFrançais : langue maternelle\nAnglais : C1\n")
+    assert d["summary"].startswith("Assistante polyvalente") and "Facturation" in d["expertise"]
+    assert {x["name"] for x in d["languages"]} == {"French", "English"}

@@ -15,7 +15,8 @@ CREATE TABLE IF NOT EXISTS tenants (
 CREATE TABLE IF NOT EXISTS invites (
   id INTEGER PRIMARY KEY AUTOINCREMENT, token_hash TEXT UNIQUE NOT NULL, note TEXT,
   email TEXT, created_by TEXT, created_at TEXT NOT NULL, expires_at TEXT NOT NULL,
-  used_by TEXT, used_at TEXT, revoked INTEGER NOT NULL DEFAULT 0);
+  used_by TEXT, used_at TEXT, revoked INTEGER NOT NULL DEFAULT 0,
+  max_uses INTEGER NOT NULL DEFAULT 1, uses INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS audit (ts TEXT NOT NULL, actor TEXT, action TEXT, detail TEXT);
 """
 
@@ -35,6 +36,11 @@ def conn():
 def init():
     with conn() as c:
         c.executescript(SCHEMA)
+        cols = {r["name"] for r in c.execute("PRAGMA table_info(invites)").fetchall()}
+        if "max_uses" not in cols:              # databases created before shareable invites
+            c.execute("ALTER TABLE invites ADD COLUMN max_uses INTEGER NOT NULL DEFAULT 1")
+            c.execute("ALTER TABLE invites ADD COLUMN uses INTEGER NOT NULL DEFAULT 0")
+            c.execute("UPDATE invites SET uses=1 WHERE used_at IS NOT NULL")
 
 
 def audit(actor, action, detail=""):
@@ -90,30 +96,38 @@ def _hash(token):
     return hashlib.sha256(token.encode()).hexdigest()
 
 
-def create_invite(created_by, note="", days=7, email=""):
-    """Returns the token (shown once; only its hash is stored)."""
+def create_invite(created_by, note="", days=7, email="", max_uses=1):
+    """Returns the token (shown once; only its hash is stored). max_uses > 1: one link for several people."""
     token = secrets.token_urlsafe(24)
     exp = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=days)).replace(microsecond=0)
     with conn() as c:
-        c.execute("INSERT INTO invites (token_hash, note, email, created_by, created_at, expires_at) VALUES (?,?,?,?,?,?)",
-                  (_hash(token), note, (email or "").lower() or None, created_by, now(), exp.isoformat()))
+        c.execute("INSERT INTO invites (token_hash, note, email, created_by, created_at, expires_at, max_uses) "
+                  "VALUES (?,?,?,?,?,?,?)", (_hash(token), note, (email or "").lower() or None, created_by, now(),
+                                             exp.isoformat(), max(1, int(max_uses))))
     return token
 
 
 def invite(token):
-    """The invite row if the token is valid (not used, revoked or expired), else None."""
+    """The invite row if the token is valid (uses left, not revoked or expired), else None."""
     with conn() as c:
         r = c.execute("SELECT * FROM invites WHERE token_hash=?", (_hash(token or ""),)).fetchone()
-    if not r or r["revoked"] or r["used_at"] or r["expires_at"] < now():
+    if not r or r["revoked"] or r["uses"] >= r["max_uses"] or r["expires_at"] < now():
         return None
     return dict(r)
 
 
 def use_invite(invite_id, email):
     with conn() as c:
-        cur = c.execute("UPDATE invites SET used_by=?, used_at=? WHERE id=? AND used_at IS NULL AND revoked=0",
-                        (email.lower(), now(), invite_id))
+        cur = c.execute("UPDATE invites SET uses=uses+1, used_by=?, used_at=? "
+                        "WHERE id=? AND uses < max_uses AND revoked=0 AND expires_at >= ?",
+                        (email.lower(), now(), invite_id, now()))
         return cur.rowcount == 1
+
+
+def release_invite(invite_id):
+    """Give a use back when the workspace couldn't be created."""
+    with conn() as c:
+        c.execute("UPDATE invites SET uses=MAX(uses-1, 0) WHERE id=?", (invite_id,))
 
 
 def revoke_invite(invite_id):

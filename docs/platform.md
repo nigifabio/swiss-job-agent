@@ -10,7 +10,7 @@ outplacement group) from one server.
 | Piece | Role |
 |---|---|
 | **Cloudflare Access** application | the only way in: Google, one-time e-mail code or any Access login method. Policy "everyone who authenticates"; *who gets a workspace* is decided by the gateway's invites |
-| **gateway** `jobplatform-gateway` (port 8090, the only published port) | verifies the Access token, maps the e-mail to a workspace and forwards the request; `/_platform/*` = invite, account and admin pages |
+| **gateway** `jobplatform-gateway` (port 8090, the only published port) | verifies the Access token, maps the e-mail to a workspace and forwards the request; `/_platform/*` = invite, account and admin pages; `/welcome` = public home page |
 | **provisioner** `jobplatform-provisioner` (internal network only) | the only holder of the Docker socket; creates, stops, exports, upgrades and deletes workspaces with a fixed spec; API protected by a shared token |
 | **workspace** `jat-<id>-web` + `jat-<id>-sched` | the normal app with the setup wizard, data in volume `jat-<id>-data` |
 
@@ -48,8 +48,32 @@ There is no login mode without Cloudflare Access, on purpose: test it behind a r
 
 ## Invite someone
 
-Admin page → *Invite someone* (note, optional e-mail lock, validity 3-30 days) → copy the link
-(shown once) → send it. Links are single-use; revoke unused ones there. `MAX_TENANTS` caps the total.
+Admin page → *Invite someone* → copy the link (shown once) → send it.
+
+- **For one person** (default), optionally locked to their e-mail address.
+- **For several people**: choose "up to 3 / 5 / 10 people" and share the same link, e.g. in a group chat.
+  It stops working when that many workspaces were created, when it expires (3-30 days) or when you revoke it.
+- `MAX_TENANTS` caps the total number of workspaces. Count roughly 300-400 MB of RAM per active workspace.
+
+The person opens the link, signs in (see below), clicks **Create my workspace** and follows the wizard.
+
+## Who can sign in, and the public home page
+
+Signing in is Cloudflare Access; *having a workspace* is the gateway's invites. Two ways to set the
+Access policy of the application:
+
+- **Closed**: Allow → the e-mail addresses you list. You add each person before sending the invite.
+- **Open sign-in**: Allow → *Everyone*, with the login methods Google and One-time PIN. Anybody can
+  prove who they are with their own Google account or an e-mailed code, but without an invite they
+  only see the home page ("you don't have a workspace yet"). Use this to onboard people you don't
+  know the address of.
+
+`/welcome` is the home page: what the service does, how to start, a link to the source code. It is
+the only page the gateway serves without a login (plain text, no personal data). To make it reachable
+without the Cloudflare login, add a second Access application for the path `<hostname>/welcome` with a
+policy **Bypass → Everyone**; the more specific path wins over the main application. Signed-in people
+without a workspace get the same page at `/`. `PROJECT_URL` and `CONTACT_EMAIL` in `platform/.env`
+set the source link and an optional "ask for an invite" address.
 
 ## Operations
 

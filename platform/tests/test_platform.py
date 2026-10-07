@@ -254,3 +254,64 @@ def test_archives_are_pruned(prov, tmp_path):
     (d / "new.tar.gz").write_bytes(b"x")
     os.utime(d / "old.tar.gz", (1, 1))
     assert prov.prune_archives(30) == ["old.tar.gz"] and (d / "new.tar.gz").exists()
+
+
+def test_public_home_page_is_the_only_page_without_a_login(gw):
+    r = gw.get("/welcome")
+    assert r.status_code == 200 and "github.com" in r.text and "Sign in" in r.text
+    assert r.headers["x-frame-options"] == "DENY" and "csrf" not in r.text.lower()
+    for path in ("/", "/jobs", "/welcome/x", "/_platform/admin", "/_platform/me", "/_platform/invite/abc"):
+        assert gw.get(path).status_code == 403, path
+    assert gw.post("/welcome").status_code == 403                       # reading only
+    assert not gw.seen                                                 # nothing reached a tenant
+
+
+def test_signed_in_without_a_workspace_sees_how_to_get_one(gw):
+    r = gw.get("/", headers=as_("new@example.org"))
+    assert r.status_code == 403 and "don't have a workspace yet" in r.text and "new@example.org" in r.text
+    gw.db.add_tenant("marie", "marie@example.org")
+    r = gw.get("/welcome", headers=as_("marie@example.org"))
+    assert r.status_code == 200 and "Open my workspace" in r.text
+
+
+def test_one_invite_link_for_several_people(gw):
+    admin = as_("admin@example.org")
+    r = gw.post("/_platform/admin/invite", headers=admin, follow_redirects=False,
+                data={"csrf": csrf(gw, "admin@example.org"), "note": "job club", "uses": "2", "days": "7"})
+    tok = r.headers["location"].split("new=")[1]
+    for who in ("a.one@example.org", "b.two@example.org"):
+        assert gw.get(f"/_platform/invite/{tok}", headers=as_(who)).status_code == 200
+        r = gw.post(f"/_platform/invite/{tok}", headers=as_(who), data={"csrf": csrf(gw, who)}, follow_redirects=False)
+        assert r.status_code == 303 and gw.db.tenant_for(who)
+    assert gw.get(f"/_platform/invite/{tok}", headers=as_("c.three@example.org")).status_code == 404   # used up
+    assert "2 / 2 used" in gw.get("/_platform/admin", headers=admin).text
+    # a link locked to one address is always for one person
+    r = gw.post("/_platform/admin/invite", headers=admin, follow_redirects=False,
+                data={"csrf": csrf(gw, "admin@example.org"), "email": "x@example.org", "uses": "10"})
+    assert gw.db.invite(r.headers["location"].split("new=")[1])["max_uses"] == 1
+
+
+def test_a_failed_workspace_gives_the_invite_use_back(gw, monkeypatch):
+    tok = gw.db.create_invite("admin@example.org", "", 7, "", 1)
+
+    def boom(*a, **k):
+        raise RuntimeError("docker down")
+    monkeypatch.setattr(gw.g, "prov", boom)
+    r = gw.post(f"/_platform/invite/{tok}", headers=as_("d@example.org"), data={"csrf": csrf(gw, "d@example.org")})
+    assert r.status_code == 500 and not gw.db.tenant_for("d@example.org") and gw.db.invite(tok)
+
+
+def test_invites_table_from_before_shareable_links_is_migrated(gw, tmp_path):
+    import sqlite3
+    old = tmp_path / "old.db"
+    c = sqlite3.connect(old)
+    c.executescript("""CREATE TABLE invites (id INTEGER PRIMARY KEY AUTOINCREMENT, token_hash TEXT UNIQUE NOT NULL, note TEXT,
+        email TEXT, created_by TEXT, created_at TEXT NOT NULL, expires_at TEXT NOT NULL, used_by TEXT, used_at TEXT,
+        revoked INTEGER NOT NULL DEFAULT 0);
+        INSERT INTO invites (token_hash, created_at, expires_at, used_by, used_at) VALUES ('h1','2026-01-01','2099-01-01','a@b.co','2026-01-02');
+        INSERT INTO invites (token_hash, created_at, expires_at) VALUES ('h2','2026-01-01','2099-01-01');""")
+    c.commit(); c.close()
+    gw.db.PATH = str(old)
+    gw.db.init()
+    rows = {r["token_hash"]: r for r in gw.db.invites()}
+    assert (rows["h1"]["uses"], rows["h1"]["max_uses"], rows["h2"]["uses"]) == (1, 1, 0)

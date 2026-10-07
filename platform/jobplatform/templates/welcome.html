@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Swiss Job Agent: your private job-search assistant{% endblock %}
+{% block nav %}<a href="{{ project_url }}" rel="noopener">GitHub</a>{% if email %} · {% endif %}{% endblock %}
+{% block body %}
+<style>
+  .hero { padding:26px 4px 10px; } .hero h2 { font-size:30px; line-height:1.2; margin:0 0 10px; max-width:24ch; }
+  .hero p { font-size:17px; color:var(--muted); max-width:62ch; margin:0 0 18px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:12px; margin-bottom:12px; }
+  .grid .card { margin:0; } .card h3 { margin:0 0 6px; font-size:15px; } .card p, .card li { color:var(--muted); font-size:14px; margin:0; }
+  ol.steps { margin:0; padding-left:20px; } ol.steps li { margin-bottom:6px; } ol.steps b { color:var(--fg); }
+  .cta { display:flex; gap:10px; flex-wrap:wrap; align-items:center; } .notice { border-color:var(--accent); }
+</style>
+
+{% if email and not has_workspace %}
+<div class="card notice">
+  <b>You're signed in as {{ email }}, but you don't have a workspace yet.</b>
+  <p class="muted" style="margin:6px 0 0">This service is by invitation. Open the invite link you were sent while signed in
+    with this address{% if contact %}, or <a href="mailto:{{ contact }}">ask for an invite</a>{% endif %}.
+    Signed in with the wrong address? Sign out of Cloudflare Access (close the browser or use a private window) and sign in again.</p>
+</div>
+{% endif %}
+
+<div class="hero">
+  <h2>Your private assistant for a job search in Switzerland</h2>
+  <p>It scans Swiss job boards and company career pages for you, ranks every posting against your skills, keeps track of your
+    applications, and writes a tailored CV and cover letter for each job. Built for people registered with an ORP / RAV office:
+    the monthly proof-of-search report is one click.</p>
+  <div class="cta">
+    {% if has_workspace %}<a class="btn" href="/">Open my workspace →</a>
+    {% elif not email %}<a class="btn" href="/">Sign in →</a><span class="muted">with Google or a code sent to your e-mail</span>{% endif %}
+    <a class="btn ghost" href="{{ project_url }}" rel="noopener">Source code on GitHub</a>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="card"><h3>Find</h3><p>jobs.ch, jobup.ch, Job-Room (work.swiss), company career sites and remote boards, scanned twice a day.
+    The same job from several sites appears once.</p></div>
+  <div class="card"><h3>Rank</h3><p>A 0-100 match score from your own skills. Mark skills you have, or words you want to avoid,
+    straight from a posting.</p></div>
+  <div class="card"><h3>Track</h3><p>New, shortlisted, applied, interview, offer: with contacts, notes and follow-up reminders.</p></div>
+  <div class="card"><h3>Write</h3><p>A CV and a Swiss-format cover letter per job, in the posting's language, using only facts
+    from your own profile. Nothing is invented.</p></div>
+  <div class="card"><h3>Report</h3><p>The ORP / RAV "preuves de recherches" for a week or a month as PDF or Excel, and your
+    numbers against the monthly target.</p></div>
+</div>
+
+<div class="card">
+  <h3>How to start</h3>
+  <ol class="steps">
+    <li><b>Open your invite link</b> and sign in with your Google account, or with a code sent to your e-mail. No new password.</li>
+    <li><b>Upload your CV</b> (PDF or Word) and/or your LinkedIn profile. Check what was read and correct it.</li>
+    <li><b>Choose what you're looking for</b>: roles, town, how far you'd commute, languages. Your search is built from that.</li>
+    <li><b>Read your first results</b> a few minutes later, and generate your first CV and letter.</li>
+  </ol>
+</div>
+
+<div class="grid">
+  <div class="card"><h3>Private</h3><p>Each person gets a separate workspace with its own database. Other users can't see your data,
+    and the administrator has no page to look into it.</p></div>
+  <div class="card"><h3>Yours</h3><p>Download everything, or delete your workspace, at any time from the Account page.</p></div>
+  <div class="card"><h3>No AI service, no tracking</h3><p>Your CV is never sent to an AI or to a third party. The only outside
+    requests go to the job sites being searched.</p></div>
+  <div class="card"><h3>You apply, not a robot</h3><p>It never logs into your accounts and never sends an application for you.</p></div>
+</div>
+
+<div class="card">
+  <h3>Open source</h3>
+  <p>Swiss Job Agent is free software under the MIT licence. You can read the code, report a problem, or run your own copy
+    on your computer or server: <a href="{{ project_url }}" rel="noopener">{{ project_url | replace("https://", "") }}</a>.</p>
+</div>
+{% endblock %}

@@ -4,6 +4,7 @@ Who you are comes from Cloudflare Access (a signed JWT: Google or one-time email
 tenant you reach comes only from that verified email, so nobody can address someone else's
 space. The tenant app checks the same JWT again (ALLOWED_EMAILS = its owner).
 
+/welcome            public home page (what this is, link to the source): the only page without a login
 /_platform/...      gateway pages: invite, account (export / delete my data), admin
 everything else     forwarded to the caller's own tenant container
 """
@@ -35,6 +36,8 @@ class Config:
         self.max_tenants = int(e("MAX_TENANTS", "25"))
         self.public_url = e("PUBLIC_URL", "").rstrip("/")
         self.max_body = int(e("MAX_BODY_MB", "30")) * 1024 * 1024
+        self.project_url = e("PROJECT_URL", "https://github.com/nigifabio/swiss-job-agent")
+        self.contact = e("CONTACT_EMAIL", "").strip()      # shown on the home page to ask for an invite
 
 
 C = Config()
@@ -108,6 +111,15 @@ def page(request, name, ctx, status=200):
     return r
 
 
+PUBLIC_HOME = "/welcome"
+
+
+def home(request, status=200):
+    email = getattr(request.state, "email", "")
+    return page(request, "welcome.html", {"project_url": C.project_url, "contact": C.contact,
+                                          "has_workspace": bool(email and db.tenant_for(email))}, status)
+
+
 def message(request, title, text, status=200, link=None):
     return page(request, "message.html", {"title": title, "text": text, "link": link}, status)
 
@@ -117,6 +129,13 @@ async def gate(request: Request, call_next):
     path = request.url.path
     if path == "/_platform/healthz":
         return await call_next(request)
+    if path == PUBLIC_HOME and request.method in ("GET", "HEAD"):
+        # the one public page: static text, shows the visitor's email only if they are signed in
+        request.state.email = identify(request) or ""
+        resp = await call_next(request)
+        for k, v in SECURITY_HEADERS.items():
+            resp.headers.setdefault(k, v)
+        return resp
     email = identify(request)
     if not email:
         return PlainTextResponse("Forbidden", status_code=403)
@@ -158,11 +177,8 @@ def tenant_url(slug):
 
 async def forward(request, email):
     t = db.tenant_for(email)
-    if not t:
-        return message(request, "No workspace yet",
-                       "This job-search space is by invitation. Ask the person who runs it for an invite link, "
-                       "then open it while signed in with this email.", 403,
-                       link=("/_platform/admin", "Admin page") if email in C.admins else None)
+    if not t:                    # signed in, no workspace: the home page says how to get one
+        return home(request, 403)
     if t["status"] != "active":
         return message(request, "Workspace paused", "Your workspace is paused. Contact the administrator.", 403)
     if int(request.headers.get("content-length") or 0) > C.max_body:
@@ -186,6 +202,11 @@ async def forward(request, email):
         if k.lower() not in HOP and k.lower() != "content-encoding":
             out.headers.append(k, v)
     return out
+
+
+@app.get(PUBLIC_HOME, response_class=HTMLResponse)
+def welcome(request: Request):
+    return home(request)
 
 
 # ---- invites ------------------------------------------------------------------------------------
@@ -228,6 +249,7 @@ def invite_accept(request: Request, token: str, csrf: str = Form("")):
         prov("PUT", f"/tenants/{slug}", json={"email": email})
     except Exception as e:  # noqa: BLE001
         db.remove_tenant(slug)
+        db.release_invite(inv["id"])
         db.audit(email, "tenant.create_failed", f"{slug}: {e}")
         return message(request, "Something went wrong", "Your workspace couldn't be created. The administrator was "
                                                          "notified in the log; the invite can be reissued.", 500)
@@ -297,11 +319,12 @@ def admin(request: Request, new: str = ""):
 
 @app.post("/_platform/admin/invite")
 def admin_invite(request: Request, csrf: str = Form(""), note: str = Form(""), email: str = Form(""),
-                 days: int = Form(7)):
+                 days: int = Form(7), uses: int = Form(1)):
     require_admin(request)
     check_csrf(request, request.state.email, csrf)
-    token = db.create_invite(request.state.email, note.strip()[:100], max(1, min(days, 30)), email.strip())
-    db.audit(request.state.email, "invite.create", f"{note.strip()[:60]} {email.strip()}")
+    uses = 1 if email.strip() else max(1, min(uses, C.max_tenants))     # a link locked to one email is for one person
+    token = db.create_invite(request.state.email, note.strip()[:100], max(1, min(days, 30)), email.strip(), uses)
+    db.audit(request.state.email, "invite.create", f"{note.strip()[:60]} {email.strip()} x{uses}")
     # the token goes back once, in the URL of the admin page (only admins can open it)
     return RedirectResponse(f"/_platform/admin?new={token}", status_code=303)
 

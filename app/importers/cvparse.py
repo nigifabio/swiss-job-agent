@@ -89,12 +89,22 @@ def _fold(s):
     return unicodedata.normalize("NFKD", s or "").encode("ascii", "ignore").decode().lower()
 
 
+def _unspace(line):
+    """Designed CVs letter-space their headings and the name ("C O N T A C T", "E X PÉ R I E N C ES"):
+    a line of very short upper-case fragments is one word (two spaces or more separate words)."""
+    toks = line.split()
+    if len(toks) < 4 or line != line.upper() or sum(len(t) for t in toks) / len(toks) > 2 \
+            or not all(t.isalpha() for t in toks):
+        return line
+    return " ".join("".join(w.split()) for w in re.split(r"\s{2,}", line.strip()))
+
+
 def _clean_lines(text):
     lines = []
     for raw in (text or "").replace("\r", "\n").split("\n"):
         line = raw.replace("\t", " | ").replace("\xa0", " ")
         line = re.sub(r"[​﻿]", "", line)
-        line = re.sub(r"\s{2,}", "  ", line).strip()
+        line = re.sub(r"\s{2,}", "  ", _unspace(line)).strip()
         if re.fullmatch(r"(?:page\s*)?\d+\s*(?:/|of|de|von|di)\s*\d+|page \d+", line, re.I):
             continue
         lines.append(line)
