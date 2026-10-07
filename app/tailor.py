@@ -200,12 +200,13 @@ def render(profile, hits, out, company="", key_skills=None, summary=None, lang="
                  Paragraph(" &nbsp;•&nbsp; ".join(esc(k) for k in key_skills), st["body"])]
     flow.append(Paragraph(H[3], st["head"]))
     for e in profile.get("experience", []):
-        flow.append(Paragraph(f'<b>{esc(e["title"])}</b> — {esc(e["org"])}, {esc(e.get("loc", ""))}', st["role"]))
+        where = ", ".join(x for x in (e.get("org", ""), e.get("loc", "")) if x)      # either may be missing
+        flow.append(Paragraph(f'<b>{esc(e["title"])}</b>' + (f" — {esc(where)}" if where else ""), st["role"]))
         flow.append(Paragraph(esc(e.get("dates", "")), st["sub"]))
-        flow.append(ListFlowable([ListItem(Paragraph(esc(b), st["bullet"]), leftIndent=8)
-                                  for b in (_by_relevance(e.get("bullets", []), job) if job
-                                            else _bullet_first(e.get("bullets", []), hits))],
-                                 bulletType="bullet", start="•", leftIndent=10, spaceAfter=4))
+        bullets = (_by_relevance(e.get("bullets", []), job) if job else _bullet_first(e.get("bullets", []), hits))
+        if bullets:                                    # a job listed without details: no (empty) list
+            flow.append(ListFlowable([ListItem(Paragraph(esc(b), st["bullet"]), leftIndent=8) for b in bullets],
+                                     bulletType="bullet", start="•", leftIndent=10, spaceAfter=4))
     if profile.get("education"):
         flow.append(Paragraph(H[4], st["head"]))
         flow += [Paragraph(esc(ed), st["body"]) for ed in profile["education"]]

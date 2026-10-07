@@ -230,3 +230,18 @@ def test_loose_duplicates_across_sources(env):
     assert env.store.upsert_jobs([a]) == 1 and env.store.upsert_jobs([b]) == 0
     [kept] = env.store.list_jobs("new")
     assert kept["source"] == "jobup.ch"                       # first source wins
+
+
+def test_cv_with_jobs_that_have_no_bullets_or_place(env):
+    """A CV that only lists job titles (no details, no town) still renders (was an empty-list crash)."""
+    import json
+    from fastapi.testclient import TestClient
+    Path(env.config.PROFILE_PATH).write_text(json.dumps({
+        "name": "Sam Test", "summary": "Drafter.", "expertise": ["Archicad"],
+        "experience": [{"title": "Drafter", "org": "Self-employed", "loc": "", "dates": "2025", "bullets": []},
+                       {"title": "Intern", "org": "", "loc": "", "dates": "2018"}]}))
+    jid = env.store.add_manual({"title": "Architect", "company": "Acme SA"})
+    c = TestClient(env.web.app)
+    assert c.post(f"/job/{jid}/cv", follow_redirects=False).status_code == 303
+    r = c.get(f"/job/{jid}/cv?dl=1")
+    assert r.status_code == 200 and r.content[:4] == b"%PDF"
