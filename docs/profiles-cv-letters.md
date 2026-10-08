@@ -35,7 +35,8 @@ vendita), see `SKILL_I18N` in `app/roles.py`. Letters use the posting's own word
 With `ONBOARDING=1` (the installer's default) the app opens on a wizard until `data/profile.json` exists:
 
 1. **Import** a CV (PDF / Word / text), a **LinkedIn profile PDF** (More → Save to PDF) and/or the
-   **LinkedIn data export ZIP** (Settings → Data privacy → Get a copy of your data). Files are parsed
+   **LinkedIn data export ZIP** (Settings → Data privacy → Get a copy of your data). A partial export (LinkedIn's first quick archive, or only some categories) and single CSV
+   files taken from it work too: what they hold is used and the rest is filled in by hand. Files are parsed
    locally, in a time- and memory-limited subprocess (8 MB, 12 pages at most).
 2. **Review** the draft profile: contact, summary, skills, languages with levels, jobs with bullets,
    education.

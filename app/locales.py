@@ -393,14 +393,16 @@ _ONBOARDING = [
     ('<label>LinkedIn profile PDF</label>', '<label>Profil LinkedIn en PDF</label>', '<label>LinkedIn-Profil als PDF</label>'),
     ('On your LinkedIn profile page: <b>More</b> (or <b>Resources</b>) → <b>Save to PDF</b>.', 'Sur votre page de profil LinkedIn : <b>Plus</b> (ou <b>Ressources</b>) → <b>Enregistrer au format PDF</b>.',
      'Auf Ihrer LinkedIn-Profilseite: <b>Mehr</b> (oder <b>Ressourcen</b>) → <b>Als PDF speichern</b>.'),
-    ('<label>LinkedIn data export (.zip)</label>', '<label>Export des données LinkedIn (.zip)</label>', '<label>LinkedIn-Datenexport (.zip)</label>'),
+    ('<label>LinkedIn data export (.zip, complete or partial, or single .csv files from it)</label>',
+     '<label>Export des données LinkedIn (.zip, complet ou partiel, ou fichiers .csv isolés)</label>',
+     '<label>LinkedIn-Datenexport (.zip, vollständig oder teilweise, oder einzelne .csv-Dateien daraus)</label>'),
     ('<summary>How to get the export</summary>', '<summary>Comment obtenir l\'export</summary>', '<summary>So erhalten Sie den Export</summary>'),
     ('LinkedIn → <b>Me</b> → <b>Settings &amp; Privacy</b> → <b>Data privacy</b> → <b>Get a copy of your data</b> → choose <i>Profile, Positions, Education, Skills, Languages, Certifications</i> → <b>Request archive</b>. '
-     'LinkedIn emails you a link within minutes; upload the .zip here. It is the most complete source (all positions with dates, skills, languages).',
+     'LinkedIn emails you a link within minutes; upload the .zip here. It is the most complete source (all positions with dates, skills, languages). A partial export works too: what it holds is used and you fill in the rest.',
      'LinkedIn → <b>Vous</b> → <b>Préférences et confidentialité</b> → <b>Confidentialité des données</b> → <b>Obtenir une copie de vos données</b> → choisissez <i>Profil, Postes, Formation, Compétences, Langues, Certifications</i> → <b>Demander l\'archive</b>. '
-     'LinkedIn vous envoie un lien par e-mail en quelques minutes ; importez le .zip ici. C\'est la source la plus complète (tous les postes avec dates, compétences, langues).',
+     'LinkedIn vous envoie un lien par e-mail en quelques minutes ; importez le .zip ici. C\'est la source la plus complète (tous les postes avec dates, compétences, langues). Un export partiel fonctionne aussi : ce qu\'il contient est utilisé et vous complétez le reste.',
      'LinkedIn → <b>Sie</b> → <b>Einstellungen &amp; Datenschutz</b> → <b>Datenschutz</b> → <b>Kopie Ihrer Daten anfordern</b> → wählen Sie <i>Profil, Positionen, Ausbildung, Kenntnisse, Sprachen, Zertifikate</i> → <b>Archiv anfordern</b>. '
-     'LinkedIn schickt Ihnen innert Minuten einen Link; laden Sie das .zip hier hoch. Es ist die vollständigste Quelle (alle Positionen mit Daten, Kenntnisse, Sprachen).'),
+     'LinkedIn schickt Ihnen innert Minuten einen Link; laden Sie das .zip hier hoch. Es ist die vollständigste Quelle (alle Positionen mit Daten, Kenntnisse, Sprachen). Ein teilweiser Export geht auch: Was er enthält, wird verwendet, den Rest ergänzen Sie.'),
     ('>Read my files →</button>', '>Lire mes fichiers →</button>', '>Meine Dateien lesen →</button>'),
     ('>I have no file: start from an empty profile</button>', '>Je n\'ai pas de fichier : partir d\'un profil vide</button>', '>Ich habe keine Datei: mit leerem Profil beginnen</button>'),
     ('<h2 style="margin-top:0">Your profile</h2>', '<h2 style="margin-top:0">Votre profil</h2>', '<h2 style="margin-top:0">Ihr Profil</h2>'),

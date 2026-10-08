@@ -356,3 +356,54 @@ def test_letter_spaced_headings_of_designed_cvs_are_read(env):
                       "• Accueil des clients\n• Facturation\n\nL A N G U E S\nFrançais : langue maternelle\nAnglais : C1\n")
     assert d["summary"].startswith("Assistante polyvalente") and "Facturation" in d["expertise"]
     assert {x["name"] for x in d["languages"]} == {"French", "English"}
+
+
+def _zip(files):
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        for name, text in files.items():
+            z.writestr(name, text)
+    return buf.getvalue()
+
+
+def test_partial_linkedin_export_single_csv_and_misplaced_files_are_accepted(env, monkeypatch):
+    from app.importers import linkedin
+    skills = "Name\nArchicad\nAutocad\n"
+    langs = "Name,Proficiency\nFrench,Native or bilingual proficiency\nEnglish,Professional working proficiency\n"
+    positions = "Company Name,Title,Description,Location,Started On,Finished On\nAcme SA,Coordinator,Planned deliveries.,Lausanne,Jan 2020,\n"
+    # LinkedIn's quick archive: no Profile.csv, no Positions.csv
+    d = linkedin.parse_zip(_zip({"Basic_Export/Skills.csv": skills, "Basic_Export/Languages.csv": langs}))
+    assert d["_parts"] == ["languages.csv", "skills.csv"] and d["expertise"] == ["Archicad", "Autocad"] and d["experience"] == []
+    assert {x["name"] for x in d["languages"]} == {"French", "English"} and d["name"] == ""
+    assert linkedin.coverage(d["_parts"]) == ("languages, skills", "profile, positions")
+    d = linkedin.parse_csv("C:\\\\Users\\\\me\\\\Positions.csv", positions.encode())
+    assert d["experience"][0]["title"] == "Coordinator" and d["_parts"] == ["positions.csv"]
+    for bad in (lambda: linkedin.parse_csv("Connections.csv", b"a,b\n"), lambda: linkedin.parse_zip(_zip({"readme.txt": "x"})),
+                lambda: linkedin.parse_zip(b"PK\x03\x04 cut off"), lambda: linkedin.parse_zip(b"x" * (linkedin.MAX_ZIP + 1))):
+        with pytest.raises(Exception) as e:
+            bad()
+        assert type(e.value).__name__ == "ImportError_"
+    # in the wizard: a partial export alone moves on, and says what is still to fill in
+    monkeypatch.setattr(env.config, "ONBOARDING", True)
+    c = TestClient(env.web.app)
+    r = c.post("/onboarding/import", files={"linkedin_zip": ("export.zip", _zip({"Skills.csv": skills}), "application/zip")}, follow_redirects=True)
+    st = env.onboard.state()
+    assert st["step"] == "review" and st["sources"] == ["LinkedIn export"] and "archicad" in st["draft"]["skills"]
+    assert "Partial LinkedIn export: read skills. Not in the file: profile, positions." in r.text and "_parts" not in st["draft"]
+    # several single CSV files at once, and a ZIP dropped into the CV field: both understood
+    c.post("/onboarding/restart")
+    c.post("/onboarding/import", files=[("linkedin_zip", ("Positions.csv", positions.encode(), "text/csv")),
+                                        ("linkedin_zip", ("Languages.csv", langs.encode(), "text/csv"))])
+    st = env.onboard.state()
+    assert st["draft"]["experience"][0]["org"] == "Acme SA" and len(st["draft"]["languages"]) == 2
+    c.post("/onboarding/restart")
+    c.post("/onboarding/import", files={"cv": ("linkedin.zip", _zip({"Profile.csv": "First Name,Last Name,Headline\nSam,Test,Coordinator\n",
+                                                                     "Positions.csv": positions}), "application/zip")})
+    st = env.onboard.state()
+    assert st["step"] == "review" and st["draft"]["name"] == "Sam Test" and st["errors"] == []           # complete: no notice
+    # one bad file next to a good one: the good one is used, the bad one named
+    c.post("/onboarding/restart")
+    r = c.post("/onboarding/import", files=[("cv", ("cv.txt", CV_PIPES.encode(), "text/plain")),
+                                            ("linkedin_zip", ("broken.zip", b"PK\x03\x04 cut", "application/zip"))], follow_redirects=True)
+    st = env.onboard.state()
+    assert st["step"] == "review" and st["draft"]["name"] == "Alex Example" and "broken.zip" in r.text

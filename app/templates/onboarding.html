@@ -32,13 +32,13 @@
     <label>LinkedIn profile PDF</label>
     <input type="file" name="linkedin_pdf" accept=".pdf">
     <p class="muted" style="margin:4px 0 0">On your LinkedIn profile page: <b>More</b> (or <b>Resources</b>) → <b>Save to PDF</b>.</p>
-    <label>LinkedIn data export (.zip)</label>
-    <input type="file" name="linkedin_zip" accept=".zip">
+    <label>LinkedIn data export (.zip, complete or partial, or single .csv files from it)</label>
+    <input type="file" name="linkedin_zip" accept=".zip,.csv" multiple>
     <details style="margin-top:6px"><summary>How to get the export</summary>
       <p class="muted">LinkedIn → <b>Me</b> → <b>Settings &amp; Privacy</b> → <b>Data privacy</b> → <b>Get a copy of your data</b>
         → choose <i>Profile, Positions, Education, Skills, Languages, Certifications</i> → <b>Request archive</b>.
         LinkedIn emails you a link within minutes; upload the .zip here. It is the most complete source
-        (all positions with dates, skills, languages).</p>
+      (all positions with dates, skills, languages). A partial export works too: what it holds is used and you fill in the rest.</p>
     </details>
     <p style="margin-top:16px"><button type="submit">Read my files →</button></p>
   </form>

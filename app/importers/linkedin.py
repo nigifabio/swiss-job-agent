@@ -13,6 +13,7 @@ from . import cvparse
 from .extract import ImportError_
 
 MAX_MEMBER = 5 * 1024 * 1024
+MAX_ZIP = 25 * 1024 * 1024            # a full export with messages and media is far bigger than a CV
 WANTED = ("profile.csv", "positions.csv", "education.csv", "skills.csv", "languages.csv",
           "certifications.csv", "email addresses.csv", "phonenumbers.csv")
 LI_LEVELS = {"native or bilingual": "native", "full professional": "fluent", "professional working": "professional",
@@ -26,7 +27,11 @@ def _rows(z, name):
         return []
     if member.file_size > MAX_MEMBER:
         raise ImportError_(f"{member.filename} is unexpectedly large.")
-    raw = z.read(member).decode("utf-8-sig", "replace")
+    return _csv_rows(z.read(member))
+
+
+def _csv_rows(data):
+    raw = data.decode("utf-8-sig", "replace")
     lines = raw.splitlines()
     if lines and lines[0].lower().startswith("notes"):
         while lines and lines[0].strip():          # the notes block ends with an empty line
@@ -55,25 +60,57 @@ def _bullets(text):
     return [p for p in parts if len(p) > 3][:10]
 
 
+PARTS = {"profile.csv": "profile", "positions.csv": "positions", "education.csv": "education", "skills.csv": "skills",
+         "languages.csv": "languages", "certifications.csv": "certifications", "email addresses.csv": "e-mail",
+         "phonenumbers.csv": "phone"}
+MAIN = ("profile.csv", "positions.csv")
+
+
 def parse_zip(data):
+    """Draft from a LinkedIn export, complete or partial: LinkedIn's first, quick archive and an export
+    of a few categories only hold some of the files. Whatever is there is used; the draft's "_parts"
+    lists the files found so the person can be told what is still to fill in."""
+    if len(data) > MAX_ZIP:
+        raise ImportError_(f"This ZIP is too large (max {MAX_ZIP // (1024 * 1024)} MB). In LinkedIn, ask for the export "
+                           "with only Profile, Positions, Education, Skills, Languages and Certifications.")
     try:
         z = zipfile.ZipFile(io.BytesIO(data))
     except zipfile.BadZipFile:
-        raise ImportError_("This isn't a valid ZIP file.")
+        raise ImportError_("This isn't a valid ZIP file (an interrupted download?). Download it again from LinkedIn.")
     with z:
         if sum(i.file_size for i in z.infolist()) > 400 * 1024 * 1024:
             raise ImportError_("This ZIP is too large once unpacked.")
         names = {i.filename.lower().rsplit("/", 1)[-1] for i in z.infolist()}
-        if not names & {"profile.csv", "positions.csv"}:
-            raise ImportError_("No Profile.csv or Positions.csv inside: is this the LinkedIn data export?")
-        prof = (_rows(z, "profile.csv") or [{}])[0]
-        positions = _rows(z, "positions.csv")
-        education = _rows(z, "education.csv")
-        skills = _rows(z, "skills.csv")
-        langs = _rows(z, "languages.csv")
-        certs = _rows(z, "certifications.csv")
-        emails = _rows(z, "email addresses.csv")
-        phones = _rows(z, "phonenumbers.csv")
+        found = sorted(names & set(WANTED))
+        if not found:
+            raise ImportError_("None of LinkedIn's files (Profile.csv, Positions.csv, Skills.csv...) is inside: "
+                               "is this the LinkedIn data export?")
+        tables = {n: _rows(z, n) for n in found}
+    return dict(_draft(tables), _parts=found)
+
+
+def parse_csv(filename, data):
+    """Draft from one CSV taken out of the export (Positions.csv, Skills.csv...)."""
+    name = (filename or "").replace("\\", "/").rsplit("/", 1)[-1].lower()
+    if name not in WANTED:
+        raise ImportError_("This CSV isn't one of LinkedIn's export files (Profile.csv, Positions.csv, Education.csv, "
+                           "Skills.csv, Languages.csv, Certifications.csv).")
+    if len(data) > MAX_MEMBER:
+        raise ImportError_("This CSV is unexpectedly large.")
+    return dict(_draft({name: _csv_rows(data)}), _parts=[name])
+
+
+def coverage(parts):
+    """("skills, languages", "profile, positions"): what an import held, and the main files it lacked."""
+    return ", ".join(PARTS[p] for p in parts), ", ".join(PARTS[p] for p in MAIN if p not in parts)
+
+
+def _draft(tables):
+    prof = (tables.get("profile.csv") or [{}])[0]
+    positions, education = tables.get("positions.csv", []), tables.get("education.csv", [])
+    skills, langs = tables.get("skills.csv", []), tables.get("languages.csv", [])
+    certs, emails, phones = (tables.get("certifications.csv", []), tables.get("email addresses.csv", []),
+                             tables.get("phonenumbers.csv", []))
     name = " ".join(x for x in (_get(prof, "First Name"), _get(prof, "Last Name")) if x)
     email = next((_get(e, "Email Address") for e in emails if _get(e, "Primary").lower() == "yes"),
                  _get(emails[0], "Email Address") if emails else "")

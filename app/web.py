@@ -453,12 +453,23 @@ def _csv_list(text):
     return [x.strip() for x in re.split(r"[,\n;]", text or "") if x.strip()]
 
 
-async def _upload(form, name):
-    f = form.get(name)
-    if not f or not getattr(f, "filename", ""):
-        return None
-    data = await f.read(extract.MAX_UPLOAD + 1)
-    return f.filename, data
+async def _uploads(form, name):
+    """[(filename, bytes)] of a file field (several files allowed)."""
+    out = []
+    for f in form.getlist(name)[:10]:
+        if getattr(f, "filename", ""):
+            out.append((f.filename, await f.read(linkedin.MAX_ZIP + 1)))
+    return out
+
+
+def _read_import(filename, data):
+    """(draft, kind) for one uploaded file, whatever field it was put in: a ZIP is the LinkedIn export
+    (complete or partial), a .csv one file of it, anything else a CV or the LinkedIn profile PDF."""
+    if (filename or "").lower().endswith(".csv"):
+        return linkedin.parse_csv(filename, data), "linkedin"
+    if data[:2] == b"PK" and not (filename or "").lower().endswith(".docx"):
+        return linkedin.parse_zip(data), "linkedin"
+    return cvparse.parse_any(extract.text_of(filename, data)), "cv"
 
 
 @app.get("/onboarding", response_class=HTMLResponse)
@@ -494,25 +505,29 @@ FAMILY_LABELS = {"it": "IT & technology", "business": "Sales & marketing", "reta
 async def onboarding_import(request: Request):
     form = await request.form()
     st = onboard.state()
-    drafts, sources, errors = [], [], []
+    drafts, sources, errors, parts = [], [], [], []
     if not form.get("skip"):
         for field, label in (("cv", "CV"), ("linkedin_zip", "LinkedIn export"), ("linkedin_pdf", "LinkedIn PDF")):
-            up = await _upload(form, field)
-            if not up:
-                continue
-            name, data = up
-            try:
-                if field == "linkedin_zip":
-                    drafts.append(linkedin.parse_zip(data))
-                else:
-                    drafts.append(cvparse.parse_any(extract.text_of(name, data)))
-                sources.append(label)
-            except extract.ImportError_ as e:
-                errors.append(f"{label}: {e}")
-            except Exception as e:  # noqa: BLE001
-                errors.append(f"{label}: this file couldn't be read ({type(e).__name__}).")
+            for name, data in await _uploads(form, field):
+                try:
+                    draft, kind = _read_import(name, data)
+                    if kind == "linkedin":
+                        label, found = "LinkedIn export", draft.pop("_parts", [])
+                        parts += [p for p in found if p not in parts]
+                    drafts.append(draft)
+                    if label not in sources:
+                        sources.append(label)
+                except extract.ImportError_ as e:
+                    errors.append(f"{name}: {e}")
+                except Exception as e:  # noqa: BLE001
+                    errors.append(f"{name}: this file couldn't be read ({type(e).__name__}).")
         if not drafts and not errors:
             errors.append("Choose at least one file, or start from an empty profile.")
+        if parts and len(sources) == 1:          # only a partial LinkedIn export: say what is still to fill in
+            had, lacks = linkedin.coverage(parts)
+            if lacks:
+                errors.append(f"Partial LinkedIn export: read {had}. Not in the file: {lacks}. Fill in the rest below, "
+                              "or go back and add your CV.")
     if errors and not drafts:
         st["errors"] = errors
         onboard.save_state(st)
