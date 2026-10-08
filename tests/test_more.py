@@ -288,3 +288,94 @@ def test_search_and_filters_on_top_of_the_list(env, monkeypatch):
     assert "Any distance" not in c.get("/jobs").text
     for lang, word in (("fr", "Tous les types de poste"), ("de", "Alle Stellenarten"), ("it", "Tutti i tipi di posto")):
         assert word in c.get("/jobs", headers={"accept-language": lang}).text
+
+
+def test_cv_of_a_job_is_text_first_then_pdf(env):
+    Path(env.config.PROFILE_PATH).write_text(json.dumps(dict(PROFILE, education=["CFC, Lausanne, 2016"], extras_title="LANGUAGES",
+                                                              extras=["French (native)", "English (C1)"])))
+    c = TestClient(env.web.app)
+    jid = _job(env, "Cloud Architect", description="We need AWS skills and planning.")
+    assert "Write the CV" in c.get(f"/job/{jid}").text and 'name="text" rows="24"' not in c.get(f"/job/{jid}").text
+    r = c.post(f"/job/{jid}/cv", follow_redirects=False)
+    assert r.headers["location"] == f"/job/{jid}#cv"
+    text = env.store.get_job(jid)["cv_text"]
+    assert text.startswith("## PROFILE\n") and "### Coordinator — Acme SA, Lausanne\n2020 – 2025\n- " in text
+    assert "## EDUCATION\n- CFC, Lausanne, 2016" in text and "## LANGUAGES\n- French (native)" in text and "Sam Test" not in text
+    page = c.get(f"/job/{jid}").text
+    assert "Rewrite the CV" in page and "Planned deliveries for 12 drivers" in page and "Save and update the PDF" in page
+    assert c.get(f"/job/{jid}/cv").content[:4] == b"%PDF"
+    # what the person writes is what the PDF holds
+    edited = text.replace("Planned deliveries for 12 drivers with AWS tools.", "Ran the ZEBRA-42 migration.") + "\n## HOBBIES\nChess and hiking.\n"
+    c.post(f"/job/{jid}/cv/save", data={"text": edited})
+    assert env.store.get_job(jid)["cv_text"] == edited
+    from pypdf import PdfReader
+    pdf = " ".join(p.extract_text() for p in PdfReader(env.tailor.cv_path(jid)).pages)
+    assert "ZEBRA-42" in pdf and "HOBBIES" in pdf and "Chess and hiking." in pdf and "Planned deliveries" not in pdf and "Sam Test" in pdf
+    secs = env.tailor.parse_text("loose line\n## A\n- x\n### Job — Org\n2020\n- did\nmore\n## B\ntext")
+    assert [s["title"] for s in secs] == ["", "A", "B"] and secs[1]["items"][0] == ("li", "x")
+    assert secs[1]["items"][1] == {"role": "Job — Org", "dates": "2020", "bullets": ["did", "more"]}
+    assert c.post("/job/999/cv/save", data={"text": "x"}).status_code == 404
+
+
+def test_cv_versions_named_default_and_applied_to_a_job(env):
+    Path(env.config.PROFILE_PATH).write_text(json.dumps(PROFILE))
+    c = TestClient(env.web.app)
+    a, b = _job(env, "Cloud Architect"), _job(env, "DevOps Engineer")
+    c.post(f"/job/{a}/cv")
+    text = env.store.get_job(a)["cv_text"].replace("Trained five new colleagues.", "Trained five colleagues on ARCHICAD.")
+    r = c.post(f"/job/{a}/cv/save", data={"text": text, "then": "version", "name": "  Dessinatrice  "}, follow_redirects=False)
+    assert r.headers["location"] == f"/job/{a}?kept=1#cv" and "Kept in" in c.get(r.headers["location"]).text
+    v = env.store.cv_versions()
+    assert [(x["name"], x["is_default"]) for x in v] == [("Dessinatrice", 0)] and env.store.get_job(a)["cv_version"] == "Dessinatrice"
+    c.post(f"/job/{a}/cv/save", data={"text": text + "\n## X\ny\n", "then": "default", "name": ""})       # no name: a default named after the job
+    c.post(f"/job/{a}/cv/save", data={"text": text, "then": "version", "name": "Dessinatrice"})           # same name: replaced, not doubled
+    v = {x["name"]: x for x in env.store.cv_versions()}
+    assert set(v) == {"Dessinatrice", "Cloud Architect"} and v["Cloud Architect"]["is_default"] == 1
+    # on another job: the default is offered first, and applying a version takes its text as it is
+    page = c.get(f"/job/{b}").text
+    assert f'<option value="{v["Cloud Architect"]["id"]}" selected>Cloud Architect ★</option>' in page and "From my profile, tailored to this job" in page
+    c.post(f"/job/{b}/cv", data={"source": str(v["Dessinatrice"]["id"])})
+    job = env.store.get_job(b)
+    assert "ARCHICAD" in job["cv_text"] and job["cv_version"] == "Dessinatrice" and c.get(f"/job/{b}/cv").content[:4] == b"%PDF"
+    # the versions tab: create from the profile, rename and edit, default, PDF, delete
+    page = c.get("/cv/versions").text
+    assert "My CV versions" in page and 'value="Dessinatrice"' in page and "★ default" in page
+    r = c.post("/cv/versions", data={"name": "Interior design"}, follow_redirects=False)
+    assert "saved=1" in r.headers["location"]
+    assert "saved=0" in c.post("/cv/versions", data={"name": "interior DESIGN"}, follow_redirects=False).headers["location"]
+    vid = next(x["id"] for x in env.store.cv_versions() if x["name"] == "Interior design")
+    assert env.store.cv_version(vid)["text"].startswith("## PROFILE\nOperations coordinator.")
+    c.post(f"/cv/versions/{vid}", data={"action": "save", "name": "Interiors", "text": "## PROFILE\nNew text.\n"})
+    assert env.store.cv_version(vid)["name"] == "Interiors" and env.store.cv_version(vid)["text"] == "## PROFILE\nNew text.\n"
+    assert "saved=0" in c.post(f"/cv/versions/{vid}", data={"action": "save", "name": "Dessinatrice", "text": "x"}, follow_redirects=False).headers["location"]
+    c.post(f"/cv/versions/{vid}", data={"action": "default"})
+    assert [x["name"] for x in env.store.cv_versions() if x["is_default"]] == ["Interiors"]              # one default at a time
+    c.post(f"/cv/versions/{vid}", data={"action": "undefault"})
+    assert not env.store.default_cv_version()
+    assert c.get(f"/cv/versions/{vid}.pdf").content[:4] == b"%PDF" and c.get("/cv/versions/999.pdf").status_code == 404
+    c.post(f"/cv/versions/{vid}", data={"action": "delete"})
+    assert env.store.cv_version(vid) is None and "ARCHICAD" in env.store.get_job(b)["cv_text"]           # jobs keep their text
+
+
+def test_photo_goes_on_the_cv(env):
+    import io
+    from PIL import Image
+    Path(env.config.PROFILE_PATH).write_text(json.dumps(PROFILE))
+    c = TestClient(env.web.app)
+    assert "Add the photo" in c.get("/cv").text and c.get("/cv/photo.jpg").status_code == 404
+    r = c.post("/cv/photo", files={"photo": ("me.txt", b"not a picture", "text/plain")}, follow_redirects=False)
+    assert r.headers["location"] == "/cv?photo=0#photo" and "not a picture we can read" in c.get("/cv?photo=0").text
+    buf = io.BytesIO()
+    Image.new("RGB", (1600, 2000), (200, 120, 90)).save(buf, "PNG")
+    r = c.post("/cv/photo", files={"photo": ("me.png", buf.getvalue(), "image/png")}, follow_redirects=False)
+    assert r.headers["location"] == "/cv?photo=1#photo"
+    kept = Image.open(io.BytesIO(c.get("/cv/photo.jpg").content))
+    assert kept.format == "JPEG" and max(kept.size) <= 800                                # stored small, as a JPEG
+    assert "Replace the photo" in c.get("/cv").text
+    jid = _job(env, "Cloud Architect")
+    c.post(f"/job/{jid}/cv")
+    from pypdf import PdfReader
+    assert len(PdfReader(env.tailor.cv_path(jid)).pages[0].images) == 1                   # the portrait is in the PDF
+    c.post("/cv/photo", data={"remove": "1"})
+    c.post(f"/job/{jid}/cv")
+    assert len(PdfReader(env.tailor.cv_path(jid)).pages[0].images) == 0 and c.get("/cv/photo.jpg").status_code == 404

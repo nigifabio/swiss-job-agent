@@ -181,6 +181,7 @@ def job_detail(request: Request, jid: int):
         follow = compose.followup(cv, job, lang)
     return render(request, "detail.html", {
         "flags": requirements.flags(job.get("description") or ""), "followup_text": follow, "docs": docs.checklist(job),
+        "cv_versions": store.cv_versions(), "kept": request.query_params.get("kept", ""),
         "home_town": commute.home(), "blocked": not filters.company_ok(job.get("company")),
         "job": job, "statuses": store.STATUSES, "reasons": store.DISCARD_REASONS, "desc_html": desc_html, "have": have, "missing": missing,
         "avoided": avoided,
@@ -191,12 +192,102 @@ def job_detail(request: Request, jid: int):
 
 
 @app.post("/job/{jid}/cv")
-def make_cv(jid: int):
+def make_cv(jid: int, source: str = Form("")):
+    """Write the CV of a job as text: from the profile, tailored to the posting, or from one of
+    the person's named versions (source = its id), as it is."""
     job, profile = store.get_job(jid), tailor.load_profile()
     if not job or not profile:
         return PlainTextResponse("No job or no candidate profile configured.", status_code=404)
-    tailor.build(job, profile)
-    return RedirectResponse(f"/job/{jid}", status_code=303)
+    version = store.cv_version(int(source)) if source.isdigit() else None
+    text = version["text"] if version else tailor.draft_text(job, profile)     # written out first: the person can edit it
+    store.update_fields(jid, {"cv_text": text, **({"cv_version": version["name"]} if version else {})})
+    tailor.build_from_text(job, profile, text)
+    return RedirectResponse(f"/job/{jid}#cv", status_code=303)
+
+
+@app.post("/job/{jid}/cv/save")
+def save_cv(jid: int, text: str = Form(""), then: str = Form(""), name: str = Form("")):
+    """The edited text of a job's CV: kept, and the PDF is made again from it, as written.
+    then = "version": also keep it as a named version; "default": as the version new CVs start from."""
+    job, profile = store.get_job(jid), tailor.load_profile()
+    if not job or not profile:
+        return PlainTextResponse("No job or no candidate profile configured.", status_code=404)
+    text = text[:tailor.MAX_CV_TEXT]
+    fields, kept = {"cv_text": text}, ""
+    if then in ("version", "default"):
+        name = " ".join(name.split())[:60] or ((store.default_cv_version() or {}).get("name") if then == "default" else "") \
+            or (job.get("title") or "CV")[:60]
+        if store.save_cv_version(name, text, default=True if then == "default" else None):
+            fields["cv_version"], kept = name, "&kept=1"
+        else:
+            kept = "&kept=0"
+    store.update_fields(jid, fields)
+    tailor.build_from_text(job, profile, text)
+    return RedirectResponse(f"/job/{jid}?{kept[1:]}#cv" if kept else f"/job/{jid}#cv", status_code=303)
+
+
+# ---- CV versions: named texts kept to apply to jobs -------------------------------------------
+@app.get("/cv/versions", response_class=HTMLResponse)
+def cv_versions_page(request: Request, saved: str = ""):
+    return render(request, "versions.html", {"versions": store.cv_versions(), "profile": tailor.load_profile(),
+                                             "saved": saved, "limit": store.MAX_CV_VERSIONS})
+
+
+@app.post("/cv/versions")
+def cv_version_new(name: str = Form("")):
+    profile = tailor.load_profile()
+    if not profile:
+        return RedirectResponse("/cv", status_code=303)
+    vid = store.save_cv_version(name, tailor.profile_text(profile)) if not any(
+        v["name"].lower() == " ".join(name.split()).lower() for v in store.cv_versions()) else None
+    return RedirectResponse(f"/cv/versions?saved=1#v{vid}" if vid else "/cv/versions?saved=0", status_code=303)
+
+
+@app.post("/cv/versions/{vid}")
+def cv_version_change(vid: int, action: str = Form("save"), name: str = Form(""), text: str = Form("")):
+    v = store.cv_version(vid)
+    if not v:
+        return RedirectResponse("/cv/versions", status_code=303)
+    if action == "delete":
+        store.delete_cv_version(vid)
+        return RedirectResponse("/cv/versions", status_code=303)
+    if action == "default":
+        ok = store.save_cv_version(v["name"], v["text"], vid, default=True)
+    elif action == "undefault":
+        ok = store.save_cv_version(v["name"], v["text"], vid, default=False)
+    else:
+        ok = store.save_cv_version(name or v["name"], text[:tailor.MAX_CV_TEXT] or v["text"], vid)
+    return RedirectResponse(f"/cv/versions?saved={'1' if ok else '0'}#v{vid}", status_code=303)
+
+
+@app.get("/cv/versions/{vid}.pdf")
+def cv_version_pdf(vid: int):
+    v, profile = store.cv_version(vid), tailor.load_profile()
+    if not v or not profile:
+        return PlainTextResponse("No such CV version.", status_code=404)
+    path = tailor.build_version(profile, v)
+    return FileResponse(path, media_type="application/pdf", filename=tailor.download_name(profile, {"company": v["name"]}),
+                        content_disposition_type="inline")
+
+
+@app.get("/cv/photo.jpg")
+def cv_photo():
+    if not os.path.exists(tailor.PHOTO):
+        return PlainTextResponse("No photo.", status_code=404)
+    return FileResponse(tailor.PHOTO, media_type="image/jpeg", headers={"Cache-Control": "no-store"})
+
+
+@app.post("/cv/photo")
+async def cv_photo_save(request: Request):
+    """The portrait shown on every CV: upload one (kept as a small JPEG), or remove it."""
+    form = await request.form()
+    if form.get("remove"):
+        tailor.remove_photo()
+        return RedirectResponse("/cv#photo", status_code=303)
+    f = form.get("photo")
+    data = await f.read(extract.MAX_UPLOAD + 1) if getattr(f, "filename", "") else b""
+    ok = bool(data) and len(data) <= extract.MAX_UPLOAD and tailor.save_photo(data)
+    return RedirectResponse("/cv?photo=" + ("1" if ok else "0") + "#photo", status_code=303)
 
 
 @app.get("/job/{jid}/cv")
@@ -401,7 +492,7 @@ def _cv_ctx(profile, **extra):
     asked, of = suggest.missing_skills() if profile else ([], 0)
     own = tailor._profile_lang(profile) if profile else ""
     ctx = {"profile": profile, "keywords": store.get_meta().get("cv_keywords", ""),
-           "asked": asked, "asked_of": of, "check": strength.report(profile) if profile else None,
+           "has_photo": os.path.exists(tailor.PHOTO), "asked": asked, "asked_of": of, "check": strength.report(profile) if profile else None,
            "translatable": [l for l in ("fr", "de", "it", "en") if l != own] if profile else [],
            "built": os.path.exists(tailor.CUSTOM_CV), "prefs": prefs.summary(),
            "versions": tailor.profile_versions(),
@@ -411,8 +502,8 @@ def _cv_ctx(profile, **extra):
 
 
 @app.get("/cv", response_class=HTMLResponse)
-def cv_page(request: Request):
-    return render(request, "cv.html", _cv_ctx(tailor.load_profile()))
+def cv_page(request: Request, photo: str = ""):
+    return render(request, "cv.html", _cv_ctx(tailor.load_profile(), photo=photo))
 
 
 @app.post("/cv", response_class=HTMLResponse)

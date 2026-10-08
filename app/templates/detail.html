@@ -46,16 +46,7 @@
   </p>
   {% if flags %}<p style="margin:8px 0 0"><span class="muted">This posting mentions:</span>
     {% for kind, label in flags %}<span class="flag">{{ label }}</span>{% endfor %}</p>{% endif %}
-  {% if can_tailor %}
-  <p>
-    {% if has_cv %}<a class="btn" href="/job/{{ job.id }}/cv" target="_blank" rel="noopener">View tailored CV ↗</a>
-      &nbsp;<a href="/job/{{ job.id }}/cv?dl=1">Download PDF</a>{% endif %}
-    <form method="post" action="/job/{{ job.id }}/cv" style="display:inline">
-      <button type="submit">{% if has_cv %}Regenerate{% else %}Generate tailored CV{% endif %}</button>
-    </form>
-    <span class="muted">{{ cv_note }}</span>
-  </p>
-  {% endif %}
+  {% if can_tailor %}<p><a class="btn ghost small" href="#cv">📄 CV for this job ↓</a> <a class="btn ghost small" href="#letter">✉ Cover letter ↓</a></p>{% endif %}
   {% if job.score is not none %}<p><strong>Score {{ job.score }}</strong> — {{ job.score_rationale }}</p>{% endif %}
   {% if have or missing or avoided %}
   {% set back = "/job/" ~ job.id %}
@@ -132,6 +123,35 @@
   <textarea rows="11" readonly onclick="this.select()">{{ followup_text }}</textarea>
   <form method="post" action="/job/{{ job.id }}/followed-up" style="margin-top:8px">
     <button class="ghost" type="submit">✓ I sent a follow-up today</button></form>
+</div>
+{% endif %}
+{% if can_tailor %}
+<div class="card" id="cv">
+  <strong>CV for this job</strong> <span class="muted">{{ cv_note }}</span>
+  <form method="post" action="/job/{{ job.id }}/cv" style="margin:8px 0"{% if job.cv_text %} onsubmit="return confirm('Write the CV again from your profile? Your edits to this text will be lost.')"{% endif %}>
+    {% if cv_versions %}<select name="source" aria-label="Start from" style="width:auto;max-width:100%">
+      <option value="">From my profile, tailored to this job</option>
+      {% for v in cv_versions %}<option value="{{ v.id }}" {{ 'selected' if v.is_default and not job.cv_text }}>{{ v.name }}{% if v.is_default %} ★{% endif %}</option>{% endfor %}</select>{% endif %}
+    <button type="submit">{% if job.cv_text %}Rewrite the CV{% else %}Write the CV{% endif %}</button>
+    <a href="/cv/versions">My CV versions</a>
+    {% if has_cv and not job.cv_text %}<a href="/job/{{ job.id }}/cv" target="_blank" rel="noopener">Open the PDF made earlier ↗</a>{% endif %}
+  </form>
+  {% if job.cv_text %}
+  <form method="post" action="/job/{{ job.id }}/cv/save">
+    <textarea name="text" rows="24" spellcheck="true">{{ job.cv_text }}</textarea>
+    <p class="muted" style="margin:4px 0 8px">Change anything, then save: the PDF is made from this text exactly as written. A line starting with ## is a section title,
+      ### a job (the next line is its dates), - a point. Your name, contact details and photo come from your profile.</p>
+    <p><button type="submit">Save and update the PDF</button> &nbsp;<a class="btn ghost" href="/job/{{ job.id }}/cv" target="_blank" rel="noopener">Open the PDF ↗</a>
+      &nbsp;<a href="/job/{{ job.id }}/cv?dl=1">Download PDF</a></p>
+    {% if kept == "1" %}<p class="muted">✓ Kept in <a href="/cv/versions">My CV versions</a>.</p>
+    {% elif kept == "0" %}<p class="bad">Not kept: you have reached the number of versions. Delete one in <a href="/cv/versions">My CV versions</a>.</p>{% endif %}
+    <div class="row" style="align-items:flex-end;margin-top:6px">
+      <div><label>Keep this text to use it for other jobs: give it a name</label><input name="name" maxlength="60" placeholder="e.g. Dessinatrice, Interior design"></div>
+      <div style="flex:0 0 auto"><button class="ghost" type="submit" name="then" value="version">Save as a version</button>
+        <button class="ghost" type="submit" name="then" value="default" title="New CVs start from this text">★ Save as default</button></div>
+    </div>
+  </form>
+  {% endif %}
 </div>
 {% endif %}
 <div class="card" id="letter">

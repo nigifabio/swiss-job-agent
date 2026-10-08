@@ -47,7 +47,8 @@ CREATE TABLE IF NOT EXISTS jobs (
   closed_at       TEXT,
   commute_min     INTEGER,
   interview_at    TEXT,
-  docs            TEXT
+  docs            TEXT,
+  cv_text         TEXT
 );
 CREATE TABLE IF NOT EXISTS status_history (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -58,6 +59,8 @@ CREATE TABLE IF NOT EXISTS status_history (
 CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status);
 CREATE INDEX IF NOT EXISTS idx_history_job ON status_history(job_id);
 CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT);
+CREATE TABLE IF NOT EXISTS cv_versions (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, text TEXT NOT NULL,
+  is_default INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
 CREATE INDEX IF NOT EXISTS idx_jobs_loose ON jobs(loose_key);
 CREATE TABLE IF NOT EXISTS commutes (home TEXT NOT NULL, place TEXT NOT NULL, minutes INTEGER, checked_at TEXT NOT NULL,
   PRIMARY KEY (home, place));
@@ -109,7 +112,7 @@ MIGRATIONS = [
     ("outcome_note", "TEXT"), ("enriched_at", "TEXT"), ("letter", "TEXT"), ("loose_key", "TEXT"),
     ("dimmed", "INTEGER DEFAULT 0"), ("discard_reason", "TEXT"),
     ("orp_deadline", "TEXT"), ("followed_up_at", "TEXT"), ("url_checked_at", "TEXT"), ("closed_at", "TEXT"),
-    ("commute_min", "INTEGER"), ("interview_at", "TEXT"), ("docs", "TEXT"),
+    ("commute_min", "INTEGER"), ("interview_at", "TEXT"), ("docs", "TEXT"), ("cv_text", "TEXT"),
 ]
 
 # Why a posting was discarded (the list's "Why?" menu). Read on the Stats page to tune the search:
@@ -322,7 +325,7 @@ def keep(jid):
 def update_fields(jid, fields):
     allowed = ["contact", "recruiter", "cv_version", "applied_date", "followup_date", "notes",
                "work_rate", "apply_method", "orp_assigned", "outcome_note", "location", "letter",
-               "orp_deadline", "followed_up_at", "interview_at", "docs"]
+               "orp_deadline", "followed_up_at", "interview_at", "docs", "cv_text"]
     sets, vals = [], []
     for k in allowed:
         if k in fields:
@@ -429,6 +432,59 @@ def followups_due(days=14):
                  AND status NOT IN ('rejected','discarded','offer')
                ORDER BY followup_date""", (cutoff,)).fetchall()
         return [dict(r) for r in rows]
+
+
+# ---- named CV versions: texts the person wrote once and applies to jobs ----------------------
+MAX_CV_VERSIONS = 30
+
+
+def cv_versions():
+    with conn() as c:
+        return [dict(r) for r in c.execute("SELECT * FROM cv_versions ORDER BY is_default DESC, name COLLATE NOCASE").fetchall()]
+
+
+def cv_version(vid):
+    with conn() as c:
+        r = c.execute("SELECT * FROM cv_versions WHERE id=?", (vid,)).fetchone()
+        return dict(r) if r else None
+
+
+def default_cv_version():
+    with conn() as c:
+        r = c.execute("SELECT * FROM cv_versions WHERE is_default=1 LIMIT 1").fetchone()
+        return dict(r) if r else None
+
+
+def save_cv_version(name, text, vid=None, default=None):
+    """Create a version, or change one (vid). A name already used by another version replaces that
+    version's text instead of making a second one with the same name. Returns its id, or None
+    (no name, or the limit of versions is reached)."""
+    name = " ".join((name or "").split())[:60]
+    if not name:
+        return None
+    with conn() as c:
+        same = c.execute("SELECT id FROM cv_versions WHERE name=? COLLATE NOCASE", (name,)).fetchone()
+        if vid is None and same:
+            vid = same["id"]
+        elif vid is not None and same and same["id"] != vid:
+            return None
+        if vid is None:
+            if c.execute("SELECT COUNT(*) FROM cv_versions").fetchone()[0] >= MAX_CV_VERSIONS:
+                return None
+            vid = c.execute("INSERT INTO cv_versions (name, text, created_at, updated_at) VALUES (?,?,?,?)",
+                            (name, text, now(), now())).lastrowid
+        else:
+            c.execute("UPDATE cv_versions SET name=?, text=?, updated_at=? WHERE id=?", (name, text, now(), vid))
+        if default:
+            c.execute("UPDATE cv_versions SET is_default = (id = ?)", (vid,))
+        elif default is False:
+            c.execute("UPDATE cv_versions SET is_default=0 WHERE id=?", (vid,))
+    return vid
+
+
+def delete_cv_version(vid):
+    with conn() as c:
+        c.execute("DELETE FROM cv_versions WHERE id=?", (vid,))
 
 
 def set_meta(**kv):

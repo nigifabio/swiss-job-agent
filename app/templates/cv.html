@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% from "_chip.html" import chip %}
 {% block body %}
+<div class="tabs"><a class="tab active" href="/cv">CV and profile</a><a class="tab" href="/cv/versions">My CV versions</a></div>
 <div class="card">
   <h2 style="margin-top:0">Skills &amp; preferences</h2>
   <p class="muted">These drive the match score and the ranking of every scan. Refine them here or with the
@@ -43,6 +44,23 @@
       {% if not r.ok %}<div class="muted" style="margin-left:22px">{{ r.hint | tr }}{% if r.link %} <a href="{{ r.link }}">Translate my profile →</a>{% endif %}</div>{% endif %}</li>{% endfor %}
   </ul>
   {% if check.done < check.total %}<form method="post" action="/onboarding/edit" style="margin-top:10px"><button class="ghost" type="submit">Edit my profile</button></form>{% endif %}
+</div>
+{% endif %}
+
+{% if profile %}
+<div class="card" id="photo">
+  <strong>Photo on your CV</strong>
+  <span class="muted">· most Swiss employers expect a portrait: recent, neutral background, like a passport photo but friendlier</span>
+  {% if photo == "0" %}<p class="bad">That file is not a picture we can read. Use a JPEG or PNG of at most 8 MB.</p>{% endif %}
+  <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;margin-top:8px">
+    {% if has_photo %}<img src="/cv/photo.jpg" alt="Your photo" style="width:90px;border-radius:6px;border:1px solid var(--border)">{% endif %}
+    <form method="post" action="/cv/photo" enctype="multipart/form-data" style="flex:1;min-width:220px">
+      <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" required>
+      <p style="margin:8px 0 0"><button type="submit">{% if has_photo %}Replace the photo{% else %}Add the photo{% endif %}</button></p>
+    </form>
+    {% if has_photo %}<form method="post" action="/cv/photo"><button class="ghost" name="remove" value="1" type="submit">Remove</button></form>{% endif %}
+  </div>
+  <p class="muted" style="margin:8px 0 0">It is placed at the top right of every CV made from now on. It stays in your workspace.</p>
 </div>
 {% endif %}
 

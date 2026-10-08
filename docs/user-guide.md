@@ -127,6 +127,19 @@ those dates (job titles and companies, nothing else); **New address** makes the 
 - **Interview preparation sheet:** for a job you applied to, a one-page PDF with what the posting asks for against your
   skills, your experience to mention, usual questions and questions to ask.
 
+## The CV of a job: text first, then PDF
+
+- On a job page, **Write the CV** writes the CV for that job as text (the same way the cover letter works): summary,
+  skills, jobs and points in the order that suits the posting. Change anything, then **Save and update the PDF**:
+  the PDF holds exactly what you wrote. `##` starts a section, `###` a job (the next line is its dates), `-` a point.
+  Your name, contact details and photo come from your profile.
+- **Save as a version** keeps the text under a name (for example one per kind of job); **★ Save as default** makes
+  it the one offered first for every new job.
+- **My CV versions** (tab on the CV page): every version with its name; rename, edit, open the PDF, make one the
+  default, delete, or start a new one from your profile. On a job page, choose which version to start from, or
+  "From my profile, tailored to this job".
+- **Photo** (CV page): upload a portrait once; it is placed at the top right of every CV made afterwards.
+
 ## A stronger profile
 
 - **Often asked in your jobs** (CV page): skills that the jobs found for you mention most and that are not in

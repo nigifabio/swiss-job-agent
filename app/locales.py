@@ -125,10 +125,7 @@ _DETAIL = [
     ('>national wage calculator ↗</a>', '>calculateur national de salaires ↗</a>', '>nationaler Lohnrechner ↗</a>'),
     ('This posting mentions:', 'Cette annonce mentionne :', 'Dieses Inserat erwähnt:'),
     ('<span class="flag">{{ label }}</span>', '<span class="flag">{{ label | tr }}</span>', '<span class="flag">{{ label | tr }}</span>'),
-    ('>View tailored CV ↗</a>', '>Voir le CV adapté ↗</a>', '>Angepassten Lebenslauf ansehen ↗</a>'),
     ('<a href="/job/{{ job.id }}/cv?dl=1">Download PDF</a>', '<a href="/job/{{ job.id }}/cv?dl=1">Télécharger le PDF</a>', '<a href="/job/{{ job.id }}/cv?dl=1">PDF herunterladen</a>'),
-    ('{% if has_cv %}Regenerate{% else %}Generate tailored CV{% endif %}', '{% if has_cv %}Régénérer{% else %}Générer un CV adapté{% endif %}',
-     '{% if has_cv %}Neu erstellen{% else %}Angepassten Lebenslauf erstellen{% endif %}'),
     ('<span class="muted">{{ cv_note }}</span>', '<span class="muted">{{ cv_note | tr }}</span>', '<span class="muted">{{ cv_note | tr }}</span>'),
     ('<strong>Score {{ job.score }}</strong>', '<strong>Score {{ job.score }}</strong>', '<strong>Punkte {{ job.score }}</strong>'),
     ('>In your CV:</span>', '>Dans votre CV :</span>', '>In Ihrem Lebenslauf:</span>'),
@@ -630,11 +627,71 @@ _TRANSLATE = [
     ('Save the translation</button>', 'Enregistrer la traduction</button>', 'Übersetzung speichern</button>'),
 ]
 
+# the CV of a job as editable text, and the photo
+_DETAIL += [
+    ('📄 CV for this job ↓</a>', '📄 CV pour cette offre ↓</a>', '📄 Lebenslauf für diese Stelle ↓</a>'),
+    ('✉ Cover letter ↓</a>', '✉ Lettre de motivation ↓</a>', '✉ Motivationsschreiben ↓</a>'),
+    ('<strong>CV for this job</strong>', '<strong>CV pour cette offre</strong>', '<strong>Lebenslauf für diese Stelle</strong>'),
+    ("confirm('Write the CV again from your profile? Your edits to this text will be lost.')", "confirm('Réécrire le CV à partir de votre profil ? Vos modifications de ce texte seront perdues.')", "confirm('Den Lebenslauf neu aus Ihrem Profil schreiben? Ihre Änderungen an diesem Text gehen verloren.')"),
+    ('{% if job.cv_text %}Rewrite the CV{% else %}Write the CV{% endif %}', '{% if job.cv_text %}Réécrire le CV{% else %}Écrire le CV{% endif %}', '{% if job.cv_text %}Lebenslauf neu schreiben{% else %}Lebenslauf schreiben{% endif %}'),
+    ('Open the PDF made earlier ↗</a>', 'Ouvrir le PDF généré précédemment ↗</a>', 'Früher erstelltes PDF öffnen ↗</a>'),
+    ('Change anything, then save: the PDF is made from this text exactly as written. A line starting with ## is a section title, ### a job (the next line is its dates), - a point. Your name, contact details and photo come from your profile.', 'Modifiez ce que vous voulez, puis enregistrez : le PDF est fait à partir de ce texte, tel quel. Une ligne qui commence par ## est un titre de section, ### un emploi (la ligne suivante donne ses dates), - un point. Votre nom, vos coordonnées et votre photo viennent de votre profil.', 'Ändern Sie, was Sie möchten, und speichern Sie: Das PDF wird genau aus diesem Text erstellt. Eine Zeile mit ## ist ein Abschnittstitel, ### eine Stelle (die nächste Zeile nennt die Daten), - ein Punkt. Name, Kontaktangaben und Foto kommen aus Ihrem Profil.'),
+    ('<button type="submit">Save and update the PDF</button>', '<button type="submit">Enregistrer et mettre à jour le PDF</button>', '<button type="submit">Speichern und PDF aktualisieren</button>'),
+    ('>Open the PDF ↗</a>', '>Ouvrir le PDF ↗</a>', '>PDF öffnen ↗</a>'),
+]
+_CV += [
+    ('<strong>Photo on your CV</strong>', '<strong>Photo sur votre CV</strong>', '<strong>Foto auf Ihrem Lebenslauf</strong>'),
+    ('· most Swiss employers expect a portrait: recent, neutral background, like a passport photo but friendlier', '· la plupart des employeurs suisses attendent un portrait : récent, fond neutre, comme une photo de passeport mais plus souriant', '· die meisten Schweizer Arbeitgeber erwarten ein Porträt: aktuell, neutraler Hintergrund, wie ein Passfoto, aber freundlicher'),
+    ('That file is not a picture we can read. Use a JPEG or PNG of at most 8 MB.', "Ce fichier n'est pas une image lisible. Utilisez un JPEG ou un PNG de 8 Mo au plus.", 'Diese Datei ist kein lesbares Bild. Verwenden Sie ein JPEG oder PNG mit höchstens 8 MB.'),
+    ('alt="Your photo"', 'alt="Votre photo"', 'alt="Ihr Foto"'),
+    ('{% if has_photo %}Replace the photo{% else %}Add the photo{% endif %}', '{% if has_photo %}Remplacer la photo{% else %}Ajouter la photo{% endif %}', '{% if has_photo %}Foto ersetzen{% else %}Foto hinzufügen{% endif %}'),
+    ('type="submit">Remove</button>', 'type="submit">Retirer</button>', 'type="submit">Entfernen</button>'),
+    ('It is placed at the top right of every CV made from now on. It stays in your workspace.', 'Elle est placée en haut à droite de chaque CV généré dès maintenant. Elle reste dans votre espace.', 'Es steht oben rechts auf jedem ab jetzt erstellten Lebenslauf. Es bleibt in Ihrem Bereich.'),
+]
+
+# named CV versions
+_DETAIL += [
+    ('aria-label="Start from"', 'aria-label="Partir de"', 'aria-label="Ausgehen von"'),
+    ('>From my profile, tailored to this job</option>', '>De mon profil, adapté à cette offre</option>', '>Aus meinem Profil, auf diese Stelle zugeschnitten</option>'),
+    ('<a href="/cv/versions">My CV versions</a>\n', '<a href="/cv/versions">Mes versions de CV</a>\n', '<a href="/cv/versions">Meine Lebenslauf-Versionen</a>\n'),
+    ('✓ Kept in <a href="/cv/versions">My CV versions</a>.', '✓ Conservé dans <a href="/cv/versions">Mes versions de CV</a>.', '✓ Abgelegt in <a href="/cv/versions">Meine Lebenslauf-Versionen</a>.'),
+    ('Not kept: you have reached the number of versions. Delete one in <a href="/cv/versions">My CV versions</a>.', 'Non conservé : vous avez atteint le nombre de versions. Supprimez-en une dans <a href="/cv/versions">Mes versions de CV</a>.', 'Nicht abgelegt: Die Anzahl Versionen ist erreicht. Löschen Sie eine in <a href="/cv/versions">Meine Lebenslauf-Versionen</a>.'),
+    ('<label>Keep this text to use it for other jobs: give it a name</label><input name="name" maxlength="60" placeholder="e.g. Dessinatrice, Interior design">', '<label>Garder ce texte pour d\'autres offres : donnez-lui un nom</label><input name="name" maxlength="60" placeholder="p. ex. Dessinatrice, Architecture d\'intérieur">', '<label>Diesen Text für andere Stellen behalten: Geben Sie ihm einen Namen</label><input name="name" maxlength="60" placeholder="z. B. Zeichnerin, Innenarchitektur">'),
+    ('value="version">Save as a version</button>', 'value="version">Enregistrer comme version</button>', 'value="version">Als Version speichern</button>'),
+    ('title="New CVs start from this text">★ Save as default</button>', 'title="Les nouveaux CV partent de ce texte">★ Enregistrer par défaut</button>', 'title="Neue Lebensläufe gehen von diesem Text aus">★ Als Standard speichern</button>'),
+]
+_CV += [
+    ('>CV and profile</a>', '>CV et profil</a>', '>Lebenslauf und Profil</a>'),
+    ('>My CV versions</a>', '>Mes versions de CV</a>', '>Meine Lebenslauf-Versionen</a>'),
+]
+_VERSIONS = [
+    ('>CV and profile</a>', '>CV et profil</a>', '>Lebenslauf und Profil</a>'),
+    ('>My CV versions</a>', '>Mes versions de CV</a>', '>Meine Lebenslauf-Versionen</a>'),
+    ('<div class="banner">Saved.</div>', '<div class="banner">Enregistré.</div>', '<div class="banner">Gespeichert.</div>'),
+    ("Not saved: give it a name that isn't used yet (at most {{ limit }} versions).", "Non enregistré : donnez un nom qui n'est pas encore utilisé ({{ limit }} versions au plus).", 'Nicht gespeichert: Geben Sie einen Namen an, der noch nicht verwendet wird (höchstens {{ limit }} Versionen).'),
+    ('<h2 style="margin-top:0">My CV versions</h2>', '<h2 style="margin-top:0">Mes versions de CV</h2>', '<h2 style="margin-top:0">Meine Lebenslauf-Versionen</h2>'),
+    ('CVs you wrote once and keep under a name, for example one per kind of job. On a job page you choose which one to start from, change what you want, and get the PDF. The ★ default is the one offered first for every new job.', "Des CV écrits une fois et gardés sous un nom, par exemple un par type de poste. Sur la page d'une offre, vous choisissez duquel partir, modifiez ce que vous voulez et obtenez le PDF. La version ★ par défaut est celle proposée en premier pour chaque nouvelle offre.", 'Lebensläufe, die Sie einmal geschrieben haben und unter einem Namen behalten, zum Beispiel einen pro Stellenart. Auf der Seite einer Stelle wählen Sie, von welchem Sie ausgehen, ändern, was Sie möchten, und erhalten das PDF. Die ★ Standardversion wird bei jeder neuen Stelle zuerst vorgeschlagen.'),
+    ('<p class="muted">No candidate profile yet.</p>', '<p class="muted">Pas encore de profil.</p>', '<p class="muted">Noch kein Profil.</p>'),
+    ('<label>Name of a new version</label><input name="name" maxlength="60" required placeholder="e.g. Dessinatrice, Interior design">', '<label>Nom d\'une nouvelle version</label><input name="name" maxlength="60" required placeholder="p. ex. Dessinatrice, Architecture d\'intérieur">', '<label>Name einer neuen Version</label><input name="name" maxlength="60" required placeholder="z. B. Zeichnerin, Innenarchitektur">'),
+    ('+ New version from my profile</button>', '+ Nouvelle version à partir de mon profil</button>', '+ Neue Version aus meinem Profil</button>'),
+    ('<label>Name{% if v.is_default %} · ★ default{% endif %}</label>', '<label>Nom{% if v.is_default %} · ★ par défaut{% endif %}</label>', '<label>Name{% if v.is_default %} · ★ Standard{% endif %}</label>'),
+    ('class="muted">changed {{ v.updated_at[:10] }}</div>', 'class="muted">modifiée le {{ v.updated_at[:10] }}</div>', 'class="muted">geändert am {{ v.updated_at[:10] }}</div>'),
+    ('>Text of this version</summary>', '>Texte de cette version</summary>', '>Text dieser Version</summary>'),
+    ('A line starting with ## is a section title, ### a job (the next line is its dates), - a point.', 'Une ligne qui commence par ## est un titre de section, ### un emploi (la ligne suivante donne ses dates), - un point.', 'Eine Zeile mit ## ist ein Abschnittstitel, ### eine Stelle (die nächste Zeile nennt die Daten), - ein Punkt.'),
+    ('value="save">Save</button>', 'value="save">Enregistrer</button>', 'value="save">Speichern</button>'),
+    ('>Open the PDF ↗</a>', '>Ouvrir le PDF ↗</a>', '>PDF öffnen ↗</a>'),
+    ('value="undefault">No longer the default</button>', 'value="undefault">Ne plus utiliser par défaut</button>', 'value="undefault">Nicht mehr Standard</button>'),
+    ('value="default">★ Make it the default</button>', 'value="default">★ Utiliser par défaut</button>', 'value="default">★ Als Standard festlegen</button>'),
+    ("confirm('Delete this version? CVs already made for jobs are kept.')", "confirm('Supprimer cette version ? Les CV déjà faits pour des offres sont conservés.')", "confirm('Diese Version löschen? Bereits für Stellen erstellte Lebensläufe bleiben erhalten.')"),
+    ('">Delete</button>', '">Supprimer</button>', '">Löschen</button>'),
+    ('No version yet. Create one above, or use <b>Save as a version</b> under the CV of a job.', "Pas encore de version. Créez-en une ci-dessus, ou utilisez <b>Enregistrer comme version</b> sous le CV d'une offre.", 'Noch keine Version. Erstellen Sie oben eine, oder verwenden Sie <b>Als Version speichern</b> unter dem Lebenslauf einer Stelle.'),
+]
+
 TEMPLATES = {
     "base.html": _BASE, "_apply_prompt.html": _APPLY_PROMPT, "_chip.html": _CHIP, "dashboard.html": _DASHBOARD,
     "detail.html": _DETAIL, "add.html": _ADD, "report.html": _REPORT, "stats.html": _STATS, "cv.html": _CV,
     "settings.html": _SETTINGS, "_settings_form.html": _SETTINGS_FORM, "onboarding.html": _ONBOARDING,
-    "week.html": _WEEK, "translate.html": _TRANSLATE,
+    "week.html": _WEEK, "translate.html": _TRANSLATE, "versions.html": _VERSIONS,
 }
 
 STRINGS = {   # English -> (French, German); Italian is added below

@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="tabs"><a class="tab" href="/cv">CV and profile</a><a class="tab active" href="/cv/versions">My CV versions</a></div>
+{% if saved == "1" %}<div class="banner">Saved.</div>{% elif saved == "0" %}<div class="banner">Not saved: give it a name that isn't used yet (at most {{ limit }} versions).</div>{% endif %}
+<div class="card">
+  <h2 style="margin-top:0">My CV versions</h2>
+  <p class="muted">CVs you wrote once and keep under a name, for example one per kind of job. On a job page you choose which one to start from,
+    change what you want, and get the PDF. The ★ default is the one offered first for every new job.</p>
+  {% if not profile %}<p class="muted">No candidate profile yet.</p>{% else %}
+  <form method="post" action="/cv/versions" class="row" style="align-items:flex-end">
+    <div><label>Name of a new version</label><input name="name" maxlength="60" required placeholder="e.g. Dessinatrice, Interior design"></div>
+    <div style="flex:0 0 auto"><button type="submit">+ New version from my profile</button></div>
+  </form>
+  {% endif %}
+</div>
+{% for v in versions %}
+<div class="card" id="v{{ v.id }}">
+  <form method="post" action="/cv/versions/{{ v.id }}">
+    <div class="row" style="align-items:flex-end">
+      <div><label>Name{% if v.is_default %} · ★ default{% endif %}</label><input name="name" value="{{ v.name }}" maxlength="60" required></div>
+      <div style="flex:0 0 auto" class="muted">changed {{ v.updated_at[:10] }}</div>
+    </div>
+    <details{% if loop.length == 1 %} open{% endif %}><summary style="cursor:pointer;margin:8px 0">Text of this version</summary>
+      <textarea name="text" rows="22" spellcheck="true">{{ v.text }}</textarea>
+      <p class="muted" style="margin:4px 0 0">A line starting with ## is a section title, ### a job (the next line is its dates), - a point.</p></details>
+    <div class="actions">
+      <button type="submit" name="action" value="save">Save</button>
+      <a class="btn ghost" href="/cv/versions/{{ v.id }}.pdf" target="_blank" rel="noopener">Open the PDF ↗</a>
+      {% if v.is_default %}<button class="ghost" type="submit" name="action" value="undefault">No longer the default</button>
+      {% else %}<button class="ghost" type="submit" name="action" value="default">★ Make it the default</button>{% endif %}
+      <button class="ghost" type="submit" name="action" value="delete" onclick="return confirm('Delete this version? CVs already made for jobs are kept.')">Delete</button>
+    </div>
+  </form>
+</div>
+{% else %}
+<p class="muted">No version yet. Create one above, or use <b>Save as a version</b> under the CV of a job.</p>
+{% endfor %}
+{% endblock %}

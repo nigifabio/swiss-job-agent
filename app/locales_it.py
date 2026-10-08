@@ -222,9 +222,7 @@ TEMPLATES = {'base.html': {'<html lang="en">': '<html lang="it">',
                  '>national wage calculator ↗</a>': '>calcolatore nazionale dei salari ↗</a>',
                  'This posting mentions:': 'Questo annuncio menziona:',
                  '<span class="flag">{{ label }}</span>': '<span class="flag">{{ label | tr }}</span>',
-                 '>View tailored CV ↗</a>': '>Vedi il CV adattato ↗</a>',
                  '<a href="/job/{{ job.id }}/cv?dl=1">Download PDF</a>': '<a href="/job/{{ job.id }}/cv?dl=1">Scarica il PDF</a>',
-                 '{% if has_cv %}Regenerate{% else %}Generate tailored CV{% endif %}': '{% if has_cv %}Rigenera{% else %}Genera un CV adattato{% endif %}',
                  '<span class="muted">{{ cv_note }}</span>': '<span class="muted">{{ cv_note | tr }}</span>',
                  '<strong>Score {{ job.score }}</strong>': '<strong>Punteggio {{ job.score }}</strong>',
                  '>In your CV:</span>': '>Nel tuo CV:</span>',
@@ -277,7 +275,92 @@ TEMPLATES = {'base.html': {'<html lang="en">': '<html lang="it">',
                                                                                                                                      'aspettano di solito il dossier '
                                                                                                                                      'completo: CV, lettera, certificati '
                                                                                                                                      'di lavoro e diplomi, se possibile '
-                                                                                                                                     'in un unico PDF.'},
+                                                                                                                                     'in un unico PDF.',
+                 '📄 CV for this job ↓</a>': '📄 CV per questa offerta ↓</a>',
+                 '✉ Cover letter ↓</a>': '✉ Lettera di motivazione ↓</a>',
+                 '<strong>CV for this job</strong>': '<strong>CV per questa offerta</strong>',
+                 "confirm('Write the CV again from your profile? Your edits to this text will be lost.')": "confirm('Riscrivere il CV a partire dal tuo profilo? Le tue "
+                                                                                                           "modifiche a questo testo andranno perse.')",
+                 '{% if job.cv_text %}Rewrite the CV{% else %}Write the CV{% endif %}': '{% if job.cv_text %}Riscrivi il CV{% else %}Scrivi il CV{% endif %}',
+                 'Open the PDF made earlier ↗</a>': 'Apri il PDF generato in precedenza ↗</a>',
+                 'Change anything, then save: the PDF is made from this text exactly as written. A line starting with ## is a section title, ### a job (the next line is its dates), - a point. Your name, contact details and photo come from your profile.': 'Modifica '
+                                                                                                                                                                                                                                                               'ciò '
+                                                                                                                                                                                                                                                               'che '
+                                                                                                                                                                                                                                                               'vuoi, '
+                                                                                                                                                                                                                                                               'poi '
+                                                                                                                                                                                                                                                               'salva: '
+                                                                                                                                                                                                                                                               'il '
+                                                                                                                                                                                                                                                               'PDF '
+                                                                                                                                                                                                                                                               'è '
+                                                                                                                                                                                                                                                               'fatto '
+                                                                                                                                                                                                                                                               'da '
+                                                                                                                                                                                                                                                               'questo '
+                                                                                                                                                                                                                                                               'testo, '
+                                                                                                                                                                                                                                                               'così '
+                                                                                                                                                                                                                                                               "com'è. "
+                                                                                                                                                                                                                                                               'Una '
+                                                                                                                                                                                                                                                               'riga '
+                                                                                                                                                                                                                                                               'che '
+                                                                                                                                                                                                                                                               'inizia '
+                                                                                                                                                                                                                                                               'con '
+                                                                                                                                                                                                                                                               '## '
+                                                                                                                                                                                                                                                               'è '
+                                                                                                                                                                                                                                                               'un '
+                                                                                                                                                                                                                                                               'titolo '
+                                                                                                                                                                                                                                                               'di '
+                                                                                                                                                                                                                                                               'sezione, '
+                                                                                                                                                                                                                                                               '### '
+                                                                                                                                                                                                                                                               'un '
+                                                                                                                                                                                                                                                               'impiego '
+                                                                                                                                                                                                                                                               '(la '
+                                                                                                                                                                                                                                                               'riga '
+                                                                                                                                                                                                                                                               'seguente '
+                                                                                                                                                                                                                                                               'indica '
+                                                                                                                                                                                                                                                               'le '
+                                                                                                                                                                                                                                                               'date), '
+                                                                                                                                                                                                                                                               '- '
+                                                                                                                                                                                                                                                               'un '
+                                                                                                                                                                                                                                                               'punto. '
+                                                                                                                                                                                                                                                               'Il '
+                                                                                                                                                                                                                                                               'tuo '
+                                                                                                                                                                                                                                                               'nome, '
+                                                                                                                                                                                                                                                               'i '
+                                                                                                                                                                                                                                                               'recapiti '
+                                                                                                                                                                                                                                                               'e '
+                                                                                                                                                                                                                                                               'la '
+                                                                                                                                                                                                                                                               'foto '
+                                                                                                                                                                                                                                                               'vengono '
+                                                                                                                                                                                                                                                               'dal '
+                                                                                                                                                                                                                                                               'tuo '
+                                                                                                                                                                                                                                                               'profilo.',
+                 '<button type="submit">Save and update the PDF</button>': '<button type="submit">Salva e aggiorna il PDF</button>',
+                 '>Open the PDF ↗</a>': '>Apri il PDF ↗</a>',
+                 'aria-label="Start from"': 'aria-label="Partire da"',
+                 '>From my profile, tailored to this job</option>': '>Dal mio profilo, adattato a questa offerta</option>',
+                 '<a href="/cv/versions">My CV versions</a>\n': '<a href="/cv/versions">Le mie versioni del CV</a>\n',
+                 '✓ Kept in <a href="/cv/versions">My CV versions</a>.': '✓ Conservato in <a href="/cv/versions">Le mie versioni del CV</a>.',
+                 'Not kept: you have reached the number of versions. Delete one in <a href="/cv/versions">My CV versions</a>.': 'Non conservato: hai raggiunto il numero '
+                                                                                                                                'di versioni. Eliminane una in <a '
+                                                                                                                                'href="/cv/versions">Le mie versioni del '
+                                                                                                                                'CV</a>.',
+                 '<label>Keep this text to use it for other jobs: give it a name</label><input name="name" maxlength="60" placeholder="e.g. Dessinatrice, Interior design">': '<label>Conserva '
+                                                                                                                                                                              'questo '
+                                                                                                                                                                              'testo '
+                                                                                                                                                                              'per '
+                                                                                                                                                                              'altre '
+                                                                                                                                                                              'offerte: '
+                                                                                                                                                                              'dagli '
+                                                                                                                                                                              'un '
+                                                                                                                                                                              'nome</label><input '
+                                                                                                                                                                              'name="name" '
+                                                                                                                                                                              'maxlength="60" '
+                                                                                                                                                                              'placeholder="p. '
+                                                                                                                                                                              'es. '
+                                                                                                                                                                              'Disegnatrice, '
+                                                                                                                                                                              'Architettura '
+                                                                                                                                                                              'd\'interni">',
+                 'value="version">Save as a version</button>': 'value="version">Salva come versione</button>',
+                 'title="New CVs start from this text">★ Save as default</button>': 'title="I nuovi CV partono da questo testo">★ Salva come predefinito</button>'},
  'add.html': {'← back</a>': '← indietro</a>',
               '+ Spontaneous application</h2>': '+ Candidatura spontanea</h2>',
               'You wrote to a company that had no posting. It counts as a job search in your ORP report.': "Hai scritto a un'azienda che non aveva un annuncio. Conta "
@@ -671,7 +754,21 @@ TEMPLATES = {'base.html': {'<html lang="en">': '<html lang="it">',
              'Profile check <span class="muted">': 'Controllo del profilo <span class="muted">',
              'Translate my profile →</a>': 'Traduci il mio profilo →</a>',
              '>Edit my profile</button>': '>Modifica il mio profilo</button>',
-             'Write your profile in another language, next to the original:</span>': "Scrivi il tuo profilo in un'altra lingua, accanto all'originale:</span>"},
+             'Write your profile in another language, next to the original:</span>': "Scrivi il tuo profilo in un'altra lingua, accanto all'originale:</span>",
+             '<strong>Photo on your CV</strong>': '<strong>Foto sul tuo CV</strong>',
+             '· most Swiss employers expect a portrait: recent, neutral background, like a passport photo but friendlier': '· la maggior parte dei datori di lavoro '
+                                                                                                                           'svizzeri si aspetta un ritratto: recente, '
+                                                                                                                           'sfondo neutro, come una fototessera ma più '
+                                                                                                                           'sorridente',
+             'That file is not a picture we can read. Use a JPEG or PNG of at most 8 MB.': "Questo file non è un'immagine leggibile. Usa un JPEG o un PNG di 8 MB al "
+                                                                                           'massimo.',
+             'alt="Your photo"': 'alt="La tua foto"',
+             '{% if has_photo %}Replace the photo{% else %}Add the photo{% endif %}': '{% if has_photo %}Sostituisci la foto{% else %}Aggiungi la foto{% endif %}',
+             'type="submit">Remove</button>': 'type="submit">Togli</button>',
+             'It is placed at the top right of every CV made from now on. It stays in your workspace.': 'È posta in alto a destra su ogni CV generato da ora in poi. '
+                                                                                                        'Resta nel tuo spazio.',
+             '>CV and profile</a>': '>CV e profilo</a>',
+             '>My CV versions</a>': '>Le mie versioni del CV</a>'},
  'settings.html': {'Saved. The next scan uses these settings{% if rescored %}; jobs already found were re-ranked{% endif %}.': 'Salvato. La prossima ricerca userà '
                                                                                                                                'queste impostazioni{% if rescored %}; le '
                                                                                                                                'offerte già trovate sono state '
@@ -1139,7 +1236,85 @@ TEMPLATES = {'base.html': {'<html lang="en">': '<html lang="it">',
                                                                                                                                                                                                                                                                                                              'restano '
                                                                                                                                                                                                                                                                                                              'come '
                                                                                                                                                                                                                                                                                                              'sono.',
-                    'Save the translation</button>': 'Salva la traduzione</button>'}}
+                    'Save the translation</button>': 'Salva la traduzione</button>'},
+ 'versions.html': {'>CV and profile</a>': '>CV e profilo</a>',
+                   '>My CV versions</a>': '>Le mie versioni del CV</a>',
+                   '<div class="banner">Saved.</div>': '<div class="banner">Salvato.</div>',
+                   "Not saved: give it a name that isn't used yet (at most {{ limit }} versions).": 'Non salvato: dai un nome non ancora usato (al massimo {{ limit }} '
+                                                                                                    'versioni).',
+                   '<h2 style="margin-top:0">My CV versions</h2>': '<h2 style="margin-top:0">Le mie versioni del CV</h2>',
+                   'CVs you wrote once and keep under a name, for example one per kind of job. On a job page you choose which one to start from, change what you want, and get the PDF. The ★ default is the one offered first for every new job.': 'CV '
+                                                                                                                                                                                                                                                    'scritti '
+                                                                                                                                                                                                                                                    'una '
+                                                                                                                                                                                                                                                    'volta '
+                                                                                                                                                                                                                                                    'e '
+                                                                                                                                                                                                                                                    'conservati '
+                                                                                                                                                                                                                                                    'con '
+                                                                                                                                                                                                                                                    'un '
+                                                                                                                                                                                                                                                    'nome, '
+                                                                                                                                                                                                                                                    'per '
+                                                                                                                                                                                                                                                    'esempio '
+                                                                                                                                                                                                                                                    'uno '
+                                                                                                                                                                                                                                                    'per '
+                                                                                                                                                                                                                                                    'tipo '
+                                                                                                                                                                                                                                                    'di '
+                                                                                                                                                                                                                                                    'posto. '
+                                                                                                                                                                                                                                                    'Nella '
+                                                                                                                                                                                                                                                    'pagina '
+                                                                                                                                                                                                                                                    'di '
+                                                                                                                                                                                                                                                    "un'offerta "
+                                                                                                                                                                                                                                                    'scegli '
+                                                                                                                                                                                                                                                    'da '
+                                                                                                                                                                                                                                                    'quale '
+                                                                                                                                                                                                                                                    'partire, '
+                                                                                                                                                                                                                                                    'modifichi '
+                                                                                                                                                                                                                                                    'ciò '
+                                                                                                                                                                                                                                                    'che '
+                                                                                                                                                                                                                                                    'vuoi '
+                                                                                                                                                                                                                                                    'e '
+                                                                                                                                                                                                                                                    'ottieni '
+                                                                                                                                                                                                                                                    'il '
+                                                                                                                                                                                                                                                    'PDF. '
+                                                                                                                                                                                                                                                    'La '
+                                                                                                                                                                                                                                                    'versione '
+                                                                                                                                                                                                                                                    '★ '
+                                                                                                                                                                                                                                                    'predefinita '
+                                                                                                                                                                                                                                                    'è '
+                                                                                                                                                                                                                                                    'quella '
+                                                                                                                                                                                                                                                    'proposta '
+                                                                                                                                                                                                                                                    'per '
+                                                                                                                                                                                                                                                    'prima '
+                                                                                                                                                                                                                                                    'per '
+                                                                                                                                                                                                                                                    'ogni '
+                                                                                                                                                                                                                                                    'nuova '
+                                                                                                                                                                                                                                                    'offerta.',
+                   '<p class="muted">No candidate profile yet.</p>': '<p class="muted">Ancora nessun profilo.</p>',
+                   '<label>Name of a new version</label><input name="name" maxlength="60" required placeholder="e.g. Dessinatrice, Interior design">': '<label>Nome di '
+                                                                                                                                                       'una nuova '
+                                                                                                                                                       'versione</label><input '
+                                                                                                                                                       'name="name" '
+                                                                                                                                                       'maxlength="60" '
+                                                                                                                                                       'required '
+                                                                                                                                                       'placeholder="p. '
+                                                                                                                                                       'es. '
+                                                                                                                                                       'Disegnatrice, '
+                                                                                                                                                       'Architettura '
+                                                                                                                                                       'd\'interni">',
+                   '+ New version from my profile</button>': '+ Nuova versione dal mio profilo</button>',
+                   '<label>Name{% if v.is_default %} · ★ default{% endif %}</label>': '<label>Nome{% if v.is_default %} · ★ predefinita{% endif %}</label>',
+                   'class="muted">changed {{ v.updated_at[:10] }}</div>': 'class="muted">modificata il {{ v.updated_at[:10] }}</div>',
+                   '>Text of this version</summary>': '>Testo di questa versione</summary>',
+                   'A line starting with ## is a section title, ### a job (the next line is its dates), - a point.': 'Una riga che inizia con ## è un titolo di sezione, '
+                                                                                                                     '### un impiego (la riga seguente indica le date), '
+                                                                                                                     '- un punto.',
+                   'value="save">Save</button>': 'value="save">Salva</button>',
+                   '>Open the PDF ↗</a>': '>Apri il PDF ↗</a>',
+                   'value="undefault">No longer the default</button>': 'value="undefault">Non più predefinita</button>',
+                   'value="default">★ Make it the default</button>': 'value="default">★ Rendi predefinita</button>',
+                   "confirm('Delete this version? CVs already made for jobs are kept.')": "confirm('Eliminare questa versione? I CV già fatti per le offerte restano.')",
+                   '">Delete</button>': '">Elimina</button>',
+                   'No version yet. Create one above, or use <b>Save as a version</b> under the CV of a job.': 'Ancora nessuna versione. Creane una qui sopra, o usa '
+                                                                                                               "<b>Salva come versione</b> sotto il CV di un'offerta."}}
 
 STRINGS = {'CV': 'CV',
  'Cover letter': 'Lettera di motivazione',
