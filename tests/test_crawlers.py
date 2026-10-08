@@ -240,3 +240,117 @@ def test_discovery_rejects_other_companies_with_the_same_short_name(env):
     assert not d.name_matches("Sunrise", "Sunrise Management")
     assert d.accept(None, "TAG Heuer", "lever", "tagheuer") and not d.accept(None, "TAG Heuer", "lever", "tag")
     assert d.accept(None, "Logitech", "workday", "logitech/wd5/Logitech")
+
+
+# ---- systems of large Swiss employers (recorded shapes, 2026-10-08) -----------------------
+def test_successfactors_rss_feeds_per_region_and_term(env, net, monkeypatch):
+    env.scanlog.start()
+    monkeypatch.setattr(env.config, "SEARCH_TERMS", ["cloud architect", "broken term"])
+    monkeypatch.setattr(env.config, "WHERE", ["Vaud"])
+    _watchlist(env, [{"company": "Uni", "ats": "successfactors", "slug": "careers.uni.test"}])
+    asked = []
+
+    def rss(*items):
+        body = "".join(f"<item><title><![CDATA[{t}]]></title><description><![CDATA[{d}]]></description>"
+                       f"<pubDate>Wed, 07 Oct 2026 0:00:00 GMT</pubDate><link>{u}</link></item>" for t, d, u in items)
+        return httpx.Response(200, content=f"<?xml version='1.0'?><rss version='2.0'><channel>{body}</channel></rss>".encode(),
+                              headers={"content-type": "application/rss+xml"})
+
+    def feed(r):
+        kw = r.url.params.get("keywords", "")
+        asked.append((r.url.params.get("locale"), kw))
+        if kw == "(broken term)":
+            return httpx.Response(500)
+        if kw == "(Vaud)":
+            return rss(("DevOps Engineer (Lausanne, Vaud, CH)", "<p>You will run our platform team and work with Terraform every day.</p>", "https://careers.uni.test/job/2/?utm_source=rss"))
+        return rss(("Cloud Architect (80-100%) (Lausanne, CH)", "<p>We use <b>AWS</b></p>", "https://careers.uni.test/job/1/?feedId=null&amp;utm_source=rss"),
+                   ("Cloud Architect (Zurich, CH)", "", "https://careers.uni.test/job/3/"),
+                   ("Junior Architect (Lausanne, CH)", "", "https://careers.uni.test/job/4/"))
+    net["https://careers.uni.test/services/rss/job/"] = feed
+    jobs = {j["url"]: j for j in env.providers.ats.fetch()}
+    assert set(jobs) == {"https://careers.uni.test/job/1/", "https://careers.uni.test/job/2/"}      # once each, clean links
+    j = jobs["https://careers.uni.test/job/1/"]
+    assert (j["title"], j["location"], j["description"], j["source"]) == ("Cloud Architect (80-100%)", "Lausanne, CH", "We use AWS", "sf:careers.uni.test")
+    assert list(dict.fromkeys(asked)) == [("en_US", ""), ("en_US", "(Vaud)"), ("en_US", "(cloud architect)"),
+                                          ("en_US", "(broken term)")]            # the failing one is retried, then skipped
+    assert not env.scanlog.result()["ats"]["errors"]                    # one term failing is not a board failure
+    net["https://careers.uni.test/services/rss/job/"] = lambda r: httpx.Response(503)
+    env.scanlog.start()
+    assert env.providers.ats.fetch() == [] and env.scanlog.result()["ats"]["errors"]
+
+
+def test_prospective_pages_and_builds_the_ad(env, net):
+    env.scanlog.start()
+    _watchlist(env, [{"company": "Confederation", "ats": "prospective", "slug": "1000625"}])
+
+    def job(i, title, city):
+        return {"id": str(i), "title": title, "start_date": "2026-10-07T22:00:00Z", "language": "en",
+                "links": {"directlink": f"https://jobs.admin.test/{i}"},
+                "attributes": {"arbeitsort": [city], "verwaltungseinheit": ["Dept of Justice"], "verwaltungseinheit_1": ["Migration Office"]},
+                "szas": {"sza_location.city": city, "sza_tasks": "<ul><li>Run the AWS platform</li></ul>",
+                         "sza_requirements": "<p>Terraform</p>", "sza_company_profil": "<p>We work for the country.</p>"}}
+    pages = []
+
+    def api(r):
+        off = int(r.url.params["offset"])
+        pages.append((r.url.params["lang"], r.url.params["limit"], off))
+        data = [job(1, "Cloud Architect", "Lausanne, Suisse"), job(2, "Cloud Architect", "Berne, Suisse")] if off == 0 else \
+               [job(3, "DevOps Engineer", "Genève, Suisse")]
+        return jresp({"total": 3, "offset": off, "jobs": data})
+    net["https://ohws.prospective.ch/public/v1/medium/1000625/jobs"] = api
+    jobs = {j["url"]: j for j in env.providers.ats.fetch()}
+    assert set(jobs) == {"https://jobs.admin.test/1", "https://jobs.admin.test/3"} and pages == [("en", "100", 0), ("en", "100", 2)]
+    j = jobs["https://jobs.admin.test/1"]
+    assert j["company"] == "Confederation (Migration Office)" and j["location"] == "Lausanne, Suisse"
+    assert "Run the AWS platform" in j["description"] and "Terraform" in j["description"]
+
+
+def test_oracle_recruiting_lists_then_fetches_only_new_matching_ads(env, net):
+    env.scanlog.start()
+    _watchlist(env, [{"company": "Canton", "ats": "oracle", "slug": "fa-x.oraclecloud.test/CX"}])
+    details, lists = [], []
+
+    def api(r):
+        finder = r.url.params["finder"]
+        if "recruitingCEJobRequisitionDetails" in r.url.path:
+            details.append(finder)
+            return jresp({"items": [{"ExternalDescriptionStr": "<p>Mission: AWS</p>", "ExternalQualificationsStr": "<p>Terraform</p>"}]})
+        lists.append((finder, r.url.params.get("expand")))
+        if "offset=0" in finder:
+            return jresp({"items": [{"TotalJobsCount": 3, "requisitionList": [
+                {"Id": "10", "Title": "Cloud Architect", "PostedDate": "2026-10-08", "PrimaryLocation": "Lausanne, Suisse", "ShortDescriptionStr": "Dept A"},
+                {"Id": "11", "Title": "Greffier", "PostedDate": "2026-10-08", "PrimaryLocation": "Lausanne, Suisse", "ShortDescriptionStr": "Dept B"}]}]})
+        return jresp({"items": [{"TotalJobsCount": 3, "requisitionList": [
+            {"Id": "12", "Title": "DevOps Engineer", "PostedDate": "2026-10-07", "PrimaryLocation": "Genève, Suisse", "ShortDescriptionStr": "Dept C"}]}]})
+    net["https://fa-x.oraclecloud.test/hcmRestApi/resources/latest/"] = api
+    jobs = {j["url"]: j for j in env.providers.ats.fetch()}
+    assert set(jobs) == {"https://fa-x.oraclecloud.test/hcmUI/CandidateExperience/en/sites/CX/job/10",
+                         "https://fa-x.oraclecloud.test/hcmUI/CandidateExperience/en/sites/CX/job/12"}
+    assert "Mission: AWS" in jobs["https://fa-x.oraclecloud.test/hcmUI/CandidateExperience/en/sites/CX/job/10"]["description"]
+    assert len(lists) == 2 and all(e == "requisitionList.secondaryLocations" for _, e in lists) and "siteNumber=CX" in lists[0][0]
+    assert details == ['ById;Id="10",siteNumber=CX', 'ById;Id="12",siteNumber=CX']                     # not for the filtered one
+    env.store.upsert_jobs(list(jobs.values()))                          # second scan: nothing new -> no ad requests
+    details.clear()
+    env.providers.ats.fetch()
+    assert details == []
+
+
+def test_public_boards_join_the_watchlist_unless_switched_off(env, net, monkeypatch):
+    seen = []
+    monkeypatch.setattr(env.providers.ats, "DISPATCH", {k: (lambda client, slug, company, out, known=frozenset(), k=k: seen.append((k, slug)))
+                                                        for k in env.providers.ats.DISPATCH})
+    monkeypatch.setattr(env.providers.ats, "NEEDS_KNOWN", set())
+    _watchlist(env, [{"company": "EPFL", "ats": "successfactors", "slug": "careers.epfl.ch"}, {"company": "GH", "ats": "greenhouse", "slug": "gh"}])
+    env.providers.ats.fetch()
+    assert seen == [("successfactors", "careers.epfl.ch"), ("greenhouse", "gh")]                        # switched off in tests
+    monkeypatch.setenv("PUBLIC_BOARDS", "1")
+    seen.clear()
+    env.providers.ats.fetch()
+    public = json.loads(Path(env.providers.ats.PUBLIC_BOARDS).read_text())
+    assert len(seen) == 2 + len(public) - 1 and seen.count(("successfactors", "careers.epfl.ch")) == 1   # no board twice
+    assert all(e["ats"] in ("successfactors", "prospective", "oracle") for e in public)
+    Path(env.config.WATCHLIST_PATH).unlink()
+    seen.clear()
+    env.scanlog.start()
+    env.providers.ats.fetch()
+    assert len(seen) == len(public)                                      # an empty watchlist is no longer an error

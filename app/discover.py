@@ -108,6 +108,15 @@ def from_url(url):
     m = re.search(r"https?://([\w-]+)\.(wd\d+)\.myworkdayjobs\.com/(?:[a-z]{2}-[A-Z]{2}/)?([\w-]+)", url)
     if m:
         return "workday", f"{m.group(1)}/{m.group(2)}/{m.group(3)}"
+    m = re.search(r"https?://([\w.-]+\.oraclecloud\.com)/hcmUI/CandidateExperience/[\w-]+/sites/([\w-]+)", url)
+    if m:
+        return "oracle", f"{m.group(1)}/{m.group(2)}"
+    m = re.search(r"prospective\.ch/public/v1/(?:medium|careercenter)/(\d+)|/careercenter/(\d+)", url)
+    if m:
+        return "prospective", m.group(1) or m.group(2)
+    m = re.search(r"https?://([\w.-]+)/services/rss/job", url)          # a SuccessFactors career site's feed address
+    if m:
+        return "successfactors", m.group(1)
     for ats, pat in URL_PATTERNS:
         m = re.search(pat, url)
         if m:

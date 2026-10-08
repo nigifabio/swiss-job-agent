@@ -4,7 +4,7 @@ Choose sources with `PROVIDERS` in `.env` or on the Settings page (`;`-separated
 
 | Provider | What | Needs |
 |---|---|---|
-| `ats` | company career sites listed in `data/watchlist.json`: Greenhouse, Lever, Ashby, SmartRecruiters, Workday, Personio, Recruitee, Teamtailor, Workable | a watchlist (see below) |
+| `ats` | company career sites listed in `data/watchlist.json`: Greenhouse, Lever, Ashby, SmartRecruiters, Workday, Personio, Recruitee, Teamtailor, Workable, SAP SuccessFactors, Prospective, Oracle Recruiting; plus the public boards everybody gets (below) | nothing for the public boards; a watchlist for more |
 | `jobup` | jobs.ch + jobup.ch (the sites' unofficial search backend) | – |
 | `jobroom` | Job-Room / work.swiss (SECO) public ads, by canton (`JOBROOM_CANTONS`, else from `WHERE`) | – |
 | `remote` | Remotive, Remote OK, Himalayas; only roles open to Switzerland / Europe / worldwide | – |
@@ -40,13 +40,35 @@ A posting matching either fingerprint of a stored one is skipped and the first s
 Jobs you add by hand are never merged. Job-Room ads republished from jobs.ch/jobup.ch are skipped:
 the `jobup` source has them with the real employer.
 
+## Public boards (everybody gets them)
+
+`app/watchlists/public.json` lists large Swiss employers and administrations that are crawled for every person,
+on top of their own watchlist (the title, place and language filters still decide what is kept). Today:
+
+| Employer | System | What |
+|---|---|---|
+| État de Vaud | Oracle Recruiting | the canton's administration, courts, schools, social services |
+| Confédération suisse | Prospective | the federal administration (jobs.admin.ch) |
+| EPFL | SAP SuccessFactors | research, technical and administrative jobs in Lausanne |
+| BCV | SAP SuccessFactors | Banque Cantonale Vaudoise |
+| Coop | SAP SuccessFactors | shops, logistics, restaurants (jobs in your regions and for your search terms) |
+| SIG Genève | SAP SuccessFactors | Services Industriels de Genève |
+
+`PUBLIC_BOARDS=0` in `.env` turns them off. To add an employer that uses one of these systems to your own
+watchlist, give its address in a seed file (`Company = https://...`):
+
+- **SAP SuccessFactors**: the feed address `https://<career site>/services/rss/job/` (the site gives its 20 newest
+  jobs plus 20 per search: one search per region and search term of yours);
+- **Prospective**: an address containing `/careercenter/<number>` (in the page source of the career page);
+- **Oracle Recruiting**: the career address `https://<host>.oraclecloud.com/hcmUI/CandidateExperience/fr/sites/<site>`.
+
 ## Company career sites (watchlist)
 
 ```bash
 docker compose run --rm scheduler python -m app.discover app/companies.romandie.txt
 ```
 
-probes each company in the seed file for all nine career-site systems and merges the hits into
+probes each company in the seed file for nine career-site systems and merges the hits into
 `data/watchlist.json`. Seed files in the repo: `app/companies.seed.txt` (Swiss tech),
 `app/companies.romandie.txt` (Geneva/Vaud employers with tech teams),
 `app/companies.vaud-services.txt` (hotels, retail, logistics, watchmaking, services). Write your own:

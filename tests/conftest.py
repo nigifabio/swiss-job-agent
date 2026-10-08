@@ -26,6 +26,7 @@ def env(tmp_path, monkeypatch):
     monkeypatch.setenv("LOCATION_KEYWORDS", "geneva,genève,lausanne")
     monkeypatch.setenv("SCORE_KEYWORDS", "aws,azure,terraform,api")
     monkeypatch.setenv("LANGUAGES", "en")
+    monkeypatch.setenv("PUBLIC_BOARDS", "0")          # the boards everybody gets are tested on their own
     for var in ("CF_TEAM_DOMAIN", "CF_ACCESS_AUD", "ALLOWED_EMAILS", "CAREERJET_API_KEY", "JOOBLE_API_KEY",
                 "IMAP_HOST", "JOBROOM_CANTONS", "ONBOARDING", "PLATFORM_TENANT", "SETTINGS_PATH", "PROFILE_PATH"):
         monkeypatch.delenv(var, raising=False)

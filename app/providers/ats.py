@@ -1,6 +1,11 @@
 """Generic ATS provider — pulls public job boards for a watchlist of companies. No API key.
 Supported: Greenhouse, Lever, Ashby, SmartRecruiters, Workday, Personio, Recruitee,
-Teamtailor, Workable (all verified against live boards, 2026-09-24).
+Teamtailor, Workable (all verified against live boards, 2026-09-24), and the systems of large
+Swiss employers and administrations: SAP SuccessFactors career sites (RSS), Prospective
+(JSON) and Oracle Recruiting Cloud (JSON), verified 2026-10-08.
+
+Boards crawled = the person's watchlist + app/watchlists/public.json (public-sector and other
+large Swiss employers everybody gets; PUBLIC_BOARDS=0 turns that off).
 
 Filters each posting by:
   - title keywords  (config.TITLE_KEYWORDS, seniority by default)
@@ -11,6 +16,7 @@ The watchlist (app/watchlist.json) is produced by app/discover.py, which
 probes each company against all four ATSs and records the ones that resolve.
 """
 import os
+import re
 import json
 import xml.etree.ElementTree as ET
 
@@ -194,13 +200,129 @@ def _workday(client, slug, company, out, known=frozenset()):
             break
 
 
+# ---- systems of large Swiss employers and administrations ------------------------------------
+SF_LOCALES = {"fr": "fr_FR", "de": "de_DE", "it": "it_IT", "en": "en_US"}
+SF_TERMS = 12                  # search terms tried on a SuccessFactors site (20 newest results each)
+PAGES_MAX = 12
+
+
+def _successfactors(client, slug, company, out, known=frozenset()):
+    """SAP SuccessFactors career site; slug is its host ("careers.epfl.ch"). The site's RSS feed
+    gives the 20 newest jobs, and 20 per keyword search: one feed per region and search term of the person.
+    Verified 2026-10-08: GET https://{host}/services/rss/job/?locale=fr_FR[&keywords=(term)] ->
+    <item><title>Title (Town, CC)</title><description>html</description><pubDate/><link/></item>"""
+    locale = next((SF_LOCALES[l] for l in config.LANGUAGES if l in SF_LOCALES), "en_US")
+    links = set()
+    # the keyword search also matches the place ("Vaud"): the person's regions bring the local jobs of
+    # employers with thousands of postings
+    terms = [t for t in list(config.WHERE) + list(config.SEARCH_TERMS) if t.strip()][:SF_TERMS]
+    for n, kw in enumerate([""] + terms):
+        params = {"locale": locale}
+        if kw:
+            params["keywords"] = f"({kw})"
+        try:
+            root = ET.fromstring(client.get(f"https://{slug}/services/rss/job/", params=params).content)
+        except Exception:  # noqa: BLE001
+            if n == 0:                 # the site itself is unreachable or changed: report it
+                raise
+            continue                   # one search term the site doesn't like is not a failure
+        for item in root.iter("item"):
+            link = (item.findtext("link") or "").split("?")[0]
+            if not link or link in links:
+                continue
+            links.add(link)
+            title, loc = (item.findtext("title") or "").strip(), ""
+            m = re.match(r"^(.*\S)\s*\(([^()]*)\)$", title)       # "Title (Lausanne, CH)"
+            if m:
+                title, loc = m.group(1), m.group(2)
+            _emit(out, f"sf:{slug}", company, title, loc, enrich.html_to_text(item.findtext("description") or ""),
+                  link, item.findtext("pubDate") or "")
+
+
+def _prospective(client, slug, company, out, known=frozenset()):
+    """Prospective career centre (many Swiss administrations and companies); slug is the "medium" id,
+    the number in the career page's address or scripts ("/careercenter/1000625/").
+    Verified 2026-10-08: GET https://ohws.prospective.ch/public/v1/medium/{id}/jobs?lang=&limit=&offset=
+    -> {total, jobs: [{title, start_date, links{directlink}, attributes{arbeitsort[]}, szas{sza_tasks, ...}}]}"""
+    lang = next((l for l in config.LANGUAGES if l in SF_LOCALES), "fr")
+    offset = 0
+    for _ in range(PAGES_MAX):
+        d = client.json(f"https://ohws.prospective.ch/public/v1/medium/{slug}/jobs",
+                        params={"lang": lang, "limit": 100, "offset": offset})
+        jobs = d.get("jobs") or []
+        for j in jobs:
+            sz, at = j.get("szas") or {}, j.get("attributes") or {}
+            loc = sz.get("sza_location.city") or ", ".join(at.get("arbeitsort") or [])
+            desc = "\n\n".join(enrich.html_to_text(sz[k]) for k in
+                               ("sza_tasks", "sza_requirements", "sza_company_profil", "sza_benefits") if sz.get(k))
+            units = sorted((k, v) for k, v in at.items() if k.startswith("verwaltungseinheit") and v)
+            unit = units[-1][1][0] if units else ""              # the most specific one: the office, not the department
+            _emit(out, f"prospective:{slug}", f"{company} ({unit})" if unit else company, j.get("title", ""), loc, desc,
+                  (j.get("links") or {}).get("directlink") or sz.get("sza_apply_link", ""), j.get("start_date", ""))
+        offset += len(jobs)
+        if not jobs or offset >= int(d.get("total") or 0):
+            break
+
+
+def _oracle(client, slug, company, out, known=frozenset()):
+    """Oracle Recruiting Cloud candidate site; slug = "host/site" from the career address
+    https://{host}/hcmUI/CandidateExperience/fr/sites/{site}. The list has no ad text: the ad is
+    fetched only for new postings that pass the filters.
+    Verified 2026-10-08: GET https://{host}/hcmRestApi/resources/latest/recruitingCEJobRequisitions
+      ?onlyData=true&finder=findReqs;siteNumber={site},limit=25,offset=0,sortBy=POSTING_DATES_DESC
+    -> {items: [{TotalJobsCount, requisitionList: [{Id, Title, PostedDate, PrimaryLocation, ShortDescriptionStr}]}]}
+    detail: .../recruitingCEJobRequisitionDetails?onlyData=true&expand=all&finder=ById;Id="{id}",siteNumber={site}"""
+    host, _, site = slug.partition("/")
+    base = f"https://{host}/hcmRestApi/resources/latest"
+    lang = next((l for l in config.LANGUAGES if l in SF_LOCALES), "fr")
+    offset = 0
+    for _ in range(PAGES_MAX):
+        d = client.json(f"{base}/recruitingCEJobRequisitions", params={
+            "onlyData": "true", "expand": "requisitionList.secondaryLocations",       # no list without the expand
+            "finder": f"findReqs;siteNumber={site},limit=25,offset={offset},sortBy=POSTING_DATES_DESC"})
+        page = (d.get("items") or [{}])[0]
+        reqs = page.get("requisitionList") or []
+        for r in reqs:
+            title, loc, desc = r.get("Title", ""), r.get("PrimaryLocation", ""), r.get("ShortDescriptionStr") or ""
+            if (filters.title_ok(title) and filters.location_ok(loc, desc)
+                    and content_hash(title, company, loc) not in known):
+                try:
+                    det = (client.json(f"{base}/recruitingCEJobRequisitionDetails", params={
+                        "onlyData": "true", "expand": "all",
+                        "finder": f'ById;Id="{r.get("Id")}",siteNumber={site}'}).get("items") or [{}])[0]
+                    desc = "\n\n".join(enrich.html_to_text(det[k]) for k in (
+                        "ExternalDescriptionStr", "ExternalResponsibilitiesStr", "ExternalQualificationsStr",
+                        "OrganizationDescriptionStr") if det.get(k)) or desc
+                except Exception:  # noqa: BLE001  (keep the posting with its short text)
+                    pass
+            _emit(out, f"oracle:{host.split('.')[0]}", company, title, loc, desc,
+                  f"https://{host}/hcmUI/CandidateExperience/{lang}/sites/{site}/job/{r.get('Id')}", r.get("PostedDate", ""))
+        offset += len(reqs)
+        if not reqs or offset >= int(page.get("TotalJobsCount") or 0):
+            break
+
+
 DISPATCH = {
+    "successfactors": _successfactors, "prospective": _prospective, "oracle": _oracle,
     "greenhouse": _greenhouse, "lever": _lever,
     "ashby": _ashby, "smartrecruiters": _smartrecruiters,
     "workday": _workday, "personio": _personio, "recruitee": _recruitee,
     "teamtailor": _teamtailor, "workable": _workable,
 }
-NEEDS_KNOWN = {_smartrecruiters, _workday, _workable, _personio, _recruitee, _teamtailor}
+NEEDS_KNOWN = {_smartrecruiters, _workday, _workable, _personio, _recruitee, _teamtailor,
+               _successfactors, _prospective, _oracle}
+PUBLIC_BOARDS = os.path.join(os.path.dirname(os.path.dirname(__file__)), "watchlists", "public.json")
+
+
+def _public_boards():
+    """Large Swiss employers and administrations everybody gets, on top of their own watchlist."""
+    if os.environ.get("PUBLIC_BOARDS", "1") == "0":
+        return []
+    try:
+        with open(PUBLIC_BOARDS) as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return []
 
 
 def _load_watchlist():
@@ -217,6 +339,8 @@ def _load_watchlist():
 
 def fetch():
     wl = _load_watchlist()
+    have = {(e.get("ats"), e.get("slug")) for e in wl}
+    wl = wl + [e for e in _public_boards() if (e.get("ats"), e.get("slug")) not in have]
     if not wl:
         scanlog.error("ats", "watchlist empty; run: docker compose run --rm scheduler python -m app.discover")
         return []

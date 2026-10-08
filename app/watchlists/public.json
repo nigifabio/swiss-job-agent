@@ -1,0 +1,32 @@
+[
+  {
+    "company": "État de Vaud",
+    "ats": "oracle",
+    "slug": "fa-ewrg-saasfaeuraprod1.fa.ocs.oraclecloud.com/CX"
+  },
+  {
+    "company": "Confédération suisse",
+    "ats": "prospective",
+    "slug": "1000625"
+  },
+  {
+    "company": "EPFL",
+    "ats": "successfactors",
+    "slug": "careers.epfl.ch"
+  },
+  {
+    "company": "BCV",
+    "ats": "successfactors",
+    "slug": "jobs.bcv.ch"
+  },
+  {
+    "company": "Coop",
+    "ats": "successfactors",
+    "slug": "jobs.coop.ch"
+  },
+  {
+    "company": "SIG Genève",
+    "ats": "successfactors",
+    "slug": "jobs.sig-ge.ch"
+  }
+]
