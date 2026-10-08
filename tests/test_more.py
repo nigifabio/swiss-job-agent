@@ -275,6 +275,9 @@ def test_search_and_filters_on_top_of_the_list(env, monkeypatch):
     role = next(rid for _, rid, _ in env.listfilter.apply(env.store.list_jobs("new"))[1]["roles"] if "devops" in rid.lower())
     got, page = titles(f"role={role}")
     assert got == ["DevOps Engineer", "DevOps Engineer"] and "2 of 4" in page
+    # the person's own title words are choices too: "architect" (their setting) next to the catalogue's roles
+    got, page = titles("role=kw:architect")
+    assert got == ["Cloud Architect senior", "Cloud Architect"] and ">architect (2)<" in page and ">devops (2)<" in page
     assert len(titles("days=7")[0]) == 3 and "Cloud Architect senior" not in titles("days=7")[0]
     assert titles("km=5")[0] == ["Cloud Architect"]                                    # Morges is about 10 km away, remote has no distance
     assert set(titles("km=20")[0]) == {"Cloud Architect", "DevOps Engineer"}
