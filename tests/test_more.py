@@ -449,3 +449,44 @@ def test_flags_in_the_top_bar_switch_the_language(env, monkeypatch):
     fresh = TestClient(env.web.app)
     assert fresh.post("/lang", data={"lang": "de", "next": "/onboarding"}, follow_redirects=False).headers["location"] == "/onboarding"
     assert env.config.UI_LANG == "" and "Willkommen" in fresh.get("/onboarding").text
+
+
+def test_score_points_levels_badges_and_streak(env):
+    Path(env.config.PROFILE_PATH).write_text(json.dumps(PROFILE))
+    c = TestClient(env.web.app)
+    today = datetime.date(2026, 10, 8)                                     # a Thursday
+    g = env.game.stats(today)
+    assert (g["week"], g["total"], g["streak"], g["badges"], g["level_name"]) == (0, 0, 0, [], "Warming up")
+    ids = [_job(env, f"Architect {i}") for i in range(8)]
+    for n, jid in enumerate(ids[:3]):                                      # three weeks in a row, the last one this week
+        env.store.update_fields(jid, {"applied_date": (today - datetime.timedelta(days=7 * n + 1)).isoformat()})
+    env.store.update_fields(ids[0], {"followed_up_at": today.isoformat(), "letter": "x", "cv_text": "y"})
+    with env.store.conn() as k:                                            # an interview this week for the first one
+        k.execute("INSERT INTO status_history (job_id, status, changed_at) VALUES (?, 'interview', ?)", (ids[0], today.isoformat() + "T10:00:00"))
+        k.execute("UPDATE status_history SET changed_at='2020-01-01T00:00:00' WHERE status IN ('new', 'applied')")
+    env.store.dismiss(ids[5], "location", True)                            # sorted with a reason: 1 point; without: none
+    env.store.dismiss(ids[6], None, True)
+    env.store.update_status(ids[7], "shortlisted")
+    g = env.game.stats(datetime.date.today() if datetime.date.today() >= today else today)
+    g = env.game.stats(today) if g["streak"] != 3 else g
+    assert g["this_week"]["applied"] == 1 and g["this_week"]["interview"] == 1 and g["this_week"]["followup"] == 1
+    assert g["total"] >= 3 * 10 + 30 + 5 + 3 + 3 and g["streak"] == 3
+    assert {"first", "streak3", "tailor", "interview"} <= set(g["badges"]) and "offer" not in g["badges"] and "five" not in g["badges"]
+    assert g["level"] >= 1 and g["next_level"] and g["to_next"] == g["next_level"] - g["total"]
+    page = c.get("/week").text
+    assert "My score" in page and "Lift-off" in page and "How points are counted" in page and "/_platform/league" not in page
+    assert "🏅" in c.get("/jobs").text
+    assert "Mon score" in c.get("/week", headers={"accept-language": "fr"}).text and "Décollage" in c.get("/week", headers={"accept-language": "fr"}).text
+    # what a league may be given: numbers and badge keys, nothing that names a job
+    pub = env.game.public(g)
+    assert set(pub) == {"week", "month", "total", "streak", "level", "badges"} and all(isinstance(v, (int, list)) for v in pub.values())
+
+
+def test_sorting_points_are_capped_and_changed_settings_dont_count(env):
+    today = datetime.date.today()
+    for i in range(30):
+        env.store.dismiss(_job(env, f"A{i}"), "wrong_role", True)
+    for i in range(5):
+        env.store.dismiss(_job(env, f"F{i}"), "filtered", True)             # removed by a change of settings: not the person's sorting
+    g = env.game.stats(today)
+    assert g["this_week"]["sorted"] == 20 and g["week"] == 20 and "sharp" in g["badges"]

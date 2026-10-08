@@ -11,7 +11,7 @@
       {% if scan_report %}· {% for src, r in scan_report | dictsort %}{{ src }} {{ r.count }}{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}
     {% else %}No scan yet.{% endif %}
   </span>
-  <a class="weeklink" href="/week">📋 My week</a>
+  <a class="weeklink" href="/week">📋 My week</a> <a href="/week#score" title="My score">🏅 {{ game.week }} pts{% if game.streak >= 2 %} · 🔥 {{ game.streak }}{% endif %}</a>
 </div>
 {% if done >= 0 %}<div class="banner">{{ done }} job{{ 's' if done != 1 }} moved.</div>{% endif %}
 {% if assigned %}

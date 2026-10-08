@@ -140,10 +140,50 @@ _MESSAGE = [
     ('href="{{ link[0] }}">{{ link[1] }}</a>', 'href="{{ link[0] }}">{{ link[1] | tr }}</a>', 'href="{{ link[0] }}">{{ link[1] | tr }}</a>'),
 ]
 
+_LEAGUE = [
+    ('← back to my job search</a>', "← retour à ma recherche d'emploi</a>", '← zurück zu meiner Stellensuche</a>'),
+    ('<h2 style="margin-top:0">🏆 The league</h2>', '<h2 style="margin-top:0">🏆 La ligue</h2>', '<h2 style="margin-top:0">🏆 Die Liga</h2>'),
+    ('A friendly race between the people who search for a job here. You earn points for what moves your search forward: sending applications, following up, sorting your list, getting interviews. Every Monday the week starts again at zero.', 'Une course amicale entre les personnes qui cherchent un emploi ici. Vous gagnez des points pour ce qui fait avancer votre recherche : envoyer des candidatures, relancer, trier votre liste, décrocher des entretiens. Chaque lundi, la semaine repart de zéro.', 'Ein freundschaftliches Rennen unter den Leuten, die hier eine Stelle suchen. Punkte gibt es für alles, was Ihre Suche voranbringt: Bewerbungen senden, nachfassen, die Liste sortieren, Gespräche bekommen. Jeden Montag beginnt die Woche wieder bei null.'),
+    ('What the others see of you: <b>a nickname you choose, your points, your streak and your badges</b>. Nothing else: not your name or e-mail, not your jobs, not the companies. You can leave at any time and you disappear from the board.', "Ce que les autres voient de vous : <b>un pseudo que vous choisissez, vos points, votre série et vos badges</b>. Rien d'autre : ni votre nom ou e-mail, ni vos offres, ni les entreprises. Vous pouvez quitter à tout moment et vous disparaissez du classement.", 'Was die anderen von Ihnen sehen: <b>einen Spitznamen Ihrer Wahl, Ihre Punkte, Ihre Serie und Ihre Abzeichen</b>. Sonst nichts: weder Name noch E-Mail, weder Ihre Stellen noch die Firmen. Sie können jederzeit austreten und verschwinden aus der Rangliste.'),
+    ("That nickname can't be used: 2 to 20 letters or digits, and not one somebody already has.", 'Ce pseudo ne peut pas être utilisé : 2 à 20 lettres ou chiffres, et pas un pseudo déjà pris.', 'Dieser Spitzname geht nicht: 2 bis 20 Buchstaben oder Ziffern, und keiner, den schon jemand hat.'),
+    ('<label>Your nickname<br>', '<label>Votre pseudo<br>', '<label>Ihr Spitzname<br>'),
+    ('<button type="submit">Join the league →</button>', '<button type="submit">Rejoindre la ligue →</button>', '<button type="submit">Der Liga beitreten →</button>'),
+    ('{{ members }} in the league so far.', '{{ members }} dans la ligue pour le moment.', 'Bisher {{ members }} in der Liga.'),
+    ('🏆 The league <span class="muted">· this week</span>', '🏆 La ligue <span class="muted">· cette semaine</span>', '🏆 Die Liga <span class="muted">· diese Woche</span>'),
+    ("👑 Last week's champion: <b>{{ champion[0] }}</b> with {{ champion[1] }} points.", '👑 Champion de la semaine dernière : <b>{{ champion[0] }}</b> avec {{ champion[1] }} points.', '👑 Champion der letzten Woche: <b>{{ champion[0] }}</b> mit {{ champion[1] }} Punkten.'),
+    ('Nobody has scored yet this week. The first application takes the lead!', "Personne n'a encore marqué cette semaine. La première candidature prend la tête !", 'Diese Woche hat noch niemand gepunktet. Die erste Bewerbung übernimmt die Führung!'),
+    ('👑 You lead the week. Keep the crown!', '👑 Vous menez la semaine. Gardez la couronne !', '👑 Sie führen diese Woche. Behalten Sie die Krone!'),
+    ('You are {{ ahead.week - mine.week }} points behind <b>{{ ahead.name }}</b>. An application is worth 10, a follow-up 5.', 'Vous êtes à {{ ahead.week - mine.week }} points de <b>{{ ahead.name }}</b>. Une candidature vaut 10, une relance 5.', 'Sie liegen {{ ahead.week - mine.week }} Punkte hinter <b>{{ ahead.name }}</b>. Eine Bewerbung zählt 10, ein Nachfassen 5.'),
+    ('<span class="muted">(you)</span>', '<span class="muted">(vous)</span>', '<span class="muted">(Sie)</span>'),
+    ('· 🔥 {{ r.streak }} weeks in a row', '· 🔥 {{ r.streak }} semaines de suite', '· 🔥 {{ r.streak }} Wochen in Folge'),
+    ('· 💤 still in the starting blocks', '· 💤 encore dans les starting-blocks', '· 💤 noch in den Startblöcken'),
+    ('<small>{{ r.month }} this month · {{ r.total }} in total</small>', '<small>{{ r.month }} ce mois · {{ r.total }} au total</small>', '<small>{{ r.month }} diesen Monat · {{ r.total }} insgesamt</small>'),
+    ('Points: application 10 · interview 30 · offer 100 · follow-up 5 · CV or letter written for a job 3 · monthly target 25 · a job sorted with a reason 1. Your own score and next badges are on <a href="/week#score">My week</a>.', 'Points : candidature 10 · entretien 30 · offre 100 · relance 5 · CV ou lettre écrits pour une offre 3 · objectif mensuel 25 · une offre triée avec un motif 1. Votre score et vos prochains badges sont sur <a href="/week#score">Ma semaine</a>.', 'Punkte: Bewerbung 10 · Gespräch 30 · Angebot 100 · Nachfassen 5 · Lebenslauf oder Brief für eine Stelle 3 · Monatsziel 25 · eine Stelle mit Grund sortiert 1. Ihr eigener Punktestand und die nächsten Abzeichen stehen unter <a href="/week#score">Meine Woche</a>.'),
+    ('The others see only your nickname (<b>{{ t.league_name }}</b>), points, streak and badges.', 'Les autres ne voient que votre pseudo (<b>{{ t.league_name }}</b>), vos points, votre série et vos badges.', 'Die anderen sehen nur Ihren Spitznamen (<b>{{ t.league_name }}</b>), Punkte, Serie und Abzeichen.'),
+    ('<button class="ghost small">Change my nickname</button>', '<button class="ghost small">Changer de pseudo</button>', '<button class="ghost small">Spitznamen ändern</button>'),
+    ('<button class="ghost small">Leave the league</button>', '<button class="ghost small">Quitter la ligue</button>', '<button class="ghost small">Liga verlassen</button>'),
+]
+
 TEMPLATES = {"base.html": _BASE, "welcome.html": _WELCOME, "request.html": _REQUEST, "invite.html": _INVITE, "me.html": _ME,
-             "starting.html": _STARTING, "message.html": _MESSAGE}
+             "starting.html": _STARTING, "message.html": _MESSAGE, "league.html": _LEAGUE}
 
 STRINGS = {
+    'Warming up': ("À l'échauffement", 'Beim Aufwärmen'),
+    'On the move': ('En mouvement', 'In Bewegung'),
+    'In the race': ('Dans la course', 'Im Rennen'),
+    'Front runner': ('En tête de peloton', 'An der Spitze'),
+    'Unstoppable': ('Inarrêtable', 'Nicht zu stoppen'),
+    'Lift-off': ('Décollage', 'Abgehoben'),
+    'High five': ('Tope là', 'High Five'),
+    'Bullseye': ('Dans le mille', 'Volltreffer'),
+    'On fire': ('En feu', 'On Fire'),
+    'Persistent': ('Persévérant·e', 'Hartnäckig'),
+    'Sharp eye': ('Œil de lynx', 'Scharfes Auge'),
+    'Made to measure': ('Sur mesure', 'Massgeschneidert'),
+    'On stage': ('En scène', 'Auf der Bühne'),
+    'Thick skin': ('Peau dure', 'Dickes Fell'),
+    'Polished': ('Bien poli', 'Auf Hochglanz'),
+    'Jackpot': ('Jackpot', 'Jackpot'),
     "Back": ("Retour", "Zurück"),
     "Workspace paused": ("Espace en pause", "Bereich pausiert"),
     "Your workspace is paused. Contact the administrator.": ("Votre espace est en pause. Contactez l'administrateur.", "Ihr Bereich ist pausiert. Wenden Sie sich an den Administrator."),

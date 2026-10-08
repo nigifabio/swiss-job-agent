@@ -48,6 +48,34 @@ def init():
             c.execute("UPDATE invites SET uses=1 WHERE used_at IS NOT NULL")
         if "last_seen" not in {r["name"] for r in c.execute("PRAGMA table_info(tenants)").fetchall()}:
             c.execute("ALTER TABLE tenants ADD COLUMN last_seen TEXT")
+        if "league_name" not in {r["name"] for r in c.execute("PRAGMA table_info(tenants)").fetchall()}:
+            c.execute("ALTER TABLE tenants ADD COLUMN league_name TEXT")
+
+
+# ---- the league: people who chose to compare their points, under a nickname ---------------------
+NICK = re.compile(r"^[^\W_](?:[^\W_]|[ .-](?=[^\W_])){1,19}$")
+
+
+def join_league(slug, name):
+    """Returns the nickname kept, or None (not a usable nickname, or already someone else's)."""
+    name = " ".join((name or "").split())
+    if not NICK.match(name) or "@" in name:
+        return None
+    with conn() as c:
+        if c.execute("SELECT 1 FROM tenants WHERE lower(league_name)=lower(?) AND slug != ?", (name, slug)).fetchone():
+            return None
+        c.execute("UPDATE tenants SET league_name=? WHERE slug=?", (name, slug))
+    return name
+
+
+def leave_league(slug):
+    with conn() as c:
+        c.execute("UPDATE tenants SET league_name=NULL WHERE slug=?", (slug,))
+
+
+def league():
+    with conn() as c:
+        return [dict(r) for r in c.execute("SELECT * FROM tenants WHERE COALESCE(league_name,'') != '' AND status='active'").fetchall()]
 
 
 def touch(slug):

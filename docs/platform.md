@@ -110,6 +110,12 @@ Above the table, **what needs a look**: an app that is not healthy, a workspace 
 a source failing and for how many workspaces, a backup that didn't run. Every `HEALTH_CHECK_HOURS`
 (default 6) the same list is checked and, when it changed, sent through `NOTIFY_WEBHOOK`.
 
+### The league
+
+`/_platform/league`: people join by choice with a nickname. The gateway asks only the members' workspaces for their score
+(the `game` part of the counts-only `/ops/summary`: points, streak, level and badge keys) and ranks them. Nothing else is
+shared between workspaces; the board never shows an e-mail or a workspace id.
+
 ### Calendar feeds
 
 A person's calendar address is `https://<host>/welcome/cal/<workspace>/<key>.ics`. Calendar apps can't

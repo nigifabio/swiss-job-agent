@@ -27,7 +27,7 @@ from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse,
 from fastapi.templating import Jinja2Templates
 from starlette.background import BackgroundTask
 
-from . import db, health, i18n, locales, notify
+from . import db, health, i18n, league, locales, notify
 
 
 class Config:
@@ -446,6 +446,46 @@ def me_delete(request: Request, csrf: str = Form(""), confirm: str = Form("")):
     db.audit(email, "tenant.delete_self", f"{t['slug']} archive={bool(res.get('archive'))}")
     return message(request, "Deleted", "Your workspace and its data were deleted. A sealed backup copy is kept by the "
                                        "administrator for 30 days, then removed.")
+
+
+# ---- the league --------------------------------------------------------------------------------
+@app.get("/_platform/league", response_class=HTMLResponse)
+def league_page(request: Request, bad: str = ""):
+    t = db.tenant_for(request.state.email)
+    if not t:
+        return RedirectResponse("/", status_code=303)
+    members = db.league()
+    rows = league.board(members, tenant_summary, t["slug"]) if t.get("league_name") else []
+    mine = next((r for r in rows if r["me"]), None)
+    ahead = next((r for r in rows if mine and r["week"] > mine["week"]), None)
+    return page(request, "league.html", {"t": t, "rows": rows, "mine": mine, "bad": bad, "members": len(members),
+                                         "gap": (rows[0]["week"] - mine["week"]) if mine and rows else 0, "leader": rows[0] if rows else None,
+                                         "ahead": ahead, "champion": league.champion(rows) if rows else None,
+                                         "suggestion": league.suggestion([m["league_name"] for m in members])})
+
+
+@app.post("/_platform/league/join")
+def league_join(request: Request, csrf: str = Form(""), name: str = Form("")):
+    email = request.state.email
+    check_csrf(request, email, csrf)
+    t = db.tenant_for(email)
+    if not t:
+        return RedirectResponse("/", status_code=303)
+    kept = db.join_league(t["slug"], name)
+    if kept:
+        db.audit(email, "league.join", t["slug"])
+    return RedirectResponse("/_platform/league" + ("" if kept else "?bad=1"), status_code=303)
+
+
+@app.post("/_platform/league/leave")
+def league_leave(request: Request, csrf: str = Form("")):
+    email = request.state.email
+    check_csrf(request, email, csrf)
+    t = db.tenant_for(email)
+    if t:
+        db.leave_league(t["slug"])
+        db.audit(email, "league.leave", t["slug"])
+    return RedirectResponse("/_platform/league", status_code=303)
 
 
 # ---- admin ------------------------------------------------------------------------------------

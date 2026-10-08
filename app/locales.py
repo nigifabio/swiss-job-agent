@@ -709,6 +709,24 @@ _VERSIONS += [
     ('No letter kept yet. Create one above, or use <b>Save as a letter version</b> under the letter of a job.', "Pas encore de lettre gardée. Créez-en une ci-dessus, ou utilisez <b>Enregistrer comme modèle de lettre</b> sous la lettre d'une offre.", 'Noch kein Brief abgelegt. Erstellen Sie oben einen, oder verwenden Sie <b>Als Briefvorlage speichern</b> unter dem Brief einer Stelle.'),
 ]
 
+# the score
+_WEEK += [
+    ('<strong>🏅 My score</strong> <span class="muted">· level {{ g.level + 1 }}: {{ g.level_name | tr }}</span>', '<strong>🏅 Mon score</strong> <span class="muted">· niveau {{ g.level + 1 }} : {{ g.level_name | tr }}</span>', '<strong>🏅 Mein Punktestand</strong> <span class="muted">· Stufe {{ g.level + 1 }}: {{ g.level_name | tr }}</span>'),
+    ('🏆 The league</a>', '🏆 La ligue</a>', '🏆 Die Liga</a>'),
+    ('<div class="l">points this week</div>', '<div class="l">points cette semaine</div>', '<div class="l">Punkte diese Woche</div>'),
+    ('<div class="l">points this month</div>', '<div class="l">points ce mois</div>', '<div class="l">Punkte diesen Monat</div>'),
+    ('<div class="l">points in total</div>', '<div class="l">points au total</div>', '<div class="l">Punkte insgesamt</div>'),
+    ('weeks in a row with an application', 'semaines de suite avec une candidature', 'Wochen in Folge mit einer Bewerbung'),
+    ('{{ g.to_next }} points to the next level.', 'Encore {{ g.to_next }} points pour le niveau suivant.', 'Noch {{ g.to_next }} Punkte bis zur nächsten Stufe.'),
+    ('No badge yet: the first one comes with your first application.', 'Pas encore de badge : le premier arrive avec votre première candidature.', 'Noch kein Abzeichen: Das erste gibt es mit Ihrer ersten Bewerbung.'),
+    ('Next badges:', 'Prochains badges :', 'Nächste Abzeichen:'),
+    ('>How points are counted</summary>', '>Comment les points sont comptés</summary>', '>So werden die Punkte gezählt</summary>'),
+    ('Application sent {{ pts.applied }} · interview {{ pts.interview }} · offer {{ pts.offer }} · follow-up sent {{ pts.followup }} · CV written for the job {{ pts.cv }} · letter written for the job {{ pts.letter }} · monthly target reached {{ pts.target }} · a refusal {{ pts.refusal }} (you tried) · a job shortlisted, or discarded with a reason {{ pts.sorted }} (at most 20 a week).', "Candidature envoyée {{ pts.applied }} · entretien {{ pts.interview }} · offre {{ pts.offer }} · relance envoyée {{ pts.followup }} · CV écrit pour l'offre {{ pts.cv }} · lettre écrite pour l'offre {{ pts.letter }} · objectif mensuel atteint {{ pts.target }} · un refus {{ pts.refusal }} (vous avez essayé) · une offre retenue, ou écartée avec un motif {{ pts.sorted }} (20 par semaine au plus).", 'Bewerbung gesendet {{ pts.applied }} · Gespräch {{ pts.interview }} · Angebot {{ pts.offer }} · nachgefasst {{ pts.followup }} · Lebenslauf für die Stelle geschrieben {{ pts.cv }} · Brief für die Stelle geschrieben {{ pts.letter }} · Monatsziel erreicht {{ pts.target }} · eine Absage {{ pts.refusal }} (Sie haben es versucht) · eine Stelle gemerkt oder mit Grund verworfen {{ pts.sorted }} (höchstens 20 pro Woche).'),
+]
+_DASHBOARD += [
+    ('title="My score"', 'title="Mon score"', 'title="Mein Punktestand"'),
+]
+
 TEMPLATES = {
     "base.html": _BASE, "_apply_prompt.html": _APPLY_PROMPT, "_chip.html": _CHIP, "dashboard.html": _DASHBOARD,
     "detail.html": _DETAIL, "add.html": _ADD, "report.html": _REPORT, "stats.html": _STATS, "cv.html": _CV,
@@ -717,6 +735,34 @@ TEMPLATES = {
 }
 
 STRINGS = {   # English -> (French, German); Italian is added below
+    # the score: levels, badges and how to get them (game.py)
+    'Warming up': ("À l'échauffement", 'Beim Aufwärmen'),
+    'On the move': ('En mouvement', 'In Bewegung'),
+    'In the race': ('Dans la course', 'Im Rennen'),
+    'Front runner': ('En tête de peloton', 'An der Spitze'),
+    'Unstoppable': ('Inarrêtable', 'Nicht zu stoppen'),
+    'Lift-off': ('Décollage', 'Abgehoben'),
+    'High five': ('Tope là', 'High Five'),
+    'Bullseye': ('Dans le mille', 'Volltreffer'),
+    'On fire': ('En feu', 'On Fire'),
+    'Persistent': ('Persévérant·e', 'Hartnäckig'),
+    'Sharp eye': ('Œil de lynx', 'Scharfes Auge'),
+    'Made to measure': ('Sur mesure', 'Massgeschneidert'),
+    'On stage': ('En scène', 'Auf der Bühne'),
+    'Thick skin': ('Peau dure', 'Dickes Fell'),
+    'Polished': ('Bien poli', 'Auf Hochglanz'),
+    'Jackpot': ('Jackpot', 'Jackpot'),
+    'Send your first application': ('Envoyez votre première candidature', 'Senden Sie Ihre erste Bewerbung'),
+    '5 applications in one week': ('5 candidatures en une semaine', '5 Bewerbungen in einer Woche'),
+    'Reach the monthly target': ("Atteignez l'objectif mensuel", 'Erreichen Sie das Monatsziel'),
+    'Apply 3 weeks in a row': ('Postulez 3 semaines de suite', 'Bewerben Sie sich 3 Wochen in Folge'),
+    'Follow up 3 applications': ('Relancez 3 candidatures', 'Fassen Sie bei 3 Bewerbungen nach'),
+    'Sort 20 jobs and say why': ('Triez 20 offres en disant pourquoi', 'Sortieren Sie 20 Stellen mit Begründung'),
+    'Write a CV and a letter for the same job': ('Écrivez un CV et une lettre pour la même offre', 'Schreiben Sie Lebenslauf und Brief für dieselbe Stelle'),
+    'Get an interview': ('Décrochez un entretien', 'Bekommen Sie ein Gespräch'),
+    '5 refusals and still going': ('5 refus et toujours en course', '5 Absagen und immer noch dabei'),
+    'Complete the profile check': ('Complétez le contrôle du profil', 'Schliessen Sie den Profil-Check ab'),
+    'Get an offer': ('Recevez une offre', 'Erhalten Sie ein Angebot'),
     # documents to send (docs.py)
     "CV": ("CV", "Lebenslauf"), "Cover letter": ("Lettre de motivation", "Motivationsschreiben"),
     "Work certificates": ("Certificats de travail", "Arbeitszeugnisse"),

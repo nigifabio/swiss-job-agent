@@ -635,3 +635,52 @@ def test_flags_switch_the_language_of_the_platform_pages(gw):
     assert gw.get("/welcome/lang/it?next=//evil.example", follow_redirects=False).headers["location"] == "/welcome"
     assert gw.get("/welcome/lang/it?next=https://evil.example", follow_redirects=False).headers["location"] == "/welcome"
     assert gw.post("/welcome/lang/it").status_code == 403
+
+
+def test_league_is_joined_by_choice_and_shows_only_nicknames_and_points(gw, monkeypatch):
+    for slug in ("marie", "paul", "zoe"):
+        gw.db.add_tenant(slug, f"{slug}@example.org")
+    asked = []
+
+    def totals(slug):
+        asked.append(slug)
+        return {"jobs": {"new": 40}, "game": {"marie": {"week": 25, "month": 60, "total": 210, "streak": 3, "level": 2, "badges": ["first", "streak3", "nope"]},
+                                              "paul": {"week": 40, "month": 40, "total": 40, "streak": 1, "level": 0, "badges": ["first"]}}.get(slug, {})}
+    monkeypatch.setattr(gw.g, "tenant_summary", totals)
+    marie, paul, zoe = as_("marie@example.org"), as_("paul@example.org"), as_("zoe@example.org")
+    page = gw.get("/_platform/league", headers=marie).text
+    assert "Join the league" in page and "a nickname you choose" in page and not asked            # nobody is in it by default
+    assert gw.post("/_platform/league/join", headers=marie, data={"csrf": "x", "name": "Marmotte"}).status_code == 403
+    for bad in ("x", "marie@example.org", "a" * 21, "<b>hi</b>", " "):
+        r = gw.post("/_platform/league/join", headers=marie, data={"csrf": csrf(gw, "marie@example.org"), "name": bad}, follow_redirects=False)
+        assert r.headers["location"].endswith("?bad=1"), bad
+    gw.post("/_platform/league/join", headers=marie, data={"csrf": csrf(gw, "marie@example.org"), "name": "Marmotte"})
+    gw.post("/_platform/league/join", headers=paul, data={"csrf": csrf(gw, "paul@example.org"), "name": "Rösti 2"})
+    r = gw.post("/_platform/league/join", headers=zoe, data={"csrf": csrf(gw, "zoe@example.org"), "name": "marmotte"}, follow_redirects=False)
+    assert r.headers["location"].endswith("?bad=1")                                                # taken
+    asked.clear()
+    page = gw.get("/_platform/league", headers=marie).text
+    assert sorted(asked) == ["marie", "paul"]                                                      # only members' workspaces are asked
+    assert page.index("Rösti 2") < page.index("Marmotte") and "👑" in page and "15 points behind <b>Rösti 2</b>" in page
+    assert "🔥 3 weeks in a row" in page and "In the race" in page and 'title="Lift-off"' in page and "nope" not in page
+    for private in ("marie@example.org", "paul@example.org", "paul", "example.org"):               # no address, no workspace id of the others
+        assert private not in page.replace("marie@example.org", "", 1) or private == "marie@example.org", private
+    assert "paul@example.org" not in page and ">paul<" not in page
+    assert "You lead the week" in gw.get("/_platform/league", headers=paul).text
+    assert "Join the league" in gw.get("/_platform/league", headers=zoe).text and "Rösti" not in gw.get("/_platform/league", headers=zoe).text
+    fr = gw.get("/_platform/league", headers=dict(marie, **{"accept-language": "fr"})).text
+    assert "La ligue" in fr and "Dans la course" in fr and "Décollage" in fr
+    gw.post("/_platform/league/leave", headers=paul, data={"csrf": csrf(gw, "paul@example.org")})
+    assert "Rösti" not in gw.get("/_platform/league", headers=marie).text
+    assert gw.get("/_platform/league", headers=as_("stranger@example.org"), follow_redirects=False).status_code == 303
+    assert gw.get("/_platform/league").status_code == 403
+
+
+def test_league_remembers_last_weeks_champion(gw):
+    import datetime
+    from jobplatform import league
+    rows = [{"name": "Marmotte", "week": 30}, {"name": "Lynx", "week": 10}]
+    assert league.champion(rows, datetime.date(2026, 10, 8)) is None
+    assert league.champion([{"name": "Marmotte", "week": 0}, {"name": "Lynx", "week": 0}], datetime.date(2026, 10, 12)) == ["Marmotte", 30]
+    assert league.champion(rows, datetime.date(2026, 10, 14)) == ["Marmotte", 30]
+    assert league.champion(rows, datetime.date(2026, 10, 19)) == ["Marmotte", 30] and league.suggestion(["Marmotte"]) != "Marmotte"

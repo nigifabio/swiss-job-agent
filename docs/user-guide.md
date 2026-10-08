@@ -161,6 +161,16 @@ those dates (job titles and companies, nothing else); **New address** makes the 
   references, permit copy, criminal-record and debt-register extracts, salary expectations, photo). The ones the
   posting names are marked; tick what is ready.
 
+## Score, badges and the league
+
+- **🏅 My score** (on *My week*, and next to it on the job list): points for what moves a search forward. Application sent 10,
+  interview 30, offer 100, follow-up 5, a CV or a letter written for the job 3 each, the monthly target 25, a refusal 2,
+  and 1 for each job shortlisted or discarded with a reason (at most 20 a week). Five levels, eleven badges
+  (first application, 5 in a week, 3 weeks in a row, complete profile...), and a streak of weeks with an application.
+- **🏆 The league** (on a platform): a weekly race between the people who chose to join. You pick a nickname; the others see
+  that nickname, your points, streak and badges, and nothing else: no name, e-mail, job or company. The week restarts every
+  Monday and last week's champion is named. You can change nickname or leave at any time.
+
 ## Language of the site
 
 English, French, German and Italian. The site follows your browser; the **flags in the top bar** (or **Settings → Language of this site**) fix it.

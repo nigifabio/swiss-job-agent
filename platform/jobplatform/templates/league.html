@@ -1,0 +1,52 @@
+{% extends "base.html" %}{% block body %}
+<style>
+  .lrow { display:grid; grid-template-columns:34px 1fr auto; gap:10px; align-items:center; padding:10px 0; border-bottom:1px solid var(--border); }
+  .lrow.me { background:rgba(74,158,255,.08); margin:0 -16px; padding:10px 16px; } .lrank { font-size:20px; text-align:center; }
+  .lname { font-weight:600; } .lpts { font-size:22px; font-weight:600; text-align:right; white-space:nowrap; } .lpts small { font-size:12px; color:var(--muted); font-weight:400; }
+  .lbar { height:6px; background:var(--border); border-radius:3px; overflow:hidden; margin-top:5px; } .lbar span { display:block; height:100%; background:var(--accent); }
+  .lbadges { font-size:17px; letter-spacing:2px; }
+</style>
+<p><a href="/">← back to my job search</a></p>
+{% if not t.league_name %}
+<div class="card">
+  <h2 style="margin-top:0">🏆 The league</h2>
+  <p>A friendly race between the people who search for a job here. You earn points for what moves your search forward:
+    sending applications, following up, sorting your list, getting interviews. Every Monday the week starts again at zero.</p>
+  <p class="muted">What the others see of you: <b>a nickname you choose, your points, your streak and your badges</b>. Nothing else:
+    not your name or e-mail, not your jobs, not the companies. You can leave at any time and you disappear from the board.</p>
+  {% if bad %}<p class="bad">That nickname can't be used: 2 to 20 letters or digits, and not one somebody already has.</p>{% endif %}
+  <form method="post" action="/_platform/league/join"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <label>Your nickname<br><input name="name" value="{{ suggestion }}" maxlength="20" required></label>
+    <button type="submit">Join the league →</button></form>
+  <p class="muted">{{ members }} in the league so far.</p>
+</div>
+{% else %}
+<div class="card">
+  <h2 style="margin-top:0">🏆 The league <span class="muted">· this week</span></h2>
+  {% if champion %}<p class="muted" style="margin-top:0">👑 Last week's champion: <b>{{ champion[0] }}</b> with {{ champion[1] }} points.</p>{% endif %}
+  {% if mine and leader and leader.week == 0 %}<p>Nobody has scored yet this week. The first application takes the lead!</p>
+  {% elif mine and mine.lead %}<p>👑 You lead the week. Keep the crown!</p>
+  {% elif mine and ahead %}<p>You are {{ ahead.week - mine.week }} points behind <b>{{ ahead.name }}</b>. An application is worth 10, a follow-up 5.</p>{% endif %}
+  {% for r in rows %}
+  <div class="lrow{% if r.me %} me{% endif %}">
+    <div class="lrank">{% if r.lead %}👑{% elif r.rank == 2 %}🥈{% elif r.rank == 3 %}🥉{% else %}{{ r.rank }}{% endif %}</div>
+    <div><span class="lname">{{ r.name }}</span>{% if r.me %} <span class="muted">(you)</span>{% endif %}
+      <span class="muted">· {{ r.level | tr }}{% if r.streak >= 2 %} · 🔥 {{ r.streak }} weeks in a row{% endif %}{% if r.week == 0 %} · 💤 still in the starting blocks{% endif %}</span>
+      <div class="lbadges">{% for e, name in r.badges %}<span title="{{ name | tr }}">{{ e }}</span>{% endfor %}</div>
+      <div class="lbar"><span style="width:{{ r.bar }}%"></span></div></div>
+    <div class="lpts">{{ r.week }} <small>pts</small><br><small>{{ r.month }} this month · {{ r.total }} in total</small></div>
+  </div>
+  {% endfor %}
+  <p class="muted" style="margin:12px 0 0">Points: application 10 · interview 30 · offer 100 · follow-up 5 · CV or letter written for a job 3 · monthly target 25 ·
+    a job sorted with a reason 1. Your own score and next badges are on <a href="/week#score">My week</a>.</p>
+</div>
+<div class="card">
+  <p class="muted" style="margin-top:0">The others see only your nickname (<b>{{ t.league_name }}</b>), points, streak and badges.</p>
+  <form class="inline" method="post" action="/_platform/league/join"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <input name="name" value="{{ t.league_name }}" maxlength="20" required> <button class="ghost small">Change my nickname</button></form>
+  <form class="inline" method="post" action="/_platform/league/leave"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <button class="ghost small">Leave the league</button></form>
+  {% if bad %}<p class="bad">That nickname can't be used: 2 to 20 letters or digits, and not one somebody already has.</p>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

@@ -11,7 +11,7 @@ from fastapi import FastAPI, Request, Form
 from fastapi.responses import RedirectResponse, HTMLResponse, PlainTextResponse, FileResponse, Response
 from fastapi.templating import Jinja2Templates
 
-from . import (agenda, auth, commute, compose, config, docs, enrich, fetch, filters, i18n, listfilter, locales, letter, onboard, places, prefs,
+from . import (agenda, auth, commute, compose, config, docs, enrich, fetch, filters, game, i18n, listfilter, locales, letter, onboard, places, prefs,
                prep, report, requirements, roles, skills, store, strength, suggest, tailor, tune, twins, weekly)
 from .importers import cvparse, extract, linkedin
 
@@ -142,7 +142,7 @@ def jobs(request: Request, status: str = "new", view: str = "", done: int = -1, 
     if not best:
         rows = shown                              # search and filters of the bar on top of the list
     return render(request, "dashboard.html", {
-        "f": flt,
+        "f": flt, "game": game.stats(),
         "view": "best" if best else "", "fresh_n": min(BEST, len(fresh)), "done": done,
         "bulk": status in ("new", "shortlisted") and len(rows) > 1,
         "scanning": fetch.is_running(),
@@ -609,7 +609,8 @@ def _base(request):
 
 @app.get("/week", response_class=HTMLResponse)
 def week_page(request: Request):
-    return render(request, "week.html", {"w": weekly.summary()})
+    return render(request, "week.html", {"w": weekly.summary(), "g": game.stats(profile=tailor.load_profile()),
+                                         "badges": {k: (e, name) for k, e, name, _ in game.BADGES}, "pts": game.POINTS})
 
 
 @app.get("/calendar/{name}")
@@ -646,6 +647,7 @@ def ops_summary(request: Request):
     rep = _json(meta.get("last_scan_report"), {})
     return {"jobs": store.counts(), "last_scan_at": meta.get("last_scan_at", ""), "last_scan_new": meta.get("last_scan_new", ""),
             "last_visit_at": meta.get("visit_at", ""), "setup_done": not onboard.needed(), "scanning": fetch.is_running(),
+            "game": game.public(game.stats(profile=tailor.load_profile())),
             "sources": {src: {"count": r.get("count", 0), "errors": len(r.get("errors") or []), "kind": _kind(r.get("errors"))}
                         for src, r in rep.items()}}
 
