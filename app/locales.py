@@ -516,6 +516,21 @@ _DASHBOARD += [
     ('Nothing new since your last visit.', 'Rien de nouveau depuis votre dernière visite.', 'Nichts Neues seit Ihrem letzten Besuch.'),
 ]
 
+# search and filters on top of the list
+_DASHBOARD += [
+    ('placeholder="Keyword: title, company, skill…" aria-label="Keyword"', 'placeholder="Mot-clé : titre, entreprise, compétence…" aria-label="Mot-clé"', 'placeholder="Stichwort: Titel, Firma, Kompetenz…" aria-label="Stichwort"'),
+    ('aria-label="Role"><option value="">All roles</option>', 'aria-label="Type de poste"><option value="">Tous les types de poste</option>', 'aria-label="Art der Stelle"><option value="">Alle Stellenarten</option>'),
+    ('aria-label="Found"><option value="">Found: any time</option>', 'aria-label="Trouvée"><option value="">Trouvée : toutes dates</option>', 'aria-label="Gefunden"><option value="">Gefunden: jederzeit</option>'),
+    ('[(1, "Last 24 hours"), (3, "Last 3 days"), (7, "Last 7 days"), (30, "Last 30 days")]', '[(1, "Dernières 24 heures"), (3, "3 derniers jours"), (7, "7 derniers jours"), (30, "30 derniers jours")]', '[(1, "Letzte 24 Stunden"), (3, "Letzte 3 Tage"), (7, "Letzte 7 Tage"), (30, "Letzte 30 Tage")]'),
+    ('aria-label="Distance"><option value="">Any distance</option>', 'aria-label="Distance"><option value="">Toutes distances</option>', 'aria-label="Entfernung"><option value="">Jede Entfernung</option>'),
+    ('>Within {{ k }} km of home</option>', '>À moins de {{ k }} km du domicile</option>', '>Bis {{ k }} km vom Wohnort</option>'),
+    ('aria-label="Order"', 'aria-label="Ordre"', 'aria-label="Reihenfolge"'),
+    ('[("best", "Best match first"), ("newest", "Newest first")] + ([("nearest", "Nearest first")]', '[("best", "Meilleur score d\'abord"), ("newest", "Plus récentes d\'abord")] + ([("nearest", "Plus proches d\'abord")]', '[("best", "Beste Übereinstimmung zuerst"), ("newest", "Neueste zuerst")] + ([("nearest", "Nächste zuerst")]'),
+    ('<button class="small" type="submit">Search</button>', '<button class="small" type="submit">Chercher</button>', '<button class="small" type="submit">Suchen</button>'),
+    ('{{ jobs | length }} of {{ f.total }}</span> <a href="/jobs?status={{ status }}">Clear</a>', '{{ jobs | length }} sur {{ f.total }}</span> <a href="/jobs?status={{ status }}">Effacer</a>', '{{ jobs | length }} von {{ f.total }}</span> <a href="/jobs?status={{ status }}">Zurücksetzen</a>'),
+    ('No job matches this search. <a href="/jobs?status={{ status }}">Clear</a>', 'Aucune offre ne correspond à cette recherche. <a href="/jobs?status={{ status }}">Effacer</a>', 'Keine Stelle passt zu dieser Suche. <a href="/jobs?status={{ status }}">Zurücksetzen</a>'),
+]
+
 _DETAIL += [
     ('<label>Interview (date and time)</label>', "<label>Entretien (date et heure)</label>", '<label>Gespräch (Datum und Zeit)</label>'),
     ('<strong>Documents to send</strong>', '<strong>Documents à envoyer</strong>', '<strong>Unterlagen zum Mitsenden</strong>'),

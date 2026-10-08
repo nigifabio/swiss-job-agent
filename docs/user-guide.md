@@ -9,6 +9,10 @@
   **⚠ Last scan had problems** banner explains it.
 - New jobs are sorted by a **match score** (0-100): how many of your skills the posting mentions
   (words in the title count triple).
+- **Search and filters** (bar above every list): a keyword (title, company, place or text; accents and capitals
+  don't matter, every word must be there), the type of role, when the job was found (24 hours to 30 days), the
+  distance from your home town in km, and the order (best match, newest, nearest). Each card shows the distance.
+  Filter first, then **Select all** to discard or shortlist what is left.
 - **★ Best new** (first tab): the ten best-ranked jobs that arrived since your last visit. In the full list
   those jobs carry a **new** badge.
 - **The same job from several agencies is one card.** When the employer and one or more agencies advertise

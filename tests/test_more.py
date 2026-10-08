@@ -248,3 +248,40 @@ def test_weekly_message_goes_out_once_a_week_when_a_webhook_is_set(env, monkeypa
     _job(env, "Fresh DevOps")
     assert env.weekly.send_if_due() is True and env.weekly.send_if_due() is False
     assert len(sent) == 1 and "1 new jobs this week" in sent[0][1] and "Fresh DevOps" in sent[0][1]
+
+
+def test_search_and_filters_on_top_of_the_list(env, monkeypatch):
+    monkeypatch.setattr(env.config, "HOME_TOWN", "Lausanne")
+    c = TestClient(env.web.app)
+    a = _job(env, "Cloud Architect", company="Acme SA", location="Lausanne, VD", description="Kubernetes à Lausanne.")
+    b = _job(env, "DevOps Engineer", company="Globex", location="Morges", description="Terraform et pipelines, équipe à Genève.")
+    d = _job(env, "Cloud Architect senior", company="Initech", location="Zürich", description="Azure.")
+    e = _job(env, "DevOps Engineer", company="Hooli", location="Remote", description="Anywhere.")
+    with env.store.conn() as k:
+        k.execute("UPDATE jobs SET created_at='2020-01-01T00:00:00' WHERE id=?", (d,))
+        for jid, sc in ((a, 50), (b, 90), (d, 70), (e, 10)):
+            k.execute("UPDATE jobs SET score=? WHERE id=?", (sc, jid))
+
+    def titles(query):
+        page = c.get("/jobs?status=new&" + query).text
+        return [x.split("</strong>")[0] for x in page.split("<strong>")[1:] if "</a>" in x.split("</strong>")[1][:6]], page
+    got, page = titles("")
+    assert 'class="filterbar"' in page and len(got) == 4 and "Within 20 km of home" in page and " · 0 km" in page
+    assert titles("q=terraform")[0] == ["DevOps Engineer"]
+    assert titles("q=GENEVE")[0] == ["DevOps Engineer"]                                # accents and case ignored, any field
+    assert titles("q=cloud+initech")[0] == ["Cloud Architect senior"]                  # every word must be there
+    got, page = titles("q=nothinglikethis")
+    assert got == [] and "No job matches this search." in page
+    role = next(rid for _, rid, _ in env.listfilter.apply(env.store.list_jobs("new"))[1]["roles"] if "devops" in rid.lower())
+    got, page = titles(f"role={role}")
+    assert got == ["DevOps Engineer", "DevOps Engineer"] and "2 of 4" in page
+    assert len(titles("days=7")[0]) == 3 and "Cloud Architect senior" not in titles("days=7")[0]
+    assert titles("km=5")[0] == ["Cloud Architect"]                                    # Morges is about 10 km away, remote has no distance
+    assert set(titles("km=20")[0]) == {"Cloud Architect", "DevOps Engineer"}
+    assert titles("sort=nearest")[0][:2] == ["Cloud Architect", "DevOps Engineer"]
+    assert titles("sort=newest")[0][-1] == "Cloud Architect senior" and titles("")[0][0] == "DevOps Engineer"
+    assert len(titles("days=abc&km=7&sort=bogus&role=nope")[0]) == 4                   # nonsense is ignored
+    monkeypatch.setattr(env.config, "HOME_TOWN", "")                                   # no home: no distance menu
+    assert "Any distance" not in c.get("/jobs").text
+    for lang, word in (("fr", "Tous les types de poste"), ("de", "Alle Stellenarten"), ("it", "Tutti i tipi di posto")):
+        assert word in c.get("/jobs", headers={"accept-language": lang}).text

@@ -82,6 +82,8 @@
   .doclist label { display:flex; gap:8px; align-items:center; margin:0; color:var(--fg); font-size:14px; } .doclist input { width:auto; }
   .pair { display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:8px 0; border-bottom:1px solid var(--border); }
   .pair .orig { color:var(--muted); font-size:14px; white-space:pre-wrap; } .pair .k { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+  .filterbar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:0 0 12px; }
+  .filterbar input[type=search] { flex:2 1 200px; width:auto; padding:6px 8px; } .filterbar select { flex:1 1 140px; width:auto; padding:6px 8px; font-size:13px; }
   .bottomnav { display:none; }
   @media (max-width:640px) {
     .wrap { padding:12px 12px 84px; } header { padding:10px 12px; } header .nav { display:none; }
@@ -124,6 +126,8 @@
   <a href="/settings" class="{{ 'on' if here == '/settings' }}"><b>⚙</b>Settings</a>
 </nav>
 <script>
+  // the filter bar: choosing in a menu searches at once
+  document.querySelectorAll(".filterbar select").forEach(function (s) { s.addEventListener("change", function () { s.form.submit(); }); });
   // "Open & apply" opens the posting in a new tab; ask here whether to move it to Applied.
   document.querySelectorAll(".apply-link").forEach(function (a) {
     a.addEventListener("click", function () {

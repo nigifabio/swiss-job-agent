@@ -72,6 +72,22 @@
   {% endfor %}
 </div>
 
+{% if f.show and not view %}
+<form method="get" action="/jobs" class="filterbar">
+  <input type="hidden" name="status" value="{{ status }}">
+  <input type="search" name="q" value="{{ f.q }}" placeholder="Keyword: title, company, skill…" aria-label="Keyword">
+  <select name="role" aria-label="Role"><option value="">All roles</option>
+    {% for label, rid, n in f.roles %}<option value="{{ rid }}" {{ 'selected' if rid == f.role }}>{{ label }} ({{ n }})</option>{% endfor %}</select>
+  <select name="days" aria-label="Found"><option value="">Found: any time</option>
+    {% for d, label in [(1, "Last 24 hours"), (3, "Last 3 days"), (7, "Last 7 days"), (30, "Last 30 days")] %}<option value="{{ d }}" {{ 'selected' if d == f.days }}>{{ label }}</option>{% endfor %}</select>
+  {% if f.home %}<select name="km" aria-label="Distance"><option value="">Any distance</option>
+    {% for k in [5, 10, 20, 30, 50] %}<option value="{{ k }}" {{ 'selected' if k == f.km }}>Within {{ k }} km of home</option>{% endfor %}</select>{% endif %}
+  <select name="sort" aria-label="Order">
+    {% for k, label in [("best", "Best match first"), ("newest", "Newest first")] + ([("nearest", "Nearest first")] if f.home else []) %}<option value="{{ k }}" {{ 'selected' if k == f.sort }}>{{ label }}</option>{% endfor %}</select>
+  <button class="small" type="submit">Search</button>
+  {% if f.on %}<span class="muted">{{ jobs | length }} of {{ f.total }}</span> <a href="/jobs?status={{ status }}">Clear</a>{% endif %}
+</form>
+{% endif %}
 {% if view %}<p class="muted">The {{ jobs | length }} best-ranked job{{ 's' if jobs | length != 1 }} that arrived since your last visit. <a href="/jobs?status=new">See the whole list</a></p>{% endif %}
 {% if bulk and not view %}
 <form id="bulk" method="post" action="/jobs/bulk" class="bulkbar">
@@ -98,7 +114,7 @@
       {% if j.origin == "manual" %}<span class="muted">· added by hand</span>{% endif %}
     </div>
     <div class="muted">
-      {{ j.company }}{% if j.location %} · {{ j.location }}{% endif %}{% if j.commute_min is not none %} · 🚆 {{ j.commute_min }} min{% endif %} · {{ j.source }}{% if j.salary %} · {{ j.salary }}{% endif %}
+      {{ j.company }}{% if j.location %} · {{ j.location }}{% endif %}{% if j.km is not none %} · {{ j.km }} km{% endif %}{% if j.commute_min is not none %} · 🚆 {{ j.commute_min }} min{% endif %} · {{ j.source }}{% if j.salary %} · {{ j.salary }}{% endif %}
       {% if j.orp_assigned %} · 📌 ORP{% endif %}{% if j.applied_date and status != "new" %} · applied {{ j.applied_date }}{% endif %}{% if status == "discarded" and j.discard_reason %} · {{ reasons.get(j.discard_reason, j.discard_reason) }}{% elif j.outcome_note and status in ("rejected", "discarded") %} · {{ j.outcome_note }}{% endif %}
     </div>
     {% if j.twins %}<div class="muted twins">Same job also posted by:
@@ -165,7 +181,8 @@
   });
   </script>
 {% else %}
-  {% if view %}<p class="muted">Nothing new since your last visit.</p>
+  {% if f.on %}<p class="muted">No job matches this search. <a href="/jobs?status={{ status }}">Clear</a></p>
+  {% elif view %}<p class="muted">Nothing new since your last visit.</p>
   {% else %}<p class="muted">Nothing in “{{ status }}”.
     {% if status == 'new' %}Press <b>Scan now</b> or add one by hand.{% endif %}</p>{% endif %}
 {% endif %}

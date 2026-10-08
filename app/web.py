@@ -11,7 +11,7 @@ from fastapi import FastAPI, Request, Form
 from fastapi.responses import RedirectResponse, HTMLResponse, PlainTextResponse, FileResponse, Response
 from fastapi.templating import Jinja2Templates
 
-from . import (agenda, auth, commute, compose, config, docs, enrich, fetch, filters, i18n, locales, letter, onboard, places, prefs,
+from . import (agenda, auth, commute, compose, config, docs, enrich, fetch, filters, i18n, listfilter, locales, letter, onboard, places, prefs,
                prep, report, requirements, roles, skills, store, strength, suggest, tailor, tune, twins, weekly)
 from .importers import cvparse, extract, linkedin
 
@@ -110,7 +110,8 @@ BEST = 10        # how many postings "Best new" shows
 
 
 @app.get("/jobs", response_class=HTMLResponse)
-def jobs(request: Request, status: str = "new", view: str = "", done: int = -1):
+def jobs(request: Request, status: str = "new", view: str = "", done: int = -1, q: str = "", role: str = "",
+         days: str = "", km: str = "", sort: str = "best"):
     if status not in store.STATUSES:
         status = "new"
     meta = store.get_meta()
@@ -124,7 +125,12 @@ def jobs(request: Request, status: str = "new", view: str = "", done: int = -1):
     best = view == "best" and status == "new"
     if best:
         rows = fresh[:BEST]
+    num = lambda v: int(v) if str(v).isdigit() else 0  # noqa: E731
+    shown, flt = listfilter.apply(rows, q, role, num(days), num(km), sort, ui_lang(request))
+    if not best:
+        rows = shown                              # search and filters of the bar on top of the list
     return render(request, "dashboard.html", {
+        "f": flt,
         "view": "best" if best else "", "fresh_n": min(BEST, len(fresh)), "done": done,
         "bulk": status in ("new", "shortlisted") and len(rows) > 1,
         "scanning": fetch.is_running(),

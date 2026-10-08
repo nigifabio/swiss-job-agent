@@ -156,7 +156,24 @@ TEMPLATES = {'base.html': {'<html lang="en">': '<html lang="it">',
                     'aria-label="Select this job"': 'aria-label="Seleziona questa offerta"',
                     '<span class="fresh">new</span>': '<span class="fresh">nuova</span>',
                     'Same job also posted by:': 'Stesso posto pubblicato anche da:',
-                    'Nothing new since your last visit.': 'Niente di nuovo dalla tua ultima visita.'},
+                    'Nothing new since your last visit.': 'Niente di nuovo dalla tua ultima visita.',
+                    'placeholder="Keyword: title, company, skill…" aria-label="Keyword"': 'placeholder="Parola chiave: titolo, azienda, competenza…" aria-label="Parola '
+                                                                                          'chiave"',
+                    'aria-label="Role"><option value="">All roles</option>': 'aria-label="Tipo di posto"><option value="">Tutti i tipi di posto</option>',
+                    'aria-label="Found"><option value="">Found: any time</option>': 'aria-label="Trovata"><option value="">Trovata: qualsiasi data</option>',
+                    '[(1, "Last 24 hours"), (3, "Last 3 days"), (7, "Last 7 days"), (30, "Last 30 days")]': '[(1, "Ultime 24 ore"), (3, "Ultimi 3 giorni"), (7, "Ultimi '
+                                                                                                            '7 giorni"), (30, "Ultimi 30 giorni")]',
+                    'aria-label="Distance"><option value="">Any distance</option>': 'aria-label="Distanza"><option value="">Qualsiasi distanza</option>',
+                    '>Within {{ k }} km of home</option>': '>Entro {{ k }} km dal domicilio</option>',
+                    'aria-label="Order"': 'aria-label="Ordine"',
+                    '[("best", "Best match first"), ("newest", "Newest first")] + ([("nearest", "Nearest first")]': '[("best", "Miglior punteggio prima"), ("newest", '
+                                                                                                                    '"Più recenti prima")] + ([("nearest", "Più vicine '
+                                                                                                                    'prima")]',
+                    '<button class="small" type="submit">Search</button>': '<button class="small" type="submit">Cerca</button>',
+                    '{{ jobs | length }} of {{ f.total }}</span> <a href="/jobs?status={{ status }}">Clear</a>': '{{ jobs | length }} su {{ f.total }}</span> <a '
+                                                                                                                 'href="/jobs?status={{ status }}">Azzera</a>',
+                    'No job matches this search. <a href="/jobs?status={{ status }}">Clear</a>': 'Nessuna offerta corrisponde a questa ricerca. <a href="/jobs?status={{ '
+                                                                                                 'status }}">Azzera</a>'},
  'detail.html': {'← back to {{ job.status }}</a>': '← torna a «{{ job.status | tr }}»</a>',
                  '>Open &amp; apply ↗</a>': '>Apri e candidati ↗</a>',
                  '✓ Mark as applied': '✓ Segna come candidato',
