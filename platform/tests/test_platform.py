@@ -720,3 +720,58 @@ def test_bug_reports_and_requests_reach_the_operator(gw, monkeypatch):
     assert r.headers["location"].endswith("sent=2") and len(sent) == 8
     assert gw.get("/_platform/feedback", headers=as_("stranger@example.org"), follow_redirects=False).status_code == 303
     assert "Signaler un problème" in gw.get("/_platform/feedback", headers=dict(marie, **{"accept-language": "fr"})).text
+
+
+def test_forum_topics_replies_and_moderation_under_the_nickname(gw, monkeypatch):
+    sent = []
+    monkeypatch.setattr(gw.g.notify, "admins", lambda prov, subject, body: sent.append((subject, body)))
+    for slug in ("marie", "paul"):
+        gw.db.add_tenant(slug, f"{slug}@example.org")
+    gw.db.add_tenant("boss", "admin@example.org")
+    marie, paul, admin = as_("marie@example.org"), as_("paul@example.org"), as_("admin@example.org")
+    tok = lambda who: csrf(gw, who)                                                    # noqa: E731
+    page = gw.get("/_platform/forum", headers=marie).text
+    assert "Enter the forum" in page and "Start a topic" not in page                   # a username first
+    r = gw.post("/_platform/forum/new", headers=marie, data={"csrf": tok("marie@example.org"), "title": "Hello all", "text": "First words"}, follow_redirects=False)
+    assert r.headers["location"] == "/_platform/forum" and not gw.db.forum_topics()    # no username: nothing is posted
+    assert gw.post("/_platform/forum/name", headers=marie, data={"csrf": tok("marie@example.org"), "name": "x"}, follow_redirects=False).headers["location"].endswith("bad=name")
+    gw.post("/_platform/forum/name", headers=marie, data={"csrf": tok("marie@example.org"), "name": "Marmotte"})
+    assert gw.db.tenant("marie")["league_name"] == "Marmotte" and gw.db.tenant("marie")["in_league"] == 0 and gw.db.league() == []   # a forum name is not a league entry
+    assert "Join the league" in gw.get("/_platform/league", headers=marie).text
+    assert gw.post("/_platform/forum/new", headers=marie, data={"csrf": "x", "title": "Hello all", "text": "First words"}).status_code == 403
+    r = gw.post("/_platform/forum/new", headers=marie, follow_redirects=False,
+                data={"csrf": tok("marie@example.org"), "cat": "interviews", "title": "  Salary   question ", "text": "How do you answer?\r\n<script>alert(1)</script>"})
+    tid = int(r.headers["location"].rsplit("/", 1)[1])
+    assert sent and sent[0][0] == "🇨🇭 Job platform: new forum topic by Marmotte" and "Salary question" in sent[0][1]
+    assert "bad=short" in gw.post("/_platform/forum/new", headers=marie, data={"csrf": tok("marie@example.org"), "title": "Hi", "text": "x"}, follow_redirects=False).headers["location"]
+    # paul joins the league first: the same username signs his forum messages
+    gw.post("/_platform/league/join", headers=paul, data={"csrf": tok("paul@example.org"), "name": "Lynx"})
+    lst = gw.get("/_platform/forum", headers=paul).text
+    assert "Salary question" in lst and "Interviews" in lst and "you write as Lynx" in lst and "0 replies" in lst
+    assert "Salary question" not in gw.get("/_platform/forum?cat=cv", headers=paul).text
+    r = gw.post(f"/_platform/forum/{tid}/reply", headers=paul, data={"csrf": tok("paul@example.org"), "text": "Give a range."}, follow_redirects=False)
+    pid = int(r.headers["location"].rsplit("#p", 1)[1])
+    topic = gw.get(f"/_platform/forum/{tid}", headers=marie).text
+    assert "Marmotte" in topic and "Lynx" in topic and "Give a range." in topic and "&lt;script&gt;" in topic and "<script>alert" not in topic
+    assert "paul@example.org" not in topic and "marie@example.org" not in topic.replace("marie@example.org", "", 1)    # only the reader's own address (top bar)
+    assert topic.count("Remove</button>") == 1                                          # marie can remove her own message only
+    assert "1 reply" in gw.get("/_platform/forum", headers=marie).text
+    # nobody removes someone else's message, except the administrator
+    gw.post(f"/_platform/forum/post/{pid}/delete", headers=marie, data={"csrf": tok("marie@example.org")})
+    assert "Give a range." in gw.get(f"/_platform/forum/{tid}", headers=marie).text
+    gw.post(f"/_platform/forum/post/{pid}/delete", headers=admin, data={"csrf": tok("admin@example.org")})
+    assert "Give a range." not in gw.get(f"/_platform/forum/{tid}", headers=marie).text and "(message removed)" in gw.get(f"/_platform/forum/{tid}", headers=marie).text
+    first = gw.db.forum_topic(tid)[1][0]["id"]
+    r = gw.post(f"/_platform/forum/post/{first}/delete", headers=marie, data={"csrf": tok("marie@example.org")}, follow_redirects=False)
+    assert r.headers["location"] == "/_platform/forum" and gw.db.forum_topics() == []    # nothing left: the topic goes
+    # leaving the league keeps the username for the forum; strangers and visitors see nothing
+    gw.post("/_platform/league/leave", headers=paul, data={"csrf": tok("paul@example.org")})
+    assert gw.db.tenant("paul")["league_name"] == "Lynx" and gw.db.league() == []
+    assert gw.get("/_platform/forum", headers=as_("stranger@example.org"), follow_redirects=False).status_code == 303
+    assert gw.get("/_platform/forum").status_code == 403 and gw.get(f"/_platform/forum/{tid}", headers=paul, follow_redirects=False).status_code == 303
+    assert "Le forum" in gw.get("/_platform/forum", headers=dict(paul, **{"accept-language": "fr"})).text
+    assert "Entretiens" in gw.get("/_platform/forum", headers=dict(paul, **{"accept-language": "fr"})).text
+    gw.db.forum_new_topic("paul", "cv", "T", "x")
+    for _ in range(40):
+        gw.db.forum_reply("paul", gw.db.forum_topics()[0]["id"], "again")
+    assert len(gw.db.forum_topic(gw.db.forum_topics()[0]["id"])[1]) == 30               # thirty messages a day per person

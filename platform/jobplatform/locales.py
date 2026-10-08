@@ -178,10 +178,55 @@ _FEEDBACK = [
     ('Sent with your address ({{ email }}) so you can be answered{% if from_page %}, and the page you came from ({{ from_page }}){% endif %}. Nothing from your workspace is attached: no job, no CV.', "Envoyé avec votre adresse ({{ email }}) pour pouvoir vous répondre{% if from_page %}, et la page d'où vous venez ({{ from_page }}){% endif %}. Rien de votre espace n'est joint : ni offre, ni CV.", 'Gesendet mit Ihrer Adresse ({{ email }}), damit man Ihnen antworten kann{% if from_page %}, und der Seite, von der Sie kommen ({{ from_page }}){% endif %}. Aus Ihrem Bereich wird nichts angehängt: keine Stelle, kein Lebenslauf.'),
 ]
 
+_FORUM = [
+    ('← back to my job search</a>', "← retour à ma recherche d'emploi</a>", '← zurück zu meiner Stellensuche</a>'),
+    ('🏆 The league</a></p>', '🏆 La ligue</a></p>', '🏆 Die Liga</a></p>'),
+    ('<h2 style="margin-top:0">💬 The forum</h2>', '<h2 style="margin-top:0">💬 Le forum</h2>', '<h2 style="margin-top:0">💬 Das Forum</h2>'),
+    ('A place to talk about the job search with the other people here: CVs, interviews, the ORP, courses, tips.', "Un endroit pour parler de la recherche d'emploi avec les autres personnes d'ici : CV, entretiens, ORP, cours, astuces.", 'Ein Ort, um mit den anderen hier über die Stellensuche zu reden: Lebensläufe, Gespräche, RAV, Kurse, Tipps.'),
+    ('You write under <b>a username you choose</b> (the same one as in the league). Nobody sees your name, your e-mail or anything from your workspace. Only people who have a workspace here can read the forum.', 'Vous écrivez sous <b>un pseudo que vous choisissez</b> (le même que dans la ligue). Personne ne voit votre nom, votre e-mail ni quoi que ce soit de votre espace. Seules les personnes qui ont un espace ici peuvent lire le forum.', 'Sie schreiben unter <b>einem Benutzernamen Ihrer Wahl</b> (demselben wie in der Liga). Niemand sieht Ihren Namen, Ihre E-Mail oder etwas aus Ihrem Bereich. Nur wer hier einen Bereich hat, kann das Forum lesen.'),
+    ("That username can't be used: 2 to 20 letters or digits, and not one somebody already has.", 'Ce pseudo ne peut pas être utilisé : 2 à 20 lettres ou chiffres, et pas un pseudo déjà pris.', 'Dieser Benutzername geht nicht: 2 bis 20 Buchstaben oder Ziffern, und keiner, den schon jemand hat.'),
+    ('<label>Your username<br>', '<label>Votre pseudo<br>', '<label>Ihr Benutzername<br>'),
+    ('<button type="submit">Enter the forum →</button>', '<button type="submit">Entrer dans le forum →</button>', '<button type="submit">Ins Forum →</button>'),
+    ('💬 The forum <span class="muted">· you write as {{ t.league_name }}</span>', '💬 Le forum <span class="muted">· vous écrivez sous le pseudo {{ t.league_name }}</span>', '💬 Das Forum <span class="muted">· Sie schreiben als {{ t.league_name }}</span>'),
+    ('>All topics</a>', '>Tous les sujets</a>', '>Alle Themen</a>'),
+    ('{{ x.author or "former member" }}', '{{ x.author or "ancien membre" }}', '{{ x.author or "ehemaliges Mitglied" }}'),
+    ('{{ x.replies }} repl{{ \'ies\' if x.replies != 1 else \'y\' }}<br>last {{ x.last_at[:16] | replace("T", " ") }}', '{{ x.replies }} réponse{{ \'s\' if x.replies != 1 }}<br>dernier message {{ x.last_at[:16] | replace("T", " ") }}', '{{ x.replies }} Antwort{{ \'en\' if x.replies != 1 }}<br>zuletzt {{ x.last_at[:16] | replace("T", " ") }}'),
+    ('No topic here yet. Start the first one below.', 'Pas encore de sujet ici. Lancez le premier ci-dessous.', 'Hier gibt es noch kein Thema. Starten Sie unten das erste.'),
+    ('<h3 style="margin-top:0">Start a topic</h3>', '<h3 style="margin-top:0">Lancer un sujet</h3>', '<h3 style="margin-top:0">Ein Thema starten</h3>'),
+    ('Give it a title and a few words.', 'Donnez un titre et quelques mots.', 'Geben Sie einen Titel und ein paar Worte an.'),
+    ('You wrote a lot today. Please come back tomorrow.', "Vous avez beaucoup écrit aujourd'hui. Merci de revenir demain.", 'Sie haben heute viel geschrieben. Bitte kommen Sie morgen wieder.'),
+    ('aria-label="Subject"', 'aria-label="Thème"', 'aria-label="Bereich"'),
+    ('placeholder="Title: your question or subject"', 'placeholder="Titre : votre question ou sujet"', 'placeholder="Titel: Ihre Frage oder Ihr Thema"'),
+    ('placeholder="Your message"', 'placeholder="Votre message"', 'placeholder="Ihre Nachricht"'),
+    ('<button type="submit">Post the topic →</button>', '<button type="submit">Publier le sujet →</button>', '<button type="submit">Thema veröffentlichen →</button>'),
+    ("Be kind. Don't post anyone's personal details (names, phone numbers, addresses). A message can be removed by its author or by the person who runs this service.", 'Restez bienveillant·e. Ne publiez les données personnelles de personne (noms, téléphones, adresses). Un message peut être retiré par son auteur ou par la personne qui gère ce service.', 'Bleiben Sie freundlich. Veröffentlichen Sie keine persönlichen Angaben anderer (Namen, Telefonnummern, Adressen). Eine Nachricht kann von der Person, die sie geschrieben hat, oder vom Betreiber dieses Dienstes entfernt werden.'),
+]
+_TOPIC = [
+    ('← all topics</a>', '← tous les sujets</a>', '← alle Themen</a>'),
+    ('{{ p.author or "former member" }}', '{{ p.author or "ancien membre" }}', '{{ p.author or "ehemaliges Mitglied" }}'),
+    ("confirm('Remove this message?')", "confirm('Retirer ce message ?')", "confirm('Diese Nachricht entfernen?')"),
+    ('<button class="ghost small">Remove</button>', '<button class="ghost small">Retirer</button>', '<button class="ghost small">Entfernen</button>'),
+    ('(message removed)', '(message retiré)', '(Nachricht entfernt)'),
+    ('Write a few words.', 'Écrivez quelques mots.', 'Schreiben Sie ein paar Worte.'),
+    ('You wrote a lot today. Please come back tomorrow.', "Vous avez beaucoup écrit aujourd'hui. Merci de revenir demain.", 'Sie haben heute viel geschrieben. Bitte kommen Sie morgen wieder.'),
+    ('placeholder="Your reply, as {{ t.league_name }}"', 'placeholder="Votre réponse, sous le pseudo {{ t.league_name }}"', 'placeholder="Ihre Antwort, als {{ t.league_name }}"'),
+    ('<button type="submit">Reply →</button>', '<button type="submit">Répondre →</button>', '<button type="submit">Antworten →</button>'),
+    ('Choose a username to reply →</a>', 'Choisir un pseudo pour répondre →</a>', 'Benutzernamen wählen, um zu antworten →</a>'),
+]
+_LEAGUE += [
+    ('💬 The forum</a></p>', '💬 Le forum</a></p>', '💬 Das Forum</a></p>'),
+]
+
 TEMPLATES = {"base.html": _BASE, "welcome.html": _WELCOME, "request.html": _REQUEST, "invite.html": _INVITE, "me.html": _ME,
-             "starting.html": _STARTING, "message.html": _MESSAGE, "league.html": _LEAGUE, "feedback.html": _FEEDBACK}
+             "starting.html": _STARTING, "message.html": _MESSAGE, "league.html": _LEAGUE, "feedback.html": _FEEDBACK, "forum.html": _FORUM, "topic.html": _TOPIC}
 
 STRINGS = {
+    'CV and letters': ('CV et lettres', 'Lebenslauf und Briefe'),
+    'Interviews': ('Entretiens', 'Gespräche'),
+    'ORP / RAV and unemployment': ('ORP et chômage', 'RAV und Arbeitslosigkeit'),
+    'Training and courses': ('Formations et cours', 'Weiterbildung und Kurse'),
+    'Leads and tips': ('Pistes et astuces', 'Hinweise und Tipps'),
+    'Everything else': ('Tout le reste', 'Alles andere'),
     'Warming up': ("À l'échauffement", 'Beim Aufwärmen'),
     'On the move': ('En mouvement', 'In Bewegung'),
     'In the race': ('Dans la course', 'Im Rennen'),

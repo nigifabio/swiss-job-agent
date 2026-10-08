@@ -605,7 +605,8 @@ TEMPLATES = {'base.html': {'<html lang="en">': '<html lang="it">', '>admin</a>':
                  'The others see only your nickname (<b>{{ t.league_name }}</b>), points, streak and badges.': 'Gli altri vedono solo il tuo soprannome (<b>{{ '
                                                                                                                't.league_name }}</b>), i punti, la serie e i badge.',
                  '<button class="ghost small">Change my nickname</button>': '<button class="ghost small">Cambia soprannome</button>',
-                 '<button class="ghost small">Leave the league</button>': '<button class="ghost small">Esci dalla lega</button>'},
+                 '<button class="ghost small">Leave the league</button>': '<button class="ghost small">Esci dalla lega</button>',
+                 '💬 The forum</a></p>': '💬 Il forum</a></p>'},
  'feedback.html': {'← back to my job search</a>': '← torna alla mia ricerca di lavoro</a>',
                    '<b>Sent, thank you.</b> The person who runs this service got your message and will look at it.': '<b>Inviato, grazie.</b> La persona che gestisce '
                                                                                                                      'questo servizio ha ricevuto il tuo messaggio e lo '
@@ -665,7 +666,102 @@ TEMPLATES = {'base.html': {'<html lang="en">': '<html lang="it">', '>admin</a>':
                                                                                                                                                                                                                       'né '
                                                                                                                                                                                                                       'offerte, '
                                                                                                                                                                                                                       'né '
-                                                                                                                                                                                                                      'CV.'}}
+                                                                                                                                                                                                                      'CV.'},
+ 'forum.html': {'← back to my job search</a>': '← torna alla mia ricerca di lavoro</a>',
+                '🏆 The league</a></p>': '🏆 La lega</a></p>',
+                '<h2 style="margin-top:0">💬 The forum</h2>': '<h2 style="margin-top:0">💬 Il forum</h2>',
+                'A place to talk about the job search with the other people here: CVs, interviews, the ORP, courses, tips.': 'Un posto per parlare della ricerca di '
+                                                                                                                             'lavoro con le altre persone qui: CV, '
+                                                                                                                             'colloqui, URC, corsi, consigli.',
+                'You write under <b>a username you choose</b> (the same one as in the league). Nobody sees your name, your e-mail or anything from your workspace. Only people who have a workspace here can read the forum.': 'Scrivi '
+                                                                                                                                                                                                                               'con '
+                                                                                                                                                                                                                               '<b>un '
+                                                                                                                                                                                                                               'nome '
+                                                                                                                                                                                                                               'utente '
+                                                                                                                                                                                                                               'che '
+                                                                                                                                                                                                                               'scegli</b> '
+                                                                                                                                                                                                                               '(lo '
+                                                                                                                                                                                                                               'stesso '
+                                                                                                                                                                                                                               'della '
+                                                                                                                                                                                                                               'lega). '
+                                                                                                                                                                                                                               'Nessuno '
+                                                                                                                                                                                                                               'vede '
+                                                                                                                                                                                                                               'il '
+                                                                                                                                                                                                                               'tuo '
+                                                                                                                                                                                                                               'nome, '
+                                                                                                                                                                                                                               'la '
+                                                                                                                                                                                                                               'tua '
+                                                                                                                                                                                                                               'e-mail '
+                                                                                                                                                                                                                               'né '
+                                                                                                                                                                                                                               'qualcosa '
+                                                                                                                                                                                                                               'del '
+                                                                                                                                                                                                                               'tuo '
+                                                                                                                                                                                                                               'spazio. '
+                                                                                                                                                                                                                               'Solo '
+                                                                                                                                                                                                                               'chi '
+                                                                                                                                                                                                                               'ha '
+                                                                                                                                                                                                                               'uno '
+                                                                                                                                                                                                                               'spazio '
+                                                                                                                                                                                                                               'qui '
+                                                                                                                                                                                                                               'può '
+                                                                                                                                                                                                                               'leggere '
+                                                                                                                                                                                                                               'il '
+                                                                                                                                                                                                                               'forum.',
+                "That username can't be used: 2 to 20 letters or digits, and not one somebody already has.": 'Questo nome utente non si può usare: da 2 a 20 lettere o '
+                                                                                                             'cifre, e non uno già preso.',
+                '<label>Your username<br>': '<label>Il tuo nome utente<br>',
+                '<button type="submit">Enter the forum →</button>': '<button type="submit">Entra nel forum →</button>',
+                '💬 The forum <span class="muted">· you write as {{ t.league_name }}</span>': '💬 Il forum <span class="muted">· scrivi come {{ t.league_name }}</span>',
+                '>All topics</a>': '>Tutti gli argomenti</a>',
+                '{{ x.author or "former member" }}': '{{ x.author or "ex membro" }}',
+                '{{ x.replies }} repl{{ \'ies\' if x.replies != 1 else \'y\' }}<br>last {{ x.last_at[:16] | replace("T", " ") }}': "{{ x.replies }} rispost{{ 'e' if "
+                                                                                                                                   "x.replies != 1 else 'a' }}<br>ultimo "
+                                                                                                                                   '{{ x.last_at[:16] | replace("T", " '
+                                                                                                                                   '") }}',
+                'No topic here yet. Start the first one below.': 'Ancora nessun argomento qui. Apri il primo qui sotto.',
+                '<h3 style="margin-top:0">Start a topic</h3>': '<h3 style="margin-top:0">Apri un argomento</h3>',
+                'Give it a title and a few words.': 'Dai un titolo e qualche parola.',
+                'You wrote a lot today. Please come back tomorrow.': 'Hai scritto molto oggi. Torna domani.',
+                'aria-label="Subject"': 'aria-label="Tema"',
+                'placeholder="Title: your question or subject"': 'placeholder="Titolo: la tua domanda o argomento"',
+                'placeholder="Your message"': 'placeholder="Il tuo messaggio"',
+                '<button type="submit">Post the topic →</button>': '<button type="submit">Pubblica l\'argomento →</button>',
+                "Be kind. Don't post anyone's personal details (names, phone numbers, addresses). A message can be removed by its author or by the person who runs this service.": 'Sii '
+                                                                                                                                                                                   'gentile. '
+                                                                                                                                                                                   'Non '
+                                                                                                                                                                                   'pubblicare '
+                                                                                                                                                                                   'i '
+                                                                                                                                                                                   'dati '
+                                                                                                                                                                                   'personali '
+                                                                                                                                                                                   'di '
+                                                                                                                                                                                   'nessuno '
+                                                                                                                                                                                   '(nomi, '
+                                                                                                                                                                                   'telefoni, '
+                                                                                                                                                                                   'indirizzi). '
+                                                                                                                                                                                   'Un '
+                                                                                                                                                                                   'messaggio '
+                                                                                                                                                                                   'può '
+                                                                                                                                                                                   'essere '
+                                                                                                                                                                                   'tolto '
+                                                                                                                                                                                   'dal '
+                                                                                                                                                                                   'suo '
+                                                                                                                                                                                   'autore '
+                                                                                                                                                                                   'o '
+                                                                                                                                                                                   'da '
+                                                                                                                                                                                   'chi '
+                                                                                                                                                                                   'gestisce '
+                                                                                                                                                                                   'questo '
+                                                                                                                                                                                   'servizio.'},
+ 'topic.html': {'← all topics</a>': '← tutti gli argomenti</a>',
+                '{{ p.author or "former member" }}': '{{ p.author or "ex membro" }}',
+                "confirm('Remove this message?')": "confirm('Togliere questo messaggio?')",
+                '<button class="ghost small">Remove</button>': '<button class="ghost small">Togli</button>',
+                '(message removed)': '(messaggio tolto)',
+                'Write a few words.': 'Scrivi qualche parola.',
+                'You wrote a lot today. Please come back tomorrow.': 'Hai scritto molto oggi. Torna domani.',
+                'placeholder="Your reply, as {{ t.league_name }}"': 'placeholder="La tua risposta, come {{ t.league_name }}"',
+                '<button type="submit">Reply →</button>': '<button type="submit">Rispondi →</button>',
+                'Choose a username to reply →</a>': 'Scegli un nome utente per rispondere →</a>'}}
 
 STRINGS = {'Back': 'Indietro',
  'Workspace paused': 'Spazio in pausa',
@@ -710,4 +806,10 @@ STRINGS = {'Back': 'Indietro',
  'On stage': 'In scena',
  'Thick skin': 'Pelle dura',
  'Polished': 'Tirato a lucido',
- 'Jackpot': 'Jackpot'}
+ 'Jackpot': 'Jackpot',
+ 'CV and letters': 'CV e lettere',
+ 'Interviews': 'Colloqui',
+ 'ORP / RAV and unemployment': 'URC e disoccupazione',
+ 'Training and courses': 'Formazione e corsi',
+ 'Leads and tips': 'Piste e consigli',
+ 'Everything else': 'Tutto il resto'}

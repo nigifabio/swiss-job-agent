@@ -492,6 +492,98 @@ def admin_feedback(request: Request, fid: int, csrf: str = Form(""), done: str =
     return RedirectResponse("/_platform/admin#feedback", status_code=303)
 
 
+# ---- the forum ---------------------------------------------------------------------------------
+FORUM_CATS = {"cv": "CV and letters", "interviews": "Interviews", "orp": "ORP / RAV and unemployment", "training": "Training and courses",
+              "leads": "Leads and tips", "other": "Everything else"}
+
+
+def _clean(text, limit):
+    return "\n".join(" ".join(line.split()) for line in (text or "").replace("\r", "").split("\n")).strip()[:limit]
+
+
+def _member(request):
+    return db.tenant_for(request.state.email)
+
+
+@app.get("/_platform/forum", response_class=HTMLResponse)
+def forum_page(request: Request, cat: str = "", bad: str = ""):
+    t = _member(request)
+    if not t:
+        return RedirectResponse("/", status_code=303)
+    cat = cat if cat in FORUM_CATS else ""
+    return render_page(request, "forum.html", {"t": t, "topics": db.forum_topics(cat), "cat": cat, "cats": FORUM_CATS, "bad": bad,
+                                               "suggestion": league.suggestion([m["league_name"] for m in db.tenants() if m.get("league_name")])})
+
+
+@app.post("/_platform/forum/name")
+def forum_name(request: Request, csrf: str = Form(""), name: str = Form("")):
+    email = request.state.email
+    check_csrf(request, email, csrf)
+    t = _member(request)
+    if not t:
+        return RedirectResponse("/", status_code=303)
+    return RedirectResponse("/_platform/forum" + ("" if db.set_nickname(t["slug"], name) else "?bad=name"), status_code=303)
+
+
+@app.post("/_platform/forum/new")
+def forum_new(request: Request, csrf: str = Form(""), cat: str = Form("other"), title: str = Form(""), text: str = Form("")):
+    email = request.state.email
+    check_csrf(request, email, csrf)
+    t = _member(request)
+    if not t or not t.get("league_name"):
+        return RedirectResponse("/_platform/forum", status_code=303)
+    title, text = " ".join(title.split())[:120], _clean(text, 4000)
+    if len(title) < 4 or len(text) < 5:
+        return RedirectResponse("/_platform/forum?bad=short", status_code=303)
+    tid = db.forum_new_topic(t["slug"], cat, title, text)
+    if not tid:
+        return RedirectResponse("/_platform/forum?bad=many", status_code=303)
+    db.audit(email, "forum.topic", str(tid))
+    notify.admins(prov, f"🇨🇭 Job platform: new forum topic by {t['league_name']}", f"{title}\n{C.public_url}/_platform/forum/{tid}")
+    return RedirectResponse(f"/_platform/forum/{tid}", status_code=303)
+
+
+@app.get("/_platform/forum/{tid}", response_class=HTMLResponse)
+def forum_topic(request: Request, tid: int, bad: str = ""):
+    t = _member(request)
+    if not t:
+        return RedirectResponse("/", status_code=303)
+    topic, posts = db.forum_topic(tid)
+    if not topic:
+        return RedirectResponse("/_platform/forum", status_code=303)
+    return render_page(request, "topic.html", {"t": t, "topic": topic, "posts": posts, "cats": FORUM_CATS, "bad": bad})
+
+
+@app.post("/_platform/forum/{tid}/reply")
+def forum_reply(request: Request, tid: int, csrf: str = Form(""), text: str = Form("")):
+    email = request.state.email
+    check_csrf(request, email, csrf)
+    t = _member(request)
+    if not t or not t.get("league_name"):
+        return RedirectResponse("/_platform/forum", status_code=303)
+    text = _clean(text, 4000)
+    if len(text) < 2:
+        return RedirectResponse(f"/_platform/forum/{tid}?bad=short", status_code=303)
+    pid = db.forum_reply(t["slug"], tid, text)
+    return RedirectResponse(f"/_platform/forum/{tid}" + (f"#p{pid}" if pid else "?bad=many"), status_code=303)
+
+
+@app.post("/_platform/forum/post/{pid}/delete")
+def forum_delete(request: Request, pid: int, csrf: str = Form("")):
+    """Your own message; the administrator can remove any message."""
+    email = request.state.email
+    check_csrf(request, email, csrf)
+    t = _member(request)
+    admin = email in C.admins
+    if not t and not admin:
+        return RedirectResponse("/", status_code=303)
+    tid = db.forum_delete_post(pid, None if admin else t["slug"])
+    if tid:
+        db.audit(email, "forum.delete", str(pid))
+    topic, _ = db.forum_topic(tid) if tid else (None, [])
+    return RedirectResponse(f"/_platform/forum/{tid}" if topic else "/_platform/forum", status_code=303)
+
+
 # ---- the league --------------------------------------------------------------------------------
 @app.get("/_platform/league", response_class=HTMLResponse)
 def league_page(request: Request, bad: str = ""):
@@ -499,7 +591,7 @@ def league_page(request: Request, bad: str = ""):
     if not t:
         return RedirectResponse("/", status_code=303)
     members = db.league()
-    rows = league.board(members, tenant_summary, t["slug"]) if t.get("league_name") else []
+    rows = league.board(members, tenant_summary, t["slug"]) if t.get("league_name") and t.get("in_league") else []
     mine = next((r for r in rows if r["me"]), None)
     ahead = next((r for r in rows if mine and r["week"] > mine["week"]), None)
     return page(request, "league.html", {"t": t, "rows": rows, "mine": mine, "bad": bad, "members": len(members),

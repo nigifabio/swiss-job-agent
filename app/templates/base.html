@@ -4,10 +4,20 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Swiss Job Agent</title>
+<script>
+  // day or night colours: the person's choice (kept in this browser), else what their device uses
+  (function () { var t; try { t = localStorage.getItem("theme"); } catch (e) {}
+    if (t !== "light" && t !== "dark") t = window.matchMedia && matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", t); })();
+</script>
 {% block head %}{% endblock %}
 <style>
   :root { --bg:#0f1419; --card:#1a1f29; --fg:#e6e6e6; --muted:#8a94a6; --accent:#4a9eff; --border:#2a3240;
-          --bar:#3a86e0; --have:#1e4d2b; --have-fg:#8ee6a4; --miss:#5a1f24; --miss-fg:#ffa3a8; }
+          --bar:#3a86e0; --have:#1e4d2b; --have-fg:#8ee6a4; --miss:#5a1f24; --miss-fg:#ffa3a8; --input:#0f1419; --warn-bg:#3a2e10;
+          --warn-border:#6b5418; --bad:#ffa3a8; --ok:#8ee6a4; --info-bg:#10283f; --avoid-bg:#3a3f4a; --soft:rgba(255,255,255,.12); --soft2:rgba(255,255,255,.25); }
+  html[data-theme="light"] { --bg:#f4f6f9; --card:#ffffff; --fg:#1b2330; --muted:#5a6575; --accent:#1f6fd6; --border:#d5dbe4;
+          --bar:#3a86e0; --have:#d8f3de; --have-fg:#136428; --miss:#fde1e3; --miss-fg:#a1202a; --input:#ffffff; --warn-bg:#fff5d9;
+          --warn-border:#e2c15c; --bad:#b3261e; --ok:#18794e; --info-bg:#e7f0fd; --avoid-bg:#e5e8ee; --soft:rgba(0,0,0,.08); --soft2:rgba(0,0,0,.16); }
   * { box-sizing:border-box; }
   body { margin:0; font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--fg); }
   header { padding:14px 20px; border-bottom:1px solid var(--border); display:flex; flex-wrap:wrap; align-items:center; gap:10px 16px; }
@@ -20,8 +30,8 @@
   .tab.active { background:var(--accent); color:#fff; border-color:var(--accent); }
   .card { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:14px 16px; margin-bottom:10px; }
   .muted { color:var(--muted); font-size:13px; }
-  .banner { background:#3a2e10; border:1px solid #6b5418; border-radius:8px; padding:12px 16px; margin-bottom:16px; }
-  input,select,textarea { width:100%; padding:8px; background:#0f1419; border:1px solid var(--border); border-radius:6px; color:var(--fg); font:inherit; }
+  .banner { background:var(--warn-bg); border:1px solid var(--warn-border); border-radius:8px; padding:12px 16px; margin-bottom:16px; }
+  input,select,textarea { width:100%; padding:8px; background:var(--input); border:1px solid var(--border); border-radius:6px; color:var(--fg); font:inherit; }
   label { display:block; margin:10px 0 4px; font-size:13px; color:var(--muted); }
   button,.btn { display:inline-block; padding:8px 14px; background:var(--accent); color:#fff; border:none; border-radius:6px; cursor:pointer; font:inherit; }
   .row { display:flex; gap:14px; flex-wrap:wrap; }
@@ -37,12 +47,12 @@
   .card.dim .when-live, .card:not(.dim) .when-dim { display:none; }
   select.why { width:auto; max-width:190px; padding:3px 6px; font-size:13px; }
   button:disabled { opacity:.6; cursor:default; }
-  .orpline { margin:0 0 14px; font-size:14px; } .bad { color:#ffa3a8; }
-  .flag { display:inline-block; padding:2px 8px; margin:2px 4px 2px 0; border:1px solid #6b5418; background:#3a2e10; border-radius:12px; font-size:13px; }
+  .orpline { margin:0 0 14px; font-size:14px; } .bad { color:var(--bad); }
+  .flag { display:inline-block; padding:2px 8px; margin:2px 4px 2px 0; border:1px solid var(--warn-border); background:var(--warn-bg); border-radius:12px; font-size:13px; }
   .scanbar { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:14px; }
   .scanbar form { margin:0; }
   .apply-prompt { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:10px; padding:10px 12px;
-                  background:#10283f; border:1px solid var(--accent); border-radius:6px; }
+                  background:var(--info-bg); border:1px solid var(--accent); border-radius:6px; }
   .apply-prompt[hidden] { display:none; }
   .apply-prompt form { margin:0; }
   .nav { display:flex; gap:14px; }
@@ -51,11 +61,11 @@
   mark.miss { background:var(--miss); color:var(--miss-fg); border-radius:3px; padding:0 2px; }
   .chip { display:inline-block; margin:2px 4px 2px 0; padding:1px 8px; border-radius:10px; font-size:13px; }
   .chip.have { background:var(--have); color:var(--have-fg); } .chip.miss { background:var(--miss); color:var(--miss-fg); }
-  .chip { background:var(--border); } .chip.avoid { background:#3a3f4a; color:var(--muted); text-decoration:line-through; }
+  .chip { background:var(--border); } .chip.avoid { background:var(--avoid-bg); color:var(--muted); text-decoration:line-through; }
   .chip-actions { display:inline; margin:0 0 0 4px; }
-  .chip-actions button { padding:0 6px; font-size:12px; line-height:18px; border-radius:8px; background:rgba(255,255,255,.12); color:inherit; }
-  .chip-actions button:hover { background:rgba(255,255,255,.25); }
-  mark.avoid { background:#3a3f4a; color:var(--muted); text-decoration:line-through; border-radius:3px; padding:0 2px; }
+  .chip-actions button { padding:0 6px; font-size:12px; line-height:18px; border-radius:8px; background:var(--soft); color:inherit; }
+  .chip-actions button:hover { background:var(--soft2); }
+  mark.avoid { background:var(--avoid-bg); color:var(--muted); text-decoration:line-through; border-radius:3px; padding:0 2px; }
   .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:14px; }
   .kpi { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:12px 14px; }
   .kpi .v { font-size:26px; font-weight:600; } .kpi .l { color:var(--muted); font-size:13px; }
@@ -84,8 +94,10 @@
   .pair .orig { color:var(--muted); font-size:14px; white-space:pre-wrap; } .pair .k { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
   .filterbar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:0 0 12px; }
   .filterbar input[type=search] { flex:2 1 200px; width:auto; padding:6px 8px; } .filterbar select { flex:1 1 140px; width:auto; padding:6px 8px; font-size:13px; }
-  .langs { display:flex; gap:2px; margin:0 0 0 auto; } .langs button { background:transparent; padding:2px 5px; font-size:18px; line-height:1.2; border-radius:6px; opacity:.45; min-height:0; }
+  .langs { display:flex; gap:2px; margin:0; } .langs button { background:transparent; padding:2px 5px; font-size:18px; line-height:1.2; border-radius:6px; opacity:.45; min-height:0; }
   .langs button.on { opacity:1; background:var(--border); } .langs button:hover { opacity:1; }
+  .themebtn { background:transparent; padding:2px 6px; font-size:17px; line-height:1.2; min-height:0; border-radius:6px; }
+  .themebtn:hover { background:var(--border); } html[data-theme="light"] .themebtn .sun, html:not([data-theme="light"]) .themebtn .moon { display:none; }
   .bottomnav { display:none; }
   @media (max-width:640px) {
     .wrap { padding:12px 12px 84px; } header { padding:10px 12px; } header .nav { display:none; }
@@ -115,8 +127,9 @@
   <h1><a href="/" style="color:var(--fg)">🇨🇭 Swiss Job Agent</a></h1>
   <nav class="nav"><a href="/jobs?status=new">Jobs</a><a href="/improve">Improve</a><a href="/stats">Stats</a><a href="/report">ORP report</a><a href="/cv">CV</a><a href="/settings">Settings</a></nav>
   <a class="btn" href="/add">+ Add application</a>
+  <button type="button" class="themebtn" style="margin-left:auto" title="Day / night colours" aria-label="Day / night colours"><span class="sun">☀️</span><span class="moon">🌙</span></button>
   <form method="post" action="/lang" class="langs"><input type="hidden" name="next" value="{{ request.url.path }}">{% for code, flag, name in [("en", "🇬🇧", "English"), ("fr", "🇫🇷", "Français"), ("de", "🇩🇪", "Deutsch"), ("it", "🇮🇹", "Italiano")] %}<button name="lang" value="{{ code }}" class="{{ 'on' if code == ui_lang }}" title="{{ name }}" aria-label="{{ name }}">{{ flag }}</button>{% endfor %}</form>
-  {% if user or platform %}<span class="muted">{{ user }}{% if platform %} · <a href="/_platform/league" title="League">🏆</a> · <a href="/_platform/feedback?page={{ request.url.path | urlencode }}" title="Report a problem or ask for something">💬</a> · <a href="/_platform/me">Account</a>{% endif %}</span>{% endif %}
+  {% if user or platform %}<span class="muted">{{ user }}{% if platform %} · <a href="/_platform/forum">Forum</a> · <a href="/_platform/league" title="League">🏆</a> · <a href="/_platform/feedback?page={{ request.url.path | urlencode }}" title="Report a problem or ask for something">💬</a> · <a href="/_platform/me">Account</a>{% endif %}</span>{% endif %}
 </header>
 <div class="wrap">
 {% block body %}{% endblock %}
@@ -136,6 +149,15 @@
     a.addEventListener("click", function () {
       var p = document.getElementById("prompt-" + a.dataset.job);
       if (p) { p.hidden = false; }
+    });
+  });
+</script>
+<script>
+  document.querySelectorAll(".themebtn").forEach(function (b) {          // sun / moon button of the top bar
+    b.addEventListener("click", function () {
+      var t = document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light";
+      document.documentElement.setAttribute("data-theme", t);
+      try { localStorage.setItem("theme", t); } catch (e) {}
     });
   });
 </script>

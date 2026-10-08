@@ -6,7 +6,7 @@
   <form method="post" action="/_platform/request"><input type="hidden" name="csrf" value="{{ csrf }}">
     <p><label>Your name<br><input name="name" maxlength="80" size="34" required autocomplete="name"></label></p>
     <p><label>What kind of job are you looking for, and where? <span class="muted">(optional)</span><br>
-      <textarea name="note" maxlength="400" rows="3" style="width:100%; max-width:520px; padding:8px; background:#0f1419; border:1px solid var(--border); border-radius:6px; color:var(--fg); font:inherit"></textarea></label></p>
+      <textarea name="note" maxlength="400" rows="3" style="width:100%; max-width:520px; padding:8px; background:var(--input); border:1px solid var(--border); border-radius:6px; color:var(--fg); font:inherit"></textarea></label></p>
     <button type="submit">Send my request →</button>
   </form>
   <p class="muted">Only your name, this address and your message are sent to the person who runs the service.</p>

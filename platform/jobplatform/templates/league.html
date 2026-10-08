@@ -1,13 +1,13 @@
 {% extends "base.html" %}{% block body %}
 <style>
   .lrow { display:grid; grid-template-columns:34px 1fr auto; gap:10px; align-items:center; padding:10px 0; border-bottom:1px solid var(--border); }
-  .lrow.me { background:rgba(74,158,255,.08); margin:0 -16px; padding:10px 16px; } .lrank { font-size:20px; text-align:center; }
+  .lrow.me { background:var(--soft); margin:0 -16px; padding:10px 16px; } .lrank { font-size:20px; text-align:center; }
   .lname { font-weight:600; } .lpts { font-size:22px; font-weight:600; text-align:right; white-space:nowrap; } .lpts small { font-size:12px; color:var(--muted); font-weight:400; }
   .lbar { height:6px; background:var(--border); border-radius:3px; overflow:hidden; margin-top:5px; } .lbar span { display:block; height:100%; background:var(--accent); }
   .lbadges { font-size:17px; letter-spacing:2px; }
 </style>
-<p><a href="/">← back to my job search</a></p>
-{% if not t.league_name %}
+<p><a href="/">← back to my job search</a> · <a href="/_platform/forum">💬 The forum</a></p>
+{% if not (t.league_name and t.in_league) %}
 <div class="card">
   <h2 style="margin-top:0">🏆 The league</h2>
   <p>A friendly race between the people who search for a job here. You earn points for what moves your search forward:
@@ -16,7 +16,7 @@
     not your name or e-mail, not your jobs, not the companies. You can leave at any time and you disappear from the board.</p>
   {% if bad %}<p class="bad">That nickname can't be used: 2 to 20 letters or digits, and not one somebody already has.</p>{% endif %}
   <form method="post" action="/_platform/league/join"><input type="hidden" name="csrf" value="{{ csrf }}">
-    <label>Your nickname<br><input name="name" value="{{ suggestion }}" maxlength="20" required></label>
+    <label>Your nickname<br><input name="name" value="{{ t.league_name or suggestion }}" maxlength="20" required></label>
     <button type="submit">Join the league →</button></form>
   <p class="muted">{{ members }} in the league so far.</p>
 </div>

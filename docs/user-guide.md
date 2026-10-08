@@ -187,6 +187,10 @@ can be financed as a labour-market measure.
   that nickname, your points, streak and badges, and nothing else: no name, e-mail, job or company. The week restarts every
   Monday and last week's champion is named. You can change nickname or leave at any time.
 
+## Day or night colours
+
+The ☀️ / 🌙 button of the top bar switches between a light and a dark look. Without a choice, the site follows your device.
+
 ## Language of the site
 
 English, French, German and Italian. The site follows your browser; the **flags in the top bar** (or **Settings → Language of this site**) fix it.

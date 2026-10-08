@@ -116,6 +116,14 @@ The 💬 link of the top bar opens `/_platform/feedback`: a signed-in person wri
 like. The message is kept (admin page, with Done / Reopen), and sent through `NOTIFY_WEBHOOK` with the sender's address
 and the page they came from. At most eight a day per person; nothing from the workspace is attached.
 
+### The forum
+
+`/_platform/forum` (link "Forum" in the top bar): topics about the job search in six subjects (CV and letters, interviews,
+ORP / RAV, training, leads, everything else), with replies. People write under the same username as in the league; taking a
+username for the forum does not put them on the league board. Only people with a workspace can read it. Text only, escaped;
+thirty messages a day per person. Authors can remove their own messages and administrators any message; a new topic is
+announced through `NOTIFY_WEBHOOK` so it can be looked at.
+
 ### The league
 
 `/_platform/league`: people join by choice with a nickname. The gateway asks only the members' workspaces for their score

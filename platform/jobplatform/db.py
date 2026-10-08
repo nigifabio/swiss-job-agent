@@ -25,6 +25,11 @@ CREATE TABLE IF NOT EXISTS audit (ts TEXT NOT NULL, actor TEXT, action TEXT, det
 CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT);
 CREATE TABLE IF NOT EXISTS feedback (id INTEGER PRIMARY KEY AUTOINCREMENT, ts TEXT NOT NULL, email TEXT NOT NULL,
   kind TEXT NOT NULL, page TEXT, text TEXT NOT NULL, done INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE IF NOT EXISTS forum_topics (id INTEGER PRIMARY KEY AUTOINCREMENT, cat TEXT NOT NULL, title TEXT NOT NULL,
+  slug TEXT NOT NULL, created_at TEXT NOT NULL, last_at TEXT NOT NULL, replies INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE IF NOT EXISTS forum_posts (id INTEGER PRIMARY KEY AUTOINCREMENT, topic_id INTEGER NOT NULL, slug TEXT NOT NULL,
+  text TEXT NOT NULL, created_at TEXT NOT NULL, deleted INTEGER NOT NULL DEFAULT 0);
+CREATE INDEX IF NOT EXISTS idx_forum_posts_topic ON forum_posts(topic_id);
 """
 
 
@@ -52,6 +57,8 @@ def init():
             c.execute("ALTER TABLE tenants ADD COLUMN last_seen TEXT")
         if "league_name" not in {r["name"] for r in c.execute("PRAGMA table_info(tenants)").fetchall()}:
             c.execute("ALTER TABLE tenants ADD COLUMN league_name TEXT")
+        if "in_league" not in {r["name"] for r in c.execute("PRAGMA table_info(tenants)").fetchall()}:
+            c.execute("ALTER TABLE tenants ADD COLUMN in_league INTEGER NOT NULL DEFAULT 1")       # whoever had a nickname was in the league
 
 
 # ---- bug reports and feature requests ---------------------------------------------------------
@@ -78,26 +85,99 @@ def close_feedback(fid, done=1):
 NICK = re.compile(r"^[^\W_](?:[^\W_]|[ .-](?=[^\W_])){1,19}$")
 
 
-def join_league(slug, name):
-    """Returns the nickname kept, or None (not a usable nickname, or already someone else's)."""
+def set_nickname(slug, name, league=None):
+    """The person's one username on the platform (league and forum). league=True/False also joins or
+    leaves the league; None leaves that as it is (a first nickname taken for the forum is not a league entry).
+    Returns the nickname kept, or None (not a usable nickname, or already someone else's)."""
     name = " ".join((name or "").split())
     if not NICK.match(name) or "@" in name:
         return None
     with conn() as c:
         if c.execute("SELECT 1 FROM tenants WHERE lower(league_name)=lower(?) AND slug != ?", (name, slug)).fetchone():
             return None
+        had = c.execute("SELECT COALESCE(league_name,'') FROM tenants WHERE slug=?", (slug,)).fetchone()
+        if league is None and had is not None and not had[0]:
+            league = False
         c.execute("UPDATE tenants SET league_name=? WHERE slug=?", (name, slug))
+        if league is not None:
+            c.execute("UPDATE tenants SET in_league=? WHERE slug=?", (1 if league else 0, slug))
     return name
 
 
+def join_league(slug, name):
+    return set_nickname(slug, name, league=True)
+
+
 def leave_league(slug):
+    """Off the board; the nickname stays (it may sign forum messages)."""
     with conn() as c:
-        c.execute("UPDATE tenants SET league_name=NULL WHERE slug=?", (slug,))
+        c.execute("UPDATE tenants SET in_league=0 WHERE slug=?", (slug,))
 
 
 def league():
     with conn() as c:
-        return [dict(r) for r in c.execute("SELECT * FROM tenants WHERE COALESCE(league_name,'') != '' AND status='active'").fetchall()]
+        return [dict(r) for r in c.execute("SELECT * FROM tenants WHERE COALESCE(league_name,'') != '' AND in_league=1 AND status='active'").fetchall()]
+
+
+# ---- the forum: topics about the job search, signed with the nickname ---------------------------
+FORUM_CATS = ("cv", "interviews", "orp", "training", "leads", "other")
+
+
+def forum_topics(cat="", limit=100):
+    with conn() as c:
+        q = ("SELECT t.*, COALESCE(n.league_name, '') AS author FROM forum_topics t LEFT JOIN tenants n ON n.slug = t.slug "
+             + ("WHERE t.cat=? " if cat else "") + "ORDER BY t.last_at DESC LIMIT ?")
+        return [dict(r) for r in c.execute(q, ((cat, limit) if cat else (limit,))).fetchall()]
+
+
+def forum_topic(tid):
+    with conn() as c:
+        t = c.execute("SELECT t.*, COALESCE(n.league_name, '') AS author FROM forum_topics t LEFT JOIN tenants n ON n.slug = t.slug WHERE t.id=?",
+                      (tid,)).fetchone()
+        if not t:
+            return None, []
+        posts = c.execute("SELECT p.*, COALESCE(n.league_name, '') AS author FROM forum_posts p LEFT JOIN tenants n ON n.slug = p.slug "
+                          "WHERE p.topic_id=? ORDER BY p.id", (tid,)).fetchall()
+        return dict(t), [dict(p) for p in posts]
+
+
+def _forum_room(c, slug, per_day):
+    since = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=1)).replace(microsecond=0).isoformat()
+    return c.execute("SELECT COUNT(*) FROM forum_posts WHERE slug=? AND created_at >= ?", (slug, since)).fetchone()[0] < per_day
+
+
+def forum_new_topic(slug, cat, title, text, per_day=30):
+    """Returns the topic id, or None when this person wrote a lot today."""
+    with conn() as c:
+        if not _forum_room(c, slug, per_day):
+            return None
+        tid = c.execute("INSERT INTO forum_topics (cat, title, slug, created_at, last_at) VALUES (?,?,?,?,?)",
+                        (cat if cat in FORUM_CATS else "other", title, slug, now(), now())).lastrowid
+        c.execute("INSERT INTO forum_posts (topic_id, slug, text, created_at) VALUES (?,?,?,?)", (tid, slug, text, now()))
+        return tid
+
+
+def forum_reply(slug, tid, text, per_day=30):
+    with conn() as c:
+        if not c.execute("SELECT 1 FROM forum_topics WHERE id=?", (tid,)).fetchone() or not _forum_room(c, slug, per_day):
+            return None
+        pid = c.execute("INSERT INTO forum_posts (topic_id, slug, text, created_at) VALUES (?,?,?,?)", (tid, slug, text, now())).lastrowid
+        c.execute("UPDATE forum_topics SET last_at=?, replies=replies+1 WHERE id=?", (now(), tid))
+        return pid
+
+
+def forum_delete_post(pid, slug=None):
+    """Remove a message (its own author, or anyone when slug is None: the administrator). A topic whose
+    messages are all removed goes too. Returns the topic id, or None."""
+    with conn() as c:
+        p = c.execute("SELECT * FROM forum_posts WHERE id=?", (pid,)).fetchone()
+        if not p or (slug is not None and p["slug"] != slug):
+            return None
+        c.execute("UPDATE forum_posts SET deleted=1, text='' WHERE id=?", (pid,))
+        if not c.execute("SELECT 1 FROM forum_posts WHERE topic_id=? AND deleted=0", (p["topic_id"],)).fetchone():
+            c.execute("DELETE FROM forum_posts WHERE topic_id=?", (p["topic_id"],))
+            c.execute("DELETE FROM forum_topics WHERE id=?", (p["topic_id"],))
+        return p["topic_id"]
 
 
 def touch(slug):

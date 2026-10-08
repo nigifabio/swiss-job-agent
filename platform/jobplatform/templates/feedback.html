@@ -9,7 +9,7 @@
   <form method="post" action="/_platform/feedback"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="page" value="{{ from_page }}">
     <p><label><input type="radio" name="kind" value="bug" checked> 🐞 Something doesn't work</label>
       &nbsp; <label><input type="radio" name="kind" value="idea"> 💡 I would like…</label></p>
-    <textarea name="text" rows="7" maxlength="2000" required style="width:100%;padding:8px;background:#0f1419;border:1px solid var(--border);border-radius:6px;color:var(--fg);font:inherit"
+    <textarea name="text" rows="7" maxlength="2000" required style="width:100%;padding:8px;background:var(--input);border:1px solid var(--border);border-radius:6px;color:var(--fg);font:inherit"
       placeholder="What did you do, what did you expect, what happened instead?"></textarea>
     <p><button type="submit">Send →</button></p>
   </form>
