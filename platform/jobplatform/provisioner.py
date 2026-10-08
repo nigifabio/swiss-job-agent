@@ -204,6 +204,19 @@ def create(d, slug, email, image=None, extra=None):
     return status(d, slug)
 
 
+def image_id(c):
+    """The image a container runs, from the container itself: Docker may no longer list that image
+    (a rebuild moved the tag and the old one was collected), which must not break listing or upgrades."""
+    return (c.attrs.get("Image") or "") if c is not None else ""
+
+
+def image_name(c):
+    try:
+        return (c.image.tags or [c.image.short_id])[0]
+    except Exception:  # noqa: BLE001  (image gone from the store; the container still runs)
+        return image_id(c).split(":")[-1][:12] or "?"
+
+
 def tenants(d):
     out = {}
     for c in d.containers.list(all=True, filters={"label": LABEL}):
@@ -214,7 +227,7 @@ def tenants(d):
         health = (state.get("Health") or {}).get("Status")
         t[role] = state.get("Status", c.status) + (f" ({health})" if health else "")
         if role == "web":
-            t["image"] = (c.image.tags or [c.image.short_id])[0]
+            t["image"] = image_name(c)
     for v in d.volumes.list(filters={"label": LABEL}):
         slug = v.attrs.get("Labels", {}).get(LABEL)
         out.setdefault(slug, {"slug": slug, "email": "", "web": "missing", "sched": "missing"})
@@ -308,7 +321,7 @@ def upgrade(d, slugs=None, log=print):
             log(f"{t['slug']}: not running, skipped")
             continue
         web = _get(d.containers, names(t["slug"])["web"])
-        prev = web.image.id
+        prev = image_id(web)
         if prev == target.id:
             log(f"{t['slug']}: already on {S.image}")
             continue
@@ -317,8 +330,11 @@ def upgrade(d, slugs=None, log=print):
             log(f"{t['slug']}: upgraded")
             continue
         log(f"{t['slug']}: UNHEALTHY on the new image, rolling back")
-        create(d, t["slug"], t["email"], prev)
-        log(f"{t['slug']}: " + ("rolled back" if healthy(d, names(t["slug"])["web"]) else "ROLLBACK UNHEALTHY"))
+        try:
+            create(d, t["slug"], t["email"], prev)
+            log(f"{t['slug']}: " + ("rolled back" if healthy(d, names(t["slug"])["web"]) else "ROLLBACK UNHEALTHY"))
+        except Exception as e:  # noqa: BLE001  (the previous image is gone: nothing to go back to)
+            log(f"{t['slug']}: CAN'T ROLL BACK ({type(e).__name__}); data is intact in its volume")
         return False
     return True
 

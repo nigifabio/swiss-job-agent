@@ -224,7 +224,11 @@ def test_upgrade_rolls_back_an_unhealthy_tenant_and_stops(prov, monkeypatch):
             self.id = i
 
     class Web:
-        image = Img("old")
+        attrs = {"Image": "old"}
+
+        @property
+        def image(self):                       # the store no longer lists the image the container runs
+            raise RuntimeError("No such image")
 
     class D:
         containers = None
@@ -444,3 +448,45 @@ def test_platform_pages_in_french_and_german(gw):
     gw.db.add_tenant("zoe", "zoe@example.org")
     assert "Télécharger mes données" in gw.get("/_platform/me", headers=who).text
     assert "Workspaces (" in gw.get("/_platform/admin", headers=dict(as_("admin@example.org"), **fr)).text   # admin: English
+
+
+def test_listing_and_upgrade_survive_an_image_the_store_no_longer_has(prov, monkeypatch):
+    class Gone:
+        labels = {"jobagent.tenant": "a", "jobagent.role": "web", "jobagent.email": "a@x.ch"}
+        attrs = {"State": {"Status": "running", "Health": {"Status": "healthy"}}, "Image": "sha256:bd760b3b2ab8b8bf58602b750408"}
+        status = "running"
+
+        @property
+        def image(self):
+            raise RuntimeError("404 No such image")
+
+    class D:
+        class containers:
+            @staticmethod
+            def list(all=True, filters=None):
+                return [Gone()]
+
+        class volumes:
+            @staticmethod
+            def list(filters=None):
+                return []
+    assert prov.LABEL == "jobagent.tenant"
+    t = prov.tenants(D())
+    assert t == [{"slug": "a", "email": "a@x.ch", "web": "running (healthy)", "sched": "missing", "image": "bd760b3b2ab8"}]
+    assert prov.image_id(Gone()) == "sha256:bd760b3b2ab8b8bf58602b750408" and prov.image_id(None) == ""
+    # a rollback to an image that is gone is reported, not a crash
+    class Img:
+        id = "sha256:new"
+    D.images = type("I", (), {"get": staticmethod(lambda name: Img())})
+    monkeypatch.setattr(prov, "_get", lambda coll, name: Gone())
+    calls = []
+
+    def create(d, slug, email, image=None, extra=None):
+        calls.append(image)
+        if image != "sha256:new":
+            raise RuntimeError("No such image")
+    monkeypatch.setattr(prov, "create", create)
+    monkeypatch.setattr(prov, "healthy", lambda d, name, timeout=90: False)
+    logs = []
+    assert prov.upgrade(D(), log=logs.append) is False and calls == ["sha256:new", "sha256:bd760b3b2ab8b8bf58602b750408"]
+    assert "CAN'T ROLL BACK" in logs[-1]
