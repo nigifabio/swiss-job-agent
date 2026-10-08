@@ -125,7 +125,6 @@ _DETAIL = [
     ('>national wage calculator ↗</a>', '>calculateur national de salaires ↗</a>', '>nationaler Lohnrechner ↗</a>'),
     ('This posting mentions:', 'Cette annonce mentionne :', 'Dieses Inserat erwähnt:'),
     ('<span class="flag">{{ label }}</span>', '<span class="flag">{{ label | tr }}</span>', '<span class="flag">{{ label | tr }}</span>'),
-    ('<a href="/job/{{ job.id }}/cv?dl=1">Download PDF</a>', '<a href="/job/{{ job.id }}/cv?dl=1">Télécharger le PDF</a>', '<a href="/job/{{ job.id }}/cv?dl=1">PDF herunterladen</a>'),
     ('<span class="muted">{{ cv_note }}</span>', '<span class="muted">{{ cv_note | tr }}</span>', '<span class="muted">{{ cv_note | tr }}</span>'),
     ('<strong>Score {{ job.score }}</strong>', '<strong>Score {{ job.score }}</strong>', '<strong>Punkte {{ job.score }}</strong>'),
     ('>In your CV:</span>', '>Dans votre CV :</span>', '>In Ihrem Lebenslauf:</span>'),
@@ -162,7 +161,6 @@ _DETAIL = [
     ('{% if job.letter %}Rewrite letter{% else %}Write cover letter{% endif %}', '{% if job.letter %}Réécrire la lettre{% else %}Écrire la lettre de motivation{% endif %}',
      '{% if job.letter %}Brief neu schreiben{% else %}Motivationsschreiben verfassen{% endif %}'),
     ('>Save edits</button>', '>Enregistrer les modifications</button>', '>Änderungen speichern</button>'),
-    ('<a href="/job/{{ job.id }}/letter.pdf">Download PDF</a>', '<a href="/job/{{ job.id }}/letter.pdf">Télécharger le PDF</a>', '<a href="/job/{{ job.id }}/letter.pdf">PDF herunterladen</a>'),
     ('Add a candidate profile (data/profile.json) to write letters.', 'Ajoutez un profil (data/profile.json) pour écrire des lettres.',
      'Fügen Sie ein Profil hinzu (data/profile.json), um Briefe zu schreiben.'),
     ('<strong>Status history</strong>', '<strong>Historique du statut</strong>', '<strong>Statusverlauf</strong>'),
@@ -637,7 +635,6 @@ _DETAIL += [
     ('Open the PDF made earlier ↗</a>', 'Ouvrir le PDF généré précédemment ↗</a>', 'Früher erstelltes PDF öffnen ↗</a>'),
     ('Change anything, then save: the PDF is made from this text exactly as written. A line starting with ## is a section title, ### a job (the next line is its dates), - a point. Your name, contact details and photo come from your profile.', 'Modifiez ce que vous voulez, puis enregistrez : le PDF est fait à partir de ce texte, tel quel. Une ligne qui commence par ## est un titre de section, ### un emploi (la ligne suivante donne ses dates), - un point. Votre nom, vos coordonnées et votre photo viennent de votre profil.', 'Ändern Sie, was Sie möchten, und speichern Sie: Das PDF wird genau aus diesem Text erstellt. Eine Zeile mit ## ist ein Abschnittstitel, ### eine Stelle (die nächste Zeile nennt die Daten), - ein Punkt. Name, Kontaktangaben und Foto kommen aus Ihrem Profil.'),
     ('<button type="submit">Save and update the PDF</button>', '<button type="submit">Enregistrer et mettre à jour le PDF</button>', '<button type="submit">Speichern und PDF aktualisieren</button>'),
-    ('>Open the PDF ↗</a>', '>Ouvrir le PDF ↗</a>', '>PDF öffnen ↗</a>'),
 ]
 _CV += [
     ('<strong>Photo on your CV</strong>', '<strong>Photo sur votre CV</strong>', '<strong>Foto auf Ihrem Lebenslauf</strong>'),
@@ -725,6 +722,12 @@ _WEEK += [
 ]
 _DASHBOARD += [
     ('title="My score"', 'title="Mon score"', 'title="Mein Punktestand"'),
+]
+
+# PDF buttons that save first
+_DETAIL += [
+    ('value="pdf" formtarget="_blank">Save and open the PDF ↗</button>', 'value="pdf" formtarget="_blank">Enregistrer et ouvrir le PDF ↗</button>', 'value="pdf" formtarget="_blank">Speichern und PDF öffnen ↗</button>'),
+    ('>Save and download the PDF</button>', '>Enregistrer et télécharger le PDF</button>', '>Speichern und PDF herunterladen</button>'),
 ]
 
 TEMPLATES = {

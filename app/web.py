@@ -23,6 +23,9 @@ templates = {lang: Jinja2Templates(env=env) for lang, env in _envs.items()}     
 
 
 SECURITY_HEADERS = {"X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff",
+                    # every page and file here is one person's data, and changes with each save: never kept by a browser
+                    # or by a proxy in front (a CDN stores .pdf and .csv by default, and would hand back the old one)
+                    "Cache-Control": "no-store, private",
                     "Referrer-Policy": "same-origin", "Content-Security-Policy": "frame-ancestors 'none'; base-uri 'self'; object-src 'none'"}
 
 
@@ -237,6 +240,8 @@ def save_cv(jid: int, text: str = Form(""), then: str = Form(""), name: str = Fo
             kept = "&kept=0"
     store.update_fields(jid, fields)
     tailor.build_from_text(job, profile, text)
+    if then in ("pdf", "dl"):                      # saved first, so the PDF always holds what is in the box
+        return RedirectResponse(f"/job/{jid}/cv?v={store.now()[-8:].replace(':', '')}" + ("&dl=1" if then == "dl" else ""), status_code=303)
     return RedirectResponse(f"/job/{jid}?{kept[1:]}#cv" if kept else f"/job/{jid}#cv", status_code=303)
 
 
@@ -520,6 +525,8 @@ def save_letter(jid: int, text: str = Form(""), then: str = Form(""), name: str 
             or (job.get("title") or "Letter")[:60]
         ok = store.save_cv_version(name, letter.to_template(text, job), default=True if then == "default" else None, kind="letter")
         kept = "?lkept=1" if ok else "?lkept=0"
+    if then == "pdf" and text.strip():             # saved first, so the PDF always holds what is in the box
+        return RedirectResponse(f"/job/{jid}/letter.pdf?v={store.now()[-8:].replace(':', '')}", status_code=303)
     return RedirectResponse(f"/job/{jid}{kept}#letter", status_code=303)
 
 

@@ -62,6 +62,7 @@ _jwks = None
 HOP = {"connection", "keep-alive", "proxy-authenticate", "proxy-authorization", "te", "trailers",
        "transfer-encoding", "upgrade", "host", "content-length"}
 SECURITY_HEADERS = {"X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff",
+                    "Cache-Control": "no-store, private",       # personal pages and files: never kept by a browser, a proxy or the CDN
                     "Referrer-Policy": "same-origin", "Strict-Transport-Security": "max-age=31536000",
                     "Content-Security-Policy": "frame-ancestors 'none'; base-uri 'self'; object-src 'none'"}
 

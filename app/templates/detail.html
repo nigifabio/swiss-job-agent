@@ -141,8 +141,9 @@
     <textarea name="text" rows="24" spellcheck="true">{{ job.cv_text }}</textarea>
     <p class="muted" style="margin:4px 0 8px">Change anything, then save: the PDF is made from this text exactly as written. A line starting with ## is a section title,
       ### a job (the next line is its dates), - a point. Your name, contact details and photo come from your profile.</p>
-    <p><button type="submit">Save and update the PDF</button> &nbsp;<a class="btn ghost" href="/job/{{ job.id }}/cv" target="_blank" rel="noopener">Open the PDF ↗</a>
-      &nbsp;<a href="/job/{{ job.id }}/cv?dl=1">Download PDF</a></p>
+    <p><button type="submit">Save and update the PDF</button>
+      <button class="ghost" type="submit" name="then" value="pdf" formtarget="_blank">Save and open the PDF ↗</button>
+      <button class="ghost" type="submit" name="then" value="dl">Save and download the PDF</button></p>
     {% if kept == "1" %}<p class="muted">✓ Kept in <a href="/cv/versions">My CV versions</a>.</p>
     {% elif kept == "0" %}<p class="bad">Not kept: you have reached the number of versions. Delete one in <a href="/cv/versions">My CV versions</a>.</p>{% endif %}
     <div class="row" style="align-items:flex-end;margin-top:6px">
@@ -167,7 +168,8 @@
   {% if job.letter %}
   <form method="post" action="/job/{{ job.id }}/letter/save">
     <textarea name="text" rows="18">{{ job.letter }}</textarea>
-    <p><button class="ghost" type="submit">Save edits</button> &nbsp;<a href="/job/{{ job.id }}/letter.pdf">Download PDF</a></p>
+    <p><button type="submit">Save edits</button>
+      <button class="ghost" type="submit" name="then" value="pdf">Save and download the PDF</button></p>
     {% if lkept == "1" %}<p class="muted">✓ Kept in <a href="/cv/versions#letters">My letters</a>.</p>
     {% elif lkept == "0" %}<p class="bad">Not kept: you have reached the number of letters. Delete one in <a href="/cv/versions#letters">My letters</a>.</p>{% endif %}
     <div class="row" style="align-items:flex-end;margin-top:6px">

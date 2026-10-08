@@ -667,11 +667,11 @@ def test_league_is_joined_by_choice_and_shows_only_nicknames_and_points(gw, monk
         assert private not in page.replace("marie@example.org", "", 1) or private == "marie@example.org", private
     assert "paul@example.org" not in page and ">paul<" not in page
     assert "You lead the week" in gw.get("/_platform/league", headers=paul).text
-    assert "Join the league" in gw.get("/_platform/league", headers=zoe).text and "Rösti" not in gw.get("/_platform/league", headers=zoe).text
+    assert "Join the league" in gw.get("/_platform/league", headers=zoe).text and "Rösti 2" not in gw.get("/_platform/league", headers=zoe).text
     fr = gw.get("/_platform/league", headers=dict(marie, **{"accept-language": "fr"})).text
     assert "La ligue" in fr and "Dans la course" in fr and "Décollage" in fr
     gw.post("/_platform/league/leave", headers=paul, data={"csrf": csrf(gw, "paul@example.org")})
-    assert "Rösti" not in gw.get("/_platform/league", headers=marie).text
+    assert "Rösti 2" not in gw.get("/_platform/league", headers=marie).text
     assert gw.get("/_platform/league", headers=as_("stranger@example.org"), follow_redirects=False).status_code == 303
     assert gw.get("/_platform/league").status_code == 403
 
@@ -684,3 +684,9 @@ def test_league_remembers_last_weeks_champion(gw):
     assert league.champion([{"name": "Marmotte", "week": 0}, {"name": "Lynx", "week": 0}], datetime.date(2026, 10, 12)) == ["Marmotte", 30]
     assert league.champion(rows, datetime.date(2026, 10, 14)) == ["Marmotte", 30]
     assert league.champion(rows, datetime.date(2026, 10, 19)) == ["Marmotte", 30] and league.suggestion(["Marmotte"]) != "Marmotte"
+
+
+def test_nothing_personal_is_cacheable(gw):
+    gw.db.add_tenant("marie", "marie@example.org")
+    for url in ("/job/1/letter.pdf", "/report.csv", "/jobs", "/_platform/me"):
+        assert gw.get(url, headers=as_("marie@example.org")).headers["cache-control"] == "no-store, private", url

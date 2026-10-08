@@ -490,3 +490,48 @@ def test_sorting_points_are_capped_and_changed_settings_dont_count(env):
         env.store.dismiss(_job(env, f"F{i}"), "filtered", True)             # removed by a change of settings: not the person's sorting
     g = env.game.stats(today)
     assert g["this_week"]["sorted"] == 20 and g["week"] == 20 and "sharp" in g["badges"]
+
+
+def test_every_save_is_kept_and_the_pdf_buttons_save_first(env):
+    """Edits typed in a box must never be lost: each save stores them, and a PDF button stores them before making the PDF."""
+    from pypdf import PdfReader
+    import io
+    Path(env.config.PROFILE_PATH).write_text(json.dumps(PROFILE))
+    c = TestClient(env.web.app)
+    jid = _job(env, "Cloud Architect", company="Acme SA", description="AWS.")
+
+    def pdf_text(resp):
+        return " ".join(p.extract_text() for p in PdfReader(io.BytesIO(resp.content)).pages)
+    # letter: plain save, then the PDF button with newer, unsaved text
+    c.post(f"/job/{jid}/letter")
+    base = env.store.get_job(jid)["letter"]
+    c.post(f"/job/{jid}/letter/save", data={"text": base + "\n\nPS ALPHA-1."})
+    assert env.store.get_job(jid)["letter"].endswith("PS ALPHA-1.") and "PS ALPHA-1." in c.get(f"/job/{jid}").text
+    r = c.post(f"/job/{jid}/letter/save", data={"text": base + "\n\nPS BRAVO-2.", "then": "pdf"})
+    assert r.headers["content-type"] == "application/pdf" and "BRAVO-2" in pdf_text(r) and "ALPHA-1" not in pdf_text(r)
+    assert env.store.get_job(jid)["letter"].endswith("PS BRAVO-2.")
+    assert "BRAVO-2" in pdf_text(c.get(f"/job/{jid}/letter.pdf"))
+    # CV: the three buttons
+    c.post(f"/job/{jid}/cv")
+    cv = env.store.get_job(jid)["cv_text"]
+    c.post(f"/job/{jid}/cv/save", data={"text": cv + "\n## X\nCHARLIE-3 line.\n"})
+    assert "CHARLIE-3" in env.store.get_job(jid)["cv_text"] and "CHARLIE-3" in pdf_text(c.get(f"/job/{jid}/cv"))
+    for then, word in (("pdf", "DELTA-4"), ("dl", "ECHO-5")):
+        r = c.post(f"/job/{jid}/cv/save", data={"text": cv + f"\n## X\n{word} line.\n", "then": then})
+        assert r.headers["content-type"] == "application/pdf" and word in pdf_text(r) and word in env.store.get_job(jid)["cv_text"]
+    assert "attachment" in r.headers["content-disposition"]
+    # the other boxes of the job page
+    c.post(f"/job/{jid}/fields", data={"notes": "FOXTROT-6", "contact": "Mme Golf", "work_rate": "80%", "interview_at": "2026-11-02T09:30"})
+    job = env.store.get_job(jid)
+    assert (job["notes"], job["contact"], job["work_rate"], job["interview_at"]) == ("FOXTROT-6", "Mme Golf", "80%", "2026-11-02T09:30")
+    c.post(f"/job/{jid}/docs", data={"docs": ["cv", "diplomas"]})
+    assert env.docs.done(env.store.get_job(jid)) == ["cv", "diplomas"]
+    # versions keep their edits too
+    c.post(f"/job/{jid}/letter/save", data={"text": base + "\n\nPS HOTEL-7.", "then": "version", "name": "Mine"})
+    v = next(x for x in env.store.cv_versions("letter") if x["name"] == "Mine")
+    assert "HOTEL-7" in v["text"]
+    c.post(f"/cv/versions/{v['id']}", data={"action": "save", "name": "Mine", "text": v["text"] + "\nINDIA-8"})
+    assert "INDIA-8" in env.store.cv_version(v["id"])["text"] and "INDIA-8" in pdf_text(c.get(f"/cv/versions/{v['id']}.pdf"))
+    # nothing of this may be kept by a browser, a proxy or a CDN: a stored PDF would be the old one (or someone else's)
+    for url in (f"/job/{jid}", f"/job/{jid}/letter.pdf", f"/job/{jid}/cv", "/jobs", "/report.csv", "/cv/versions"):
+        assert c.get(url).headers["cache-control"] == "no-store, private", url
