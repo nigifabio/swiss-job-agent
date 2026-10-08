@@ -68,3 +68,43 @@ enabled you can also **edit your profile** or **re-run the setup wizard** there.
   under the job title in the PDF, a column in the CSV). Copy the rows into Job-Room (work.swiss) or attach
   the PDF, as your ORP/RAV office asks, by the 5th of the following month. The AVS number is left blank
   to fill in by hand.
+
+## For people registered with an ORP / RAV
+
+- **Monthly target:** the home page shows where you stand ("ORP target 10.2026: 4 / 10 applications · 9 days left") and
+  turns into a reminder in the last ten days of the month. Until the 5th it also reminds you to hand in last month's
+  proofs. Set your own target under **Settings**.
+- **Official form:** on the **ORP report** of a month, *Official ORP form (PDF)* gives the unemployment-insurance form
+  716.007 itself, filled in with your applications (several copies when there are more than 14). Add your AVS number,
+  the date and your signature.
+- **Assignments:** tick *Assigned by the ORP* on a job and give the deadline: it is listed at the top of the home page
+  with the days left.
+- **Spontaneous applications:** *+ spontaneous application* records a company you wrote to without a posting. It counts
+  in the report and the target.
+
+## Where you search
+
+- **Home town and radius** (Settings): change the town or the number of kilometres and the towns and cantons to search
+  are recalculated. Leave the radius at 0 to keep a list of towns you typed yourself.
+- **Travel time:** each job shows the time by public transport from your home town (🚆 23 min). With a *longest travel*
+  in Settings, jobs further away are greyed out.
+- **Work rate:** give the range you want (for example 60 to 80 %); jobs whose title states another rate are skipped.
+- **Companies you don't want:** *Never show this company* on a job page, or the list in Settings.
+- **One-click fixes:** the *Why jobs were discarded* table on the Stats page offers buttons such as *skip titles with
+  "industriel"*, *stop searching in Fribourg* or *never show Adecco*: one click changes the setting and clears the list.
+
+## On a job page
+
+- **This posting mentions:** a language that isn't in your skills, a work-permit or nationality condition, a driving
+  licence, a criminal-record extract.
+- **Salary:** links to the official calculators (Salarium, national wage calculator), since postings rarely state pay.
+- **Posting offline:** postings are re-checked every week; one that is gone is marked *position filled* (or noted, if you
+  had applied).
+- **Follow-up message:** ten days after an application without an answer, the home page suggests following up and the job
+  page has a short message to copy, in the posting's language.
+- **Interview preparation sheet:** for a job you applied to, a one-page PDF with what the posting asks for against your
+  skills, your experience to mention, usual questions and questions to ask.
+
+## Language of the site
+
+English, French and German. The site follows your browser; **Settings → Language of this site** fixes it.

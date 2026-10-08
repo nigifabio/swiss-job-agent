@@ -12,6 +12,38 @@
     {% else %}No scan yet.{% endif %}
   </span>
 </div>
+{% if assigned %}
+<div class="banner">
+  <strong>📌 Assigned by the ORP: apply before the deadline</strong>
+  <table>
+  {% for a in assigned %}
+    <tr><td><a href="/job/{{ a.id }}">{{ a.title }}</a> — {{ a.company }}</td>
+        <td class="{{ 'bad' if a.days_left is not none and a.days_left <= 2 else 'muted' }}">{% if a.days_left is none %}no deadline set{% elif a.days_left < 0 %}{{ -a.days_left }} day{{ 's' if a.days_left != -1 }} late{% elif a.days_left == 0 %}today{% else %}{{ a.days_left }} day{{ 's' if a.days_left != 1 }} left{% endif %}</td></tr>
+  {% endfor %}
+  </table>
+</div>
+{% endif %}
+{% if orp.last_month %}
+<div class="banner">
+  <strong>🗓 Proofs of job search for {{ orp.last_month.label }}: hand them in by the 5th</strong>
+  <div>{{ orp.last_month.n }} application{{ 's' if orp.last_month.n != 1 }} recorded. <a href="/report?month={{ orp.last_month.key }}">Open the report</a> · <a href="/report.pdf?month={{ orp.last_month.key }}">PDF</a></div>
+</div>
+{% endif %}
+<div class="{{ 'banner' if orp.urgent else 'orpline' }}">
+  {% if orp.urgent %}<strong>⏳ {{ orp.missing }} more application{{ 's' if orp.missing != 1 }} needed this month</strong> · {% endif %}
+  <span class="{{ '' if orp.urgent else 'muted' }}">ORP target {{ orp.month }}: <b>{{ orp.done }} / {{ orp.target }}</b> applications · {{ orp.days_left }} day{{ 's' if orp.days_left != 1 }} left in the month
+    {% if orp.done >= orp.target %}· ✓ reached{% endif %} · <a href="/add?kind=spontaneous">+ spontaneous application</a></span>
+</div>
+{% if waiting %}
+<div class="banner">
+  <strong>✉ No answer yet: time to follow up?</strong>
+  <table>
+  {% for w in waiting[:6] %}
+    <tr><td><a href="/job/{{ w.id }}#followup">{{ w.title }}</a> — {{ w.company }}</td><td class="muted">applied {{ w.days_waiting }} days ago</td></tr>
+  {% endfor %}
+  </table>
+</div>
+{% endif %}
 {% if followups %}
 <div class="banner">
   <strong>⏰ Follow-ups due (next 14 days)</strong>
@@ -46,8 +78,8 @@
       {% if j.origin == "manual" %}<span class="muted">· added by hand</span>{% endif %}
     </div>
     <div class="muted">
-      {{ j.company }}{% if j.location %} · {{ j.location }}{% endif %} · {{ j.source }}{% if j.salary %} · {{ j.salary }}{% endif %}
-      {% if j.applied_date and status != "new" %} · applied {{ j.applied_date }}{% endif %}{% if status == "discarded" and j.discard_reason %} · {{ reasons.get(j.discard_reason, j.discard_reason) }}{% elif j.outcome_note and status in ("rejected", "discarded") %} · {{ j.outcome_note }}{% endif %}
+      {{ j.company }}{% if j.location %} · {{ j.location }}{% endif %}{% if j.commute_min is not none %} · 🚆 {{ j.commute_min }} min{% endif %} · {{ j.source }}{% if j.salary %} · {{ j.salary }}{% endif %}
+      {% if j.orp_assigned %} · 📌 ORP{% endif %}{% if j.applied_date and status != "new" %} · applied {{ j.applied_date }}{% endif %}{% if status == "discarded" and j.discard_reason %} · {{ reasons.get(j.discard_reason, j.discard_reason) }}{% elif j.outcome_note and status in ("rejected", "discarded") %} · {{ j.outcome_note }}{% endif %}
     </div>
     <div class="actions">
       {% if j.url | safe_url %}<a class="btn small apply-link" href="{{ j.url | safe_url }}" target="_blank" rel="noopener" data-job="{{ j.id }}">Open &amp; apply ↗</a>{% endif %}
@@ -65,7 +97,7 @@
           <span class="when-live">✕ Not for me</span><span class="when-dim">✕ Remove</span></button>
         <select name="reason" class="when-dim small why" aria-label="Why? (removes the job)" title="Say why and it is removed. It helps tune the search: see Stats.">
           <option value="">Why? …</option>
-          {% for k, label in reasons.items() %}<option value="{{ k }}">{{ label }}</option>{% endfor %}
+          {% for k, label in reasons.items() if k != "filtered" %}<option value="{{ k }}">{{ label }}</option>{% endfor %}
         </select>
       </form>
       {% endif %}

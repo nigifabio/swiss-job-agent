@@ -78,19 +78,44 @@ ONBOARDING = os.environ.get("ONBOARDING", "") == "1"
 # Runs as a tenant behind the multi-tenant platform gateway (account pages live there).
 PLATFORM_TENANT = os.environ.get("PLATFORM_TENANT", "") == "1"
 
+# Companies and agencies never shown (whole words of the company name).
+COMPANY_EXCLUDE = _csv(os.environ.get("COMPANY_EXCLUDE", ""))
+# Work rate wanted, in %: a posting whose title states a rate outside it is skipped (0-100 = any).
+WORK_RATE_MIN = int(os.environ.get("WORK_RATE_MIN", "0") or 0)
+WORK_RATE_MAX = int(os.environ.get("WORK_RATE_MAX", "100") or 100)
+# Applications per month the ORP / RAV office asked for.
+ORP_MONTHLY_TARGET = int(os.environ.get("ORP_MONTHLY_TARGET", "10") or 10)
+# Home town, for the public-transport time to each job; COMMUTE_MAX minutes greys out the ones further (0 = off).
+HOME_TOWN = os.environ.get("HOME_TOWN", "")
+COMMUTE_MAX = int(os.environ.get("COMMUTE_MAX", "0") or 0)
+# Language of the interface: en, fr or de ("" = the browser's).
+UI_LANG = os.environ.get("UI_LANG", "")
+# Search radius around the home town, in km: when set, the towns and cantons searched are computed
+# from home + radius each time either changes on the Settings page (0 = the towns are kept as typed).
+RADIUS_KM = int(os.environ.get("RADIUS_KM", "0") or 0)
+INT_BOUNDS = {"WORK_RATE_MIN": (0, 100), "WORK_RATE_MAX": (10, 100), "ORP_MONTHLY_TARGET": (1, 60), "COMMUTE_MAX": (0, 240),
+              "RADIUS_KM": (0, 150)}
+
 EDITABLE = {   # name -> kind
     "SEARCH_TERMS": "list", "WHERE": "list", "PROVIDERS": "list", "LANGUAGES": "lower",
     "TITLE_KEYWORDS": "lower", "TITLE_EXCLUDE": "lower", "LOCATION_KEYWORDS": "lower",
     "SCORE_KEYWORDS": "lower", "ALLOW_REMOTE": "bool", "FETCH_INTERVAL_HOURS": "hours",
-    "JOBROOM_CANTONS": "list",
+    "JOBROOM_CANTONS": "list", "COMPANY_EXCLUDE": "lower", "WORK_RATE_MIN": "int", "WORK_RATE_MAX": "int",
+    "ORP_MONTHLY_TARGET": "int", "HOME_TOWN": "text", "RADIUS_KM": "int", "COMMUTE_MAX": "int", "UI_LANG": "text",
 }
 JOBROOM_CANTONS = _terms(os.environ.get("JOBROOM_CANTONS", "").replace(",", ";"))
 _ENV_DEFAULTS = {k: globals()[k] for k in EDITABLE}
 
 
-def _coerce(kind, v):
+def _coerce(kind, v, name=""):
     if kind == "bool":
         return bool(v)
+    if kind == "int":
+        lo, hi = INT_BOUNDS.get(name, (0, 10 ** 6))
+        return min(hi, max(lo, int(float(v))))
+    if kind == "text":
+        v = " ".join(str(v).split())[:60]
+        return (v if v in ("en", "fr", "de") else "") if name == "UI_LANG" else v
     if kind == "hours":
         return min(168.0, max(1.0, float(v)))
     items = v if isinstance(v, list) else str(v).replace(";", ",").split(",")
@@ -116,7 +141,7 @@ def reload_settings():
         val = _ENV_DEFAULTS[k]
         if k in data:
             try:
-                val = _coerce(kind, data[k])
+                val = _coerce(kind, data[k], k)
             except (TypeError, ValueError):
                 pass
         globals()[k] = val
@@ -148,7 +173,10 @@ def save_settings(values):
     clean = {}
     for k, kind in EDITABLE.items():
         if k in values:
-            clean[k] = _coerce(kind, values[k])
+            try:
+                clean[k] = _coerce(kind, values[k], k)
+            except (TypeError, ValueError):
+                pass
     tmp = SETTINGS_PATH + ".tmp"
     os.makedirs(os.path.dirname(SETTINGS_PATH) or ".", exist_ok=True)
     with open(tmp, "w") as f:

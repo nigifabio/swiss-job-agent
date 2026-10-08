@@ -9,13 +9,15 @@ from fastapi import FastAPI, Request, Form
 from fastapi.responses import RedirectResponse, HTMLResponse, PlainTextResponse, FileResponse, Response
 from fastapi.templating import Jinja2Templates
 
-from . import auth, config, enrich, fetch, letter, onboard, places, prefs, report, roles, skills, store, tailor
+from . import (auth, commute, compose, config, enrich, fetch, filters, i18n, locales, letter, onboard, places, prefs, prep, report,
+               requirements, roles, skills, store, tailor, tune)
 from .importers import cvparse, extract, linkedin
 
 store.init_db()
 
 app = FastAPI(title="Swiss Job Agent", docs_url=None, redoc_url=None, openapi_url=None)
-templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), "templates"))
+_envs = i18n.environments(os.path.join(os.path.dirname(__file__), "templates"), locales.TEMPLATES)
+templates = {lang: Jinja2Templates(env=env) for lang, env in _envs.items()}       # one per interface language
 
 
 SECURITY_HEADERS = {"X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff",
@@ -35,6 +37,7 @@ def _cross_site(request):
 
 @app.middleware("http")
 async def require_access(request: Request, call_next):
+    i18n.use(ui_lang(request))
     if _cross_site(request):
         return PlainTextResponse("Cross-site request refused", status_code=403)
     resp = await _guarded(request, call_next)
@@ -62,13 +65,21 @@ def _safe_url(u):
     return u if urlparse(u).scheme in ("http", "https") else ""
 
 
-templates.env.filters["safe_url"] = _safe_url   # every rendered link goes through this
+for _env in _envs.values():
+    _env.filters["safe_url"] = _safe_url        # every rendered link goes through this
+
+
+def ui_lang(request):
+    """Interface language of this request: the person's setting, else the browser's."""
+    return i18n.pick(config.UI_LANG, request.headers.get("accept-language", ""))
 
 
 def render(request, name, ctx):
     ctx["user"] = getattr(request.state, "user", "")
     ctx["platform"] = config.PLATFORM_TENANT      # runs behind the platform gateway
-    return templates.TemplateResponse(request, name, ctx)
+    lang = ui_lang(request)
+    i18n.use(lang)
+    return templates[lang].TemplateResponse(request, name, ctx)
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -91,6 +102,7 @@ def jobs(request: Request, status: str = "new"):
         "statuses": store.STATUSES,
         "counts": store.counts(),
         "reasons": store.DISCARD_REASONS,
+        "orp": report.month_progress(), "assigned": store.assignments_open(), "waiting": store.awaiting_answer(),
         "followups": store.followups_due(14),
     })
 
@@ -113,7 +125,23 @@ def job_detail(request: Request, jid: int):
         job["description"] = enrich.html_to_text(job["description"])
         store.set_description(jid, job["description"])
     desc_html, have, missing, avoided = skills.analyse(job.get("description") or "")
+    if job.get("commute_min") is None and job.get("status") not in ("discarded", "rejected"):
+        try:                                        # travel time from home, asked once per town
+            m = commute.minutes(commute.home(), commute.town(job.get("location")))
+            if m is not None:
+                job["commute_min"] = m
+                with store.conn() as c:
+                    c.execute("UPDATE jobs SET commute_min=? WHERE id=?", (m, jid))
+        except Exception:  # noqa: BLE001  (timetable unreachable: the page still opens)
+            pass
+    profile = tailor.load_profile()
+    follow = ""
+    if profile and job.get("status") == "applied" and job.get("applied_date"):
+        cv, lang = tailor.localized(profile, job)
+        follow = compose.followup(cv, job, lang)
     return render(request, "detail.html", {
+        "flags": requirements.flags(job.get("description") or ""), "followup_text": follow,
+        "home_town": commute.home(), "blocked": not filters.company_ok(job.get("company")),
         "job": job, "statuses": store.STATUSES, "reasons": store.DISCARD_REASONS, "desc_html": desc_html, "have": have, "missing": missing,
         "avoided": avoided,
         "methods": store.APPLY_METHODS, "letter_engine": letter.config_note(), "cv_note": tailor.cv_note(),
@@ -215,8 +243,10 @@ def set_fields(
     apply_method: str = Form("written"),
     orp_assigned: str = Form(""),
     outcome_note: str = Form(""),
+    orp_deadline: str = Form(""),
 ):
     store.update_fields(jid, {
+        "orp_deadline": orp_deadline if re.fullmatch(r"\d{4}-\d{2}-\d{2}", orp_deadline or "") else "",
         "contact": contact, "recruiter": recruiter, "cv_version": cv_version,
         "applied_date": applied_date, "followup_date": followup_date, "notes": notes,
         "work_rate": work_rate, "outcome_note": outcome_note, "orp_assigned": 1 if orp_assigned else 0,
@@ -259,7 +289,7 @@ def _cv_ctx(profile, **extra):
     ctx = {"profile": profile, "keywords": store.get_meta().get("cv_keywords", ""),
            "built": os.path.exists(tailor.CUSTOM_CV), "prefs": prefs.summary(),
            "versions": tailor.profile_versions(),
-           "roles": [{"id": r["id"], "label": roles.label(r)} for r in roles.ROLES], "role_default": first}
+           "roles": [{"id": r["id"], "label": roles.label(r, i18n.current())} for r in roles.ROLES], "role_default": first}
     ctx.update(extra)
     return ctx
 
@@ -322,7 +352,7 @@ def report_page(request: Request, month: str = "", week: str = ""):
     return render(request, "report.html", {
         "rows": report.rows(start, end), "cols": report.COLUMNS, "link_col": report.LINK, "label": label, "kind": kind, "key": key,
         "prev": report.shift(kind, key, -1), "next": report.shift(kind, key, 1),
-        "target": report.TARGET, "name": profile.get("name", ""),
+        "target": report.target(), "name": profile.get("name", ""),
         "qs": f"{kind}={key}"})
 
 
@@ -334,17 +364,67 @@ def report_csv(month: str = "", week: str = ""):
 
 
 @app.get("/report.pdf")
-def report_pdf(month: str = "", week: str = ""):
+def report_pdf(month: str = "", week: str = "", official: str = ""):
     kind, key, start, end, label = _period(month, week)
     name = (tailor.load_profile() or {}).get("name", "")
+    if official and kind == "month":          # the SECO form 716.007 itself, filled in; else our own report
+        from . import official as form
+        out = form.fill(store.applications(start.isoformat(), end.isoformat()), name, key,
+                        os.path.join(tailor.CV_DIR, f"orp-716.007-{key}.pdf"))
+        if out:
+            return FileResponse(out, media_type="application/pdf", filename=f"preuves-recherches-716.007-{key}.pdf",
+                                content_disposition_type="attachment")
     out = report.to_pdf(report.rows(start, end), label, name, os.path.join(tailor.CV_DIR, f"report-{key}.pdf"))
     return FileResponse(out, media_type="application/pdf", filename=f"recherches-emploi-{key}.pdf",
                         content_disposition_type="attachment")
 
 
 @app.get("/add", response_class=HTMLResponse)
-def add_form(request: Request):
-    return render(request, "add.html", {"statuses": store.STATUSES})
+def add_form(request: Request, kind: str = ""):
+    return render(request, "add.html", {"statuses": store.STATUSES, "spontaneous": kind == "spontaneous",
+                                        "today": store.today(), "methods": store.APPLY_METHODS})
+
+
+@app.post("/add/spontaneous")
+def add_spontaneous(company: str = Form(...), role: str = Form(""), location: str = Form(""), contact: str = Form(""),
+                    applied_date: str = Form(""), apply_method: str = Form("written"), url: str = Form(""),
+                    notes: str = Form("")):
+    """An application sent without a posting (it counts as a job search for the ORP)."""
+    role = " ".join(role.split())
+    jid = store.add_manual({
+        "title": f"Candidature spontanée – {role}" if role else "Candidature spontanée", "company": company,
+        "location": location, "url": _safe_url(url), "source": "spontaneous", "status": "applied",
+        "description": notes, "origin": "manual"})
+    store.update_status(jid, "applied")
+    store.update_fields(jid, {
+        "contact": contact, "notes": notes,
+        "applied_date": applied_date if re.fullmatch(r"\d{4}-\d{2}-\d{2}", applied_date or "") else store.today(),
+        "apply_method": apply_method if apply_method in store.APPLY_METHODS else "written"})
+    return RedirectResponse(f"/job/{jid}", status_code=303)
+
+
+@app.post("/job/{jid}/followed-up")
+def followed_up(jid: int):
+    """The follow-up was sent: note it and stop reminding for two weeks."""
+    store.update_fields(jid, {"followed_up_at": store.today()})
+    return RedirectResponse(f"/job/{jid}", status_code=303)
+
+
+@app.get("/job/{jid}/prep.pdf")
+def prep_pdf(jid: int):
+    job, profile = store.get_job(jid), tailor.load_profile()
+    if not job or not profile:
+        return PlainTextResponse("No profile or job.", status_code=404)
+    out = prep.build(job, profile)
+    return FileResponse(out, media_type="application/pdf", content_disposition_type="inline",
+                        filename=tailor.download_name(profile, job).replace("_CV_", "_Interview_"))
+
+
+@app.post("/tune")
+def tune_search(action: str = Form(...), name: str = Form(...), value: str = Form(...), next: str = Form("/stats")):
+    """One click from Stats or a job page: skip a title word, stop searching a town, block a company."""
+    tune.change(action, name, value)
+    return RedirectResponse(_local(next, "/stats"), status_code=303)
 
 
 @app.post("/add")
@@ -396,7 +476,7 @@ def onboarding(request: Request):
         fams = {}
         for r in roles.ROLES:
             fams.setdefault(FAMILY_LABELS.get(r["family"], r["family"]), []).append(
-                {"id": r["id"], "label": roles.label(r)})
+                {"id": r["id"], "label": roles.label(r, i18n.current())})
         ctx.update(t=t, families=list(fams.items()), towns=places.town_names(),
                    seniority=list(onboard.SENIORITY_LABELS.items()), suggested=roles.suggest(st["draft"]))
     if step == "confirm":
@@ -521,7 +601,7 @@ async def onboarding_target(request: Request):
         cvs = []
         for rid in t["roles"]:
             _, sup, miss = onboard.build_role_cv(profile, rid)
-            cvs.append({"id": rid, "label": roles.label(roles.get(rid)), "missing": miss})
+            cvs.append({"id": rid, "label": roles.label(roles.get(rid), i18n.current()), "missing": miss})
         st["role_cvs"] = cvs
         st["step"] = "confirm"
     onboard.save_state(st)
@@ -546,6 +626,13 @@ def _settings_from_form(form):
                 out[k] = float(form.get(k) or 12)
             except ValueError:
                 out[k] = 12
+        elif kind == "int":
+            try:
+                out[k] = int(float(form.get(k) or getattr(config, k)))
+            except ValueError:
+                out[k] = getattr(config, k)
+        elif kind == "text":
+            out[k] = (form.get(k) if form.get(k) is not None else getattr(config, k)).strip()
         elif form.get(k) is not None:
             out[k] = [x.strip() for line in _lines(form.get(k)) for x in line.split(",") if x.strip()]
     return out
@@ -597,7 +684,12 @@ def settings_page(request: Request, saved: int = 0):
 
 @app.post("/settings")
 async def settings_save(request: Request):
-    config.save_settings(_settings_from_form(await request.form()))
+    new = _settings_from_form(await request.form())
+    moved = (new.get("HOME_TOWN", "").lower(), new.get("RADIUS_KM")) != (config.HOME_TOWN.lower(), config.RADIUS_KM)
+    if moved:                                   # home or radius changed: the towns follow, travel times too
+        new.update(onboard.area_settings(new.get("HOME_TOWN"), new.get("RADIUS_KM")) or {})
+        commute.reset()
+    config.save_settings(new)
     prefs.invalidate()
     store.rescore(fetch.score_job)
     return RedirectResponse("/settings?saved=1", status_code=303)
@@ -610,7 +702,7 @@ def cv_role(request: Request, role: str = Form(...)):
     if not profile or not roles.get(role):
         return RedirectResponse("/cv", status_code=303)
     _, sup, miss = onboard.build_role_cv(profile, role)
-    return render(request, "cv.html", _cv_ctx(profile, role_built={"id": role, "label": roles.label(roles.get(role)),
+    return render(request, "cv.html", _cv_ctx(profile, role_built={"id": role, "label": roles.label(roles.get(role), i18n.current()),
                                                                    "supported": sup, "missing": miss}))
 
 

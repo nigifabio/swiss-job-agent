@@ -24,12 +24,28 @@
     <form method="post" action="/job/{{ job.id }}/dismiss" style="display:flex;gap:6px;align-items:center">
       <input type="hidden" name="now" value="1"><input type="hidden" name="next" value="/jobs?status={{ job.status }}">
       <select name="reason" aria-label="Why discard" style="width:auto"><option value="">Why? (optional)</option>
-        {% for k, label in reasons.items() %}<option value="{{ k }}">{{ label }}</option>{% endfor %}</select>
+        {% for k, label in reasons.items() if k != "filtered" %}<option value="{{ k }}">{{ label }}</option>{% endfor %}</select>
       <button class="ghost" type="submit">✕ Discard</button>
     </form>{% endif %}
+    {% if job.company and not blocked and job.origin != "manual" %}
+    <form method="post" action="/tune" onsubmit="return confirm('Never show jobs from {{ job.company | replace("'", " ") }} again?')">
+      <input type="hidden" name="action" value="add"><input type="hidden" name="name" value="COMPANY_EXCLUDE">
+      <input type="hidden" name="value" value="{{ job.company }}"><input type="hidden" name="next" value="/jobs?status={{ job.status }}">
+      <button class="ghost" type="submit" title="Hide this company or agency from now on (undo in Settings)">🚫 Never show this company</button>
+    </form>{% endif %}
+    {% if job.status in ("applied", "interview") and can_tailor %}<a class="btn ghost" href="/job/{{ job.id }}/prep.pdf" target="_blank">🎯 Interview preparation sheet</a>{% endif %}
     {% if job.status == "discarded" and job.discard_reason %}<span class="muted">Discarded: {{ reasons.get(job.discard_reason, job.discard_reason) }}</span>{% endif %}
   </div>
   {% if job.status != "applied" %}{% with j = job, back = "/job/" ~ job.id %}{% include "_apply_prompt.html" %}{% endwith %}{% endif %}
+  <p class="muted" style="margin:8px 0 0">
+    {% if job.commute_min is not none %}🚆 <b>{{ job.commute_min }} min</b> by public transport from {{ home_town }} · {% endif %}
+    {% if job.closed_at %}<span class="bad">⚠ this posting is no longer online (checked {{ job.closed_at[:10] }})</span> · {% endif %}
+    💰 Pay is rarely stated: check the usual range for this job with the official calculators
+    <a href="https://www.salarium.bfs.admin.ch/" target="_blank" rel="noopener">Salarium ↗</a> ·
+    <a href="https://entsendung.admin.ch/Lohnrechner/home" target="_blank" rel="noopener">national wage calculator ↗</a>
+  </p>
+  {% if flags %}<p style="margin:8px 0 0"><span class="muted">This posting mentions:</span>
+    {% for kind, label in flags %}<span class="flag">{{ label }}</span>{% endfor %}</p>{% endif %}
   {% if can_tailor %}
   <p>
     {% if has_cv %}<a class="btn" href="/job/{{ job.id }}/cv" target="_blank" rel="noopener">View tailored CV ↗</a>
@@ -84,13 +100,26 @@
         <select name="apply_method">{% for k, v in methods.items() %}<option value="{{ k }}" {% if (job.apply_method or 'written') == k %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></div>
       <div><label>Refusal reason (if rejected)</label><input name="outcome_note" value="{{ job.outcome_note or '' }}"></div>
     </div>
-    <label><input type="checkbox" name="orp_assigned" value="1" style="width:auto" {% if job.orp_assigned %}checked{% endif %}> Assigned by the ORP (assignation)</label>
+    <div class="row">
+      <div><label><input type="checkbox" name="orp_assigned" value="1" style="width:auto" {% if job.orp_assigned %}checked{% endif %}> Assigned by the ORP (assignation)</label></div>
+      <div><label>ORP deadline to apply</label><input name="orp_deadline" type="date" value="{{ job.orp_deadline or '' }}"></div>
+    </div>
     <label>Notes</label>
     <textarea name="notes" rows="4">{{ job.notes or '' }}</textarea>
     <p><button type="submit">Save details</button></p>
   </form>
 </div>
 
+{% if followup_text %}
+<div class="card" id="followup">
+  <strong>Follow-up message</strong>
+  <span class="muted">· applied on {{ job.applied_date }}{% if job.followed_up_at %} · followed up on {{ job.followed_up_at }}{% endif %}</span>
+  <p class="muted" style="margin:4px 0">No answer after a week or two? Copy this into an e-mail (the first line is the subject), adapt it, send it.</p>
+  <textarea rows="11" readonly onclick="this.select()">{{ followup_text }}</textarea>
+  <form method="post" action="/job/{{ job.id }}/followed-up" style="margin-top:8px">
+    <button class="ghost" type="submit">✓ I sent a follow-up today</button></form>
+</div>
+{% endif %}
 <div class="card" id="letter">
   <strong>Cover letter</strong> <span class="muted">· {{ letter_engine }}</span>
   {% if can_tailor %}

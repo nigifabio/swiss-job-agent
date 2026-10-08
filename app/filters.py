@@ -46,6 +46,35 @@ def location_ok(location, desc=""):
     return False
 
 
+_RATE_RANGE = re.compile(r"(\d{2,3})\s*%?\s*(?:-|–|—|/|à|a|bis|to)\s*(\d{2,3})\s*%")
+_RATE_ONE = re.compile(r"(?<![\d.,])(\d{2,3})\s*%")
+
+
+def stated_rate(title):
+    """(min, max) work rate a title states ("Coordinator 60-80%" -> (60, 80)), or None."""
+    t = title or ""
+    m = _RATE_RANGE.search(t)
+    pair = (int(m.group(1)), int(m.group(2))) if m else None
+    if not pair:
+        m = _RATE_ONE.search(t)
+        pair = (int(m.group(1)), int(m.group(1))) if m else None
+    if not pair or not all(10 <= x <= 100 for x in pair):
+        return None
+    return min(pair), max(pair)
+
+
+def rate_ok(title):
+    """False only when the title states a work rate outside what the person wants; a posting that
+    states none (usually full time) is kept."""
+    r = stated_rate(title)
+    return not r or (r[1] >= config.WORK_RATE_MIN and r[0] <= config.WORK_RATE_MAX)
+
+
+def company_ok(company):
+    c = (company or "").lower()
+    return not any(_hit(k, c) for k in config.COMPANY_EXCLUDE)
+
+
 def language_ok(title, desc):
     return keep_language(f"{title}. {desc or ''}"[:600], config.LANGUAGES)
 

@@ -201,6 +201,9 @@ def settings_for(draft, t):
         "SCORE_KEYWORDS": _uniq(skills)[:100],
         "PROVIDERS": providers,
         "FETCH_INTERVAL_HOURS": 12,
+        "HOME_TOWN": home, "RADIUS_KM": 0 if t.get("whole_country") else radius,
+        "COMPANY_EXCLUDE": [], "WORK_RATE_MIN": 0, "WORK_RATE_MAX": 100, "COMMUTE_MAX": 0,
+        "ORP_MONTHLY_TARGET": config.ORP_MONTHLY_TARGET, "UI_LANG": config.UI_LANG,
     }
 
 
@@ -314,3 +317,14 @@ def build_role_cv(profile, role_id, lang=None):
     tailor.render(profile, [s.lower() for s in sup], out, key_skills=sup[:14],
                   summary=compose.summary(profile, job, lang), lang=lang, job=job)
     return out, sup, miss
+
+
+def area_settings(home, radius_km):
+    """Towns, regions and cantons to search for a home town and a radius in km (Settings page), or
+    None when the town isn't in the table (the person then keeps typing the towns)."""
+    if not home or not radius_km or not places.find(home):
+        return None
+    loc, cantons = places.search_area(home, int(radius_km), False)
+    if not loc:
+        return None
+    return {"LOCATION_KEYWORDS": loc, "WHERE": places.canton_names(cantons) or [home], "JOBROOM_CANTONS": cantons}

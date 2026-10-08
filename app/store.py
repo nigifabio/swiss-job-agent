@@ -40,7 +40,12 @@ CREATE TABLE IF NOT EXISTS jobs (
   letter          TEXT,
   loose_key       TEXT,
   dimmed          INTEGER DEFAULT 0,
-  discard_reason  TEXT
+  discard_reason  TEXT,
+  orp_deadline    TEXT,
+  followed_up_at  TEXT,
+  url_checked_at  TEXT,
+  closed_at       TEXT,
+  commute_min     INTEGER
 );
 CREATE TABLE IF NOT EXISTS status_history (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -52,6 +57,8 @@ CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status);
 CREATE INDEX IF NOT EXISTS idx_history_job ON status_history(job_id);
 CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT);
 CREATE INDEX IF NOT EXISTS idx_jobs_loose ON jobs(loose_key);
+CREATE TABLE IF NOT EXISTS commutes (home TEXT NOT NULL, place TEXT NOT NULL, minutes INTEGER, checked_at TEXT NOT NULL,
+  PRIMARY KEY (home, place));
 """
 
 
@@ -99,6 +106,8 @@ MIGRATIONS = [
     ("work_rate", "TEXT"), ("apply_method", "TEXT"), ("orp_assigned", "INTEGER DEFAULT 0"),
     ("outcome_note", "TEXT"), ("enriched_at", "TEXT"), ("letter", "TEXT"), ("loose_key", "TEXT"),
     ("dimmed", "INTEGER DEFAULT 0"), ("discard_reason", "TEXT"),
+    ("orp_deadline", "TEXT"), ("followed_up_at", "TEXT"), ("url_checked_at", "TEXT"), ("closed_at", "TEXT"),
+    ("commute_min", "INTEGER"),
 ]
 
 # Why a posting was discarded (the list's "Why?" menu). Read on the Stats page to tune the search:
@@ -115,6 +124,7 @@ DISCARD_REASONS = {
     "duplicate": "Duplicate / already seen",
     "filled": "Position filled or expired",
     "other": "Other",
+    "filtered": "Removed by a change of the search settings",       # set by the app, not in the menu
 }
 
 # How an application was made, as the ORP "preuves de recherches" form asks it.
@@ -275,7 +285,8 @@ def keep(jid):
 
 def update_fields(jid, fields):
     allowed = ["contact", "recruiter", "cv_version", "applied_date", "followup_date", "notes",
-               "work_rate", "apply_method", "orp_assigned", "outcome_note", "location", "letter"]
+               "work_rate", "apply_method", "orp_assigned", "outcome_note", "location", "letter",
+               "orp_deadline", "followed_up_at"]
     sets, vals = [], []
     for k in allowed:
         if k in fields:
@@ -339,6 +350,35 @@ def all_applied():
 def history_all():
     with conn() as c:
         return [dict(r) for r in c.execute("SELECT * FROM status_history ORDER BY changed_at").fetchall()]
+
+
+def assignments_open():
+    """Jobs the ORP assigned that aren't applied to yet, most urgent first (days_left may be None)."""
+    today = datetime.date.today()
+    with conn() as c:
+        rows = [dict(r) for r in c.execute(
+            "SELECT * FROM jobs WHERE orp_assigned=1 AND status IN ('new','shortlisted')").fetchall()]
+    for r in rows:
+        try:
+            r["days_left"] = (datetime.date.fromisoformat(r["orp_deadline"]) - today).days
+        except (TypeError, ValueError):
+            r["days_left"] = None
+    return sorted(rows, key=lambda r: (r["days_left"] is None, r["days_left"] or 0))
+
+
+def awaiting_answer(days=10, again=14):
+    """Applications without an answer for `days` days that weren't followed up in the last `again` days."""
+    today = datetime.date.today()
+    with conn() as c:
+        rows = [dict(r) for r in c.execute(
+            "SELECT * FROM jobs WHERE status='applied' AND COALESCE(applied_date,'') != '' AND applied_date <= ? "
+            "AND (COALESCE(followed_up_at,'') = '' OR followed_up_at <= ?) "
+            "AND (COALESCE(followup_date,'') = '' OR followup_date <= ?) ORDER BY applied_date",
+            ((today - datetime.timedelta(days=days)).isoformat(), (today - datetime.timedelta(days=again)).isoformat(),
+             today.isoformat())).fetchall()]
+    for r in rows:
+        r["days_waiting"] = (today - datetime.date.fromisoformat(r["applied_date"])).days
+    return rows
 
 
 def followups_due(days=14):

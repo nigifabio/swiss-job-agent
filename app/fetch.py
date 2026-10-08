@@ -65,6 +65,11 @@ def run():
         scanlog.start()
         new = _run()
         report = scanlog.result()
+        for chore in (_commutes, _closed):          # extras: never fail a scan
+            try:
+                chore()
+            except Exception as e:  # noqa: BLE001
+                print(f"[fetch] {chore.__name__} skipped: {type(e).__name__}: {str(e)[:120]}")
         try:
             previous = json.loads(get_meta().get("last_scan_report") or "{}")
         except ValueError:
@@ -72,6 +77,16 @@ def run():
         set_meta(last_scan_at=now(), last_scan_new=new, last_scan_report=json.dumps(report),
                  last_scan_warnings=json.dumps(scanlog.warnings(report, previous)))
         return new
+
+
+def _commutes():
+    from . import commute
+    commute.fill()
+
+
+def _closed():
+    from . import closed
+    closed.check()
 
 
 def _run():
@@ -86,6 +101,7 @@ def _run():
         except Exception as e:  # noqa: BLE001
             scanlog.error(name, f"provider crashed: {type(e).__name__}: {str(e)[:150]}")
             continue
+        jobs = [j for j in jobs if filters.company_ok(j.get("company")) and filters.rate_ok(j.get("title"))]
         for job in jobs:
             job["title"] = " ".join((job.get("title") or "").split())
             job["score"], job["score_rationale"] = score_job(job)

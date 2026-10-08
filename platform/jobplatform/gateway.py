@@ -22,7 +22,7 @@ from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse,
 from fastapi.templating import Jinja2Templates
 from starlette.background import BackgroundTask
 
-from . import db, notify
+from . import db, i18n, locales, notify
 
 
 class Config:
@@ -49,7 +49,9 @@ async def lifespan(_app):
 
 
 app = FastAPI(title="Swiss Job Agent", docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
-templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), "templates"))
+# one set of templates per interface language (the visitor's browser decides; the admin page stays English)
+templates = {lang: Jinja2Templates(env=env) for lang, env in i18n.environments(
+    os.path.join(os.path.dirname(__file__), "templates"), locales.TEMPLATES, locales.STRINGS).items()}
 _jwks = None
 HOP = {"connection", "keep-alive", "proxy-authenticate", "proxy-authorization", "te", "trailers",
        "transfer-encoding", "upgrade", "host", "content-length"}
@@ -109,8 +111,9 @@ def prov(method, path, **kw):
 def page(request, name, ctx, status=200):
     ctx.update(email=getattr(request.state, "email", ""), csrf=csrf_token(getattr(request.state, "email", "")),
                is_admin=getattr(request.state, "email", "") in C.admins)
-    r = templates.TemplateResponse(request, name, ctx, status_code=status)
-    return r
+    lang = "en" if name == "admin.html" else i18n.pick("", request.headers.get("accept-language", ""))
+    i18n.use(lang)
+    return templates[lang].TemplateResponse(request, name, ctx, status_code=status)
 
 
 PUBLIC_HOME = "/welcome"

@@ -226,5 +226,11 @@ def cv_note():
     """End-user description of the job CV, shown next to the button."""
     langs = [k for k, v in profile_versions().items() if v.startswith("ok")]
     where = f" ({', '.join(langs)})" if len(langs) > 1 else ""
-    return ("In the posting's language when your profile has a version in it" + where +
-            "; summary and bullet order chosen for this job, from your own profile.")
+    from . import i18n
+    a, b = {"fr": ("Dans la langue de l'annonce quand votre profil existe dans cette langue",
+                   " ; résumé et ordre des points choisis pour cette offre, à partir de votre propre profil."),
+            "de": ("In der Sprache des Inserats, wenn Ihr Profil in dieser Sprache vorliegt",
+                   "; Kurzprofil und Reihenfolge der Punkte für diese Stelle gewählt, aus Ihrem eigenen Profil.")}.get(
+        i18n.current(), ("In the posting's language when your profile has a version in it",
+                         "; summary and bullet order chosen for this job, from your own profile."))
+    return a + where + b

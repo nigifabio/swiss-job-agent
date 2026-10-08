@@ -54,6 +54,7 @@ see [docs/docker.md](docs/docker.md).
 | **Track** | new · shortlisted · applied · interview · offer · rejected, with contacts, notes, follow-up reminders and a status history. |
 | **Write** | tailored CV (PDF) and a Swiss-format cover letter per job, a CV for a type of role, or a CV from keywords. |
 | **Report** | weekly/monthly ORP report as PDF, CSV or print, plus stats against your monthly target. |
+| **Swiss specifics** | ORP monthly target and reminders, the official form 716.007 filled in, assignments with deadlines, spontaneous applications, travel time by public transport, work-rate filter, conditions a posting mentions (permit, language, licence). Interface in English, French and German. |
 
 ## Two ways to run it
 

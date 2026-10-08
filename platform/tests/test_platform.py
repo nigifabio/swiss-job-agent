@@ -421,3 +421,26 @@ def test_plain_http_is_sent_to_https_and_pages_carry_hsts(gw, monkeypatch):
     r = gw.get("/welcome", headers={"cf-visitor": '{"scheme":"https"}'})
     assert r.status_code == 200 and r.headers["strict-transport-security"].startswith("max-age=")
     assert "frame-ancestors 'none'" in r.headers["content-security-policy"]
+
+
+def test_platform_pages_in_french_and_german(gw):
+    from pathlib import Path
+    tdir = Path(gw.g.__file__).parent / "templates"
+    for name, entries in gw.g.locales.TEMPLATES.items():
+        assert gw.g.i18n.missing((tdir / name).read_text(), entries) == [], name
+    for lang in ("fr", "de"):
+        for p in tdir.glob("*.html"):
+            gw.g.templates[lang].get_template(p.name)                   # every page compiles in every language
+    fr, de = {"accept-language": "fr-CH,fr;q=0.9"}, {"accept-language": "de"}
+    home = gw.get("/welcome", headers=fr).text
+    assert "Votre assistant privé pour chercher un emploi en Suisse" in home and "Demander un compte" in home and '<html lang="fr">' in home
+    assert "Ihr privater Assistent" in gw.get("/welcome", headers=de).text and "Your private assistant" in gw.get("/welcome").text
+    who = dict(as_("zoe@example.org"), **fr)
+    assert "vous n'avez pas encore d'espace" in gw.get("/", headers=who).text
+    assert "Envoyer ma demande" in gw.get("/_platform/request", headers=who).text
+    tok = gw.db.create_invite("admin@example.org", "", 7, "", 1)
+    assert "Vous êtes invité·e" in gw.get(f"/_platform/invite/{tok}", headers=who).text
+    assert "Invitation non valable" in gw.get("/_platform/invite/nope", headers=who).text          # messages too
+    gw.db.add_tenant("zoe", "zoe@example.org")
+    assert "Télécharger mes données" in gw.get("/_platform/me", headers=who).text
+    assert "Workspaces (" in gw.get("/_platform/admin", headers=dict(as_("admin@example.org"), **fr)).text   # admin: English

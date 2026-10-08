@@ -64,7 +64,12 @@
     {% for r in discards.rows %}<tr>
       <td>{{ r.label }}</td><td>{{ r.n }}</td>
       <td class="muted">{% for src, n in r.sources %}{{ src }} {{ n }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
-      <td>{{ r.hint }}{% if r.words %}<br><span class="muted">Words these titles share: {% for w, n in r.words %}<b>{{ w }}</b> ({{ n }}){% if not loop.last %}, {% endif %}{% endfor %}</span>{% endif %}</td>
+      <td>{{ r.hint }}
+        {% macro fix(action, name, value, label) %}<form method="post" action="/tune" style="display:inline"><input type="hidden" name="action" value="{{ action }}"><input type="hidden" name="name" value="{{ name }}"><input type="hidden" name="value" value="{{ value }}"><input type="hidden" name="next" value="/stats"><button class="small ghost" type="submit" style="margin:3px 4px 0 0">{{ label }}</button></form>{% endmacro %}
+        {% if r.words %}<div>{% for w, n in r.words %}{{ fix("add", "TITLE_EXCLUDE", w, "skip titles with “" ~ w ~ "” (" ~ n ~ ")") }}{% endfor %}</div>{% endif %}
+        {% if r.towns %}<div>{% for t, n in r.towns %}{{ fix("remove", "LOCATION_KEYWORDS", t, "stop searching in " ~ (t | title) ~ " (" ~ n ~ ")") }}{% endfor %}</div>{% endif %}
+        {% if r.companies %}<div>{% for c, n in r.companies %}{{ fix("add", "COMPANY_EXCLUDE", c, "never show " ~ c ~ " (" ~ n ~ ")") }}{% endfor %}</div>{% endif %}
+      </td>
     </tr>{% endfor %}
   </table>
   {% else %}<p class="muted" style="margin-bottom:0">Nothing discarded yet. When you remove a job from a list, choose a reason in the <b>Why?</b> menu:

@@ -8,9 +8,28 @@ import datetime
 import urllib.parse
 from collections import Counter
 
-from . import store
+from . import commute, config, filters, store
 
-TARGET = int(os.environ.get("ORP_MONTHLY_TARGET", "10"))   # searches/month the ORP asked for
+def target():
+    """Applications per month the ORP / RAV asked for (Settings page, else ORP_MONTHLY_TARGET)."""
+    from . import config
+    return config.ORP_MONTHLY_TARGET
+
+
+def month_progress(today=None):
+    """Where the person stands against the monthly target, for the reminder on the home page:
+    this month's count, days left, and (until the 5th) last month's report still to hand in."""
+    today = today or datetime.date.today()
+    first = today.replace(day=1)
+    nxt = (first + datetime.timedelta(days=32)).replace(day=1)
+    done = len(store.applications(first.isoformat(), (nxt - datetime.timedelta(days=1)).isoformat()))
+    days_left = (nxt - today).days - 1
+    goal = target()
+    prev_last = first - datetime.timedelta(days=1)
+    prev = {"key": prev_last.strftime("%Y-%m"), "label": prev_last.strftime("%m.%Y"),
+            "n": len(store.applications(prev_last.replace(day=1).isoformat(), prev_last.isoformat()))} if today.day <= 5 else None
+    return {"done": done, "target": goal, "missing": max(0, goal - done), "days_left": days_left,
+            "urgent": done < goal and days_left <= 10, "month": today.strftime("%m.%Y"), "last_month": prev}
 RESULT = {"applied": "En suspens", "shortlisted": "En suspens", "new": "En suspens",
           "interview": "En suspens – entretien", "offer": "Offre reçue", "rejected": "Refus",
           "discarded": "En suspens"}
@@ -130,13 +149,13 @@ def to_pdf(rs, label, name, out):
 # ---- why jobs were discarded -----------------------------------------------
 # What each reason suggests changing in Settings.
 HINTS = {
-    "wrong_role": "Add words these titles have in common to \"Skip titles containing\", or tighten \"Keep titles containing\".",
+    "wrong_role": "Skip titles with a word these jobs share (one click below), or tighten \"Keep titles containing\".",
     "too_senior": "Add words like senior, lead, head, responsable to \"Skip titles containing\".",
     "too_junior": "Add words like junior, stage, stagiaire, apprenti* to \"Skip titles containing\".",
-    "location": "Reduce the towns in \"Where\" (or the commute radius in the setup wizard).",
+    "location": "Stop searching the towns below with one click, or set a maximum travel time in Settings.",
     "language": "Remove that language from the posting languages.",
     "workload": "Add words like temporaire, 20%, stage to \"Skip titles containing\".",
-    "company": "Skipping a company or an agency isn't a setting yet: tell the administrator which ones.",
+    "company": "Never show a company or an agency again with one click below.",
     "duplicate": "The same job came from two sites with different wording: tell the administrator which ones.",
 }
 
@@ -159,7 +178,13 @@ def discard_stats():
         rows.append({
             "key": key, "label": store.DISCARD_REASONS.get(key, "No reason given"), "n": len(js),
             "sources": Counter(j["source"] or "?" for j in js).most_common(4),
-            "words": _title_words([j["title"] or "" for j in js]) if key in ("wrong_role", "too_senior", "too_junior", "workload") else [],
+            "words": [(w, n) for w, n in _title_words([j["title"] or "" for j in js]) if not any(filters._hit(k, w) for k in config.TITLE_EXCLUDE)]
+            if key in ("wrong_role", "too_senior", "too_junior", "workload") else [],
+            # one-click fixes: towns still searched, companies not blocked yet
+            "towns": [(t, n) for t, n in Counter(commute.town(j["location"]).lower() for j in js).most_common(6)
+                      if t and t in config.LOCATION_KEYWORDS] if key == "location" else [],
+            "companies": [(c, n) for c, n in Counter((j["company"] or "").strip() for j in js).most_common(6)
+                          if c and filters.company_ok(c)] if key == "company" else [],
             "hint": HINTS.get(key, ""),
         })
     return {"total": len(jobs), "with_reason": sum(1 for j in jobs if j["discard_reason"]), "rows": rows}
@@ -220,7 +245,7 @@ def stats(today=None):
         "response_rate": round(100 * answered / n) if n else None,
         "interview_rate": round(100 * interviews / n) if n else None,
         "avg_wait": round(sum(waits) / len(waits)) if waits else None,
-        "this_month": this_month, "target": TARGET, "this_week_key": this_week_key,
+        "this_month": this_month, "target": target(), "this_week_key": this_week_key,
         "this_week": sum(1 for j in applied
                          if "{}-W{:02d}".format(*datetime.date.fromisoformat(j["applied_date"]).isocalendar()[:2])
                          == this_week_key),

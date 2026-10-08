@@ -5,9 +5,26 @@
   {% if help %}<p class="muted" style="margin:2px 0 0">{{ help }}</p>{% endif %}
 {%- endmacro %}
 {% macro settings_fields(s, compact=False) -%}
+  <label>Language of this site</label>
+  <select name="UI_LANG" style="max-width:260px">{% for code, name in [("", "Automatic (your browser's)"), ("en", "English"), ("fr", "Français"), ("de", "Deutsch")] %}<option value="{{ code }}" {{ 'selected' if s.UI_LANG == code }}>{{ name }}</option>{% endfor %}</select>
+  <div class="row">
+    <div><label>Home town</label><input name="HOME_TOWN" value="{{ s.HOME_TOWN }}" placeholder="e.g. Genève, Lausanne, Pully">
+      <p class="muted" style="margin:2px 0 0">Used for the travel time to each job, and for the search area below.</p></div>
+    <div><label>Search radius (km)</label><input name="RADIUS_KM" value="{{ s.RADIUS_KM | int }}" inputmode="numeric">
+      <p class="muted" style="margin:2px 0 0">When you change the town or the radius, the towns and cantons to search are recalculated. 0 = keep the towns as typed.</p></div>
+    <div><label>Longest travel (minutes)</label><input name="COMMUTE_MAX" value="{{ s.COMMUTE_MAX | int }}" inputmode="numeric">
+      <p class="muted" style="margin:2px 0 0">Jobs further by public transport are greyed out. 0 = no limit.</p></div>
+  </div>
   {{ field("SEARCH_TERMS", "Search terms", "Typed into the job boards, one per line.", s, 5) }}
   {{ field("TITLE_KEYWORDS", "A job title must contain one of", "Whole words; a trailing * matches the start of a word (coordinat* = coordinateur, coordinatrice).", s, 4) }}
   {{ field("TITLE_EXCLUDE", "Skip job titles containing", "", s, 3) }}
+  {{ field("COMPANY_EXCLUDE", "Never show these companies or agencies", "One per line: a word or the name as it appears on the job.", s, 2) }}
+  <div class="row">
+    <div><label>Work rate wanted, from (%)</label><input name="WORK_RATE_MIN" value="{{ s.WORK_RATE_MIN | int }}" inputmode="numeric"></div>
+    <div><label>to (%)</label><input name="WORK_RATE_MAX" value="{{ s.WORK_RATE_MAX | int }}" inputmode="numeric">
+      <p class="muted" style="margin:2px 0 0">A job whose title states a rate outside this range is skipped (0 to 100 = any).</p></div>
+    <div><label>ORP target (applications per month)</label><input name="ORP_MONTHLY_TARGET" value="{{ s.ORP_MONTHLY_TARGET | int }}" inputmode="numeric"></div>
+  </div>
   {{ field("LOCATION_KEYWORDS", "Job location must mention one of", "Towns within your commute, their cantons and regions.", s, 4) }}
   <div class="row">
     <div>{{ field("WHERE", "Regions for the job boards", "", s, 2) }}</div>

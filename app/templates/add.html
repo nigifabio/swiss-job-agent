@@ -1,9 +1,36 @@
 {% extends "base.html" %}
 {% block body %}
 <p><a href="/">← back</a></p>
+{% if spontaneous %}
+<div class="card">
+  <h2 style="margin-top:0">+ Spontaneous application</h2>
+  <p class="muted">You wrote to a company that had no posting. It counts as a job search in your ORP report.
+    <a href="/add">A job with a posting instead →</a></p>
+  <form method="post" action="/add/spontaneous">
+    <div class="row">
+      <div><label>Company *</label><input name="company" required></div>
+      <div><label>Town</label><input name="location"></div>
+    </div>
+    <div class="row">
+      <div><label>For what kind of job</label><input name="role" placeholder="e.g. Dessinatrice en bâtiment"></div>
+      <div><label>Contact person</label><input name="contact"></div>
+    </div>
+    <div class="row">
+      <div><label>Date sent</label><input name="applied_date" type="date" value="{{ today }}"></div>
+      <div><label>How</label><select name="apply_method">{% for k, v in methods.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></div>
+    </div>
+    <label>Company website (optional)</label>
+    <input name="url" placeholder="https://">
+    <label>Notes</label>
+    <textarea name="notes" rows="3"></textarea>
+    <p><button type="submit">Add to my applications</button></p>
+  </form>
+</div>
+{% else %}
 <div class="card">
   <h2 style="margin-top:0">+ Add application</h2>
-  <p class="muted">For roles you found yourself — LinkedIn, a recruiter, a referral, or a direct posting.</p>
+  <p class="muted">For roles you found yourself — LinkedIn, a recruiter, a referral, or a direct posting.
+    <a href="/add?kind=spontaneous">A spontaneous application (no posting) →</a></p>
   <form method="post" action="/add">
     <label>Title *</label>
     <input name="title" required>
@@ -27,4 +54,5 @@
     <p><button type="submit">Add</button></p>
   </form>
 </div>
+{% endif %}
 {% endblock %}

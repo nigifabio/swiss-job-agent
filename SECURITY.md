@@ -23,7 +23,9 @@ The app holds personal data (your CV, your applications, notes about employers),
 - **Uploads** (CV, LinkedIn files) are size-limited and parsed in a separate, CPU/memory/time-limited
   process; ZIP members are size-checked before reading.
 - **Container:** runs as an unprivileged user (uid 1000).
-- **No outbound AI or tracking service:** the only outbound requests are to the job sources you enable.
+- **No outbound AI or tracking service:** outbound requests go to the job sources you enable, to the Swiss
+  public-transport timetable (town names only, for travel times), to postings' own addresses (to notice the ones
+  that went offline) and once to the SECO site for the blank official form.
 
 The multi-tenant platform adds per-workspace containers, networks and volumes, a LAN egress firewall,
 read-only root filesystems, dropped capabilities and resource limits: see

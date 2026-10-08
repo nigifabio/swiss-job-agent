@@ -6,7 +6,8 @@
   <span class="muted">·</span>
   <a href="/report">this month</a>
   <span class="muted">·</span>
-  <a class="btn small" href="/report.pdf?{{ qs }}">PDF</a>
+  {% if kind == "month" %}<a class="btn small" href="/report.pdf?{{ qs }}&official=1" title="The unemployment-insurance form 716.007, filled in with these applications. Add your AVS number, date and signature.">Official ORP form (PDF)</a>{% endif %}
+  <a class="btn small {{ 'ghost' if kind == 'month' }}" href="/report.pdf?{{ qs }}">{{ 'Summary PDF' if kind == 'month' else 'PDF' }}</a>
   <a class="btn small ghost" href="/report.csv?{{ qs }}">CSV (Excel)</a>
   <button class="small ghost" type="button" onclick="window.print()">Print</button>
 </div>

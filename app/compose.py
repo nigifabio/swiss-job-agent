@@ -191,3 +191,93 @@ def letter_body(profile, job, lang):
         paras.append(w["examples"] + "\n" + "\n".join(f"– {b.rstrip('.')}." for b in top))
     paras.append(w["close"])
     return "\n\n".join(paras)
+
+
+# ---- follow-up after an application without an answer --------------------------------------
+FOLLOWUP = {
+    "en": ("Subject: My application for {title}",
+           "Dear Sir or Madam,",
+           "On {date} I applied for the position of {title}{at}. I am still very interested in this role and would be glad "
+           "to know where the selection process stands.",
+           "I remain at your disposal for any further information or an interview.",
+           "Kind regards,"),
+    "fr": ("Objet : Ma candidature au poste de {title}",
+           "Madame, Monsieur,",
+           "Le {date}, je vous ai adressé ma candidature pour le poste de {title}{at}. Ce poste m'intéresse toujours vivement "
+           "et je me permets de vous demander où en est le processus de sélection.",
+           "Je reste à votre disposition pour tout complément d'information ou pour un entretien.",
+           "Je vous prie d'agréer, Madame, Monsieur, mes salutations distinguées."),
+    "de": ("Betreff: Meine Bewerbung als {title}",
+           "Sehr geehrte Damen und Herren",
+           "Am {date} habe ich mich bei Ihnen um die Stelle als {title}{at} beworben. Die Stelle interessiert mich nach wie vor "
+           "sehr, und ich erlaube mir nachzufragen, wie weit das Auswahlverfahren fortgeschritten ist.",
+           "Für weitere Auskünfte oder ein persönliches Gespräch stehe ich Ihnen gerne zur Verfügung.",
+           "Freundliche Grüsse"),
+    "it": ("Oggetto: La mia candidatura per la posizione di {title}",
+           "Gentili Signore e Signori,",
+           "Il {date} vi ho inviato la mia candidatura per la posizione di {title}{at}. Sono tuttora molto interessato/a a questo "
+           "ruolo e mi permetto di chiedervi a che punto si trova la selezione.",
+           "Resto a disposizione per ulteriori informazioni o per un colloquio.",
+           "Cordiali saluti,"),
+}
+
+
+def followup(profile, job, lang):
+    """A short, polite follow-up message for an application without an answer (subject line first)."""
+    lang = lang if lang in FOLLOWUP else "en"
+    subject, hello, body, offer, bye = FOLLOWUP[lang]
+    d = job.get("applied_date") or ""
+    try:
+        import datetime
+        d = datetime.date.fromisoformat(d).strftime("%d.%m.%Y")
+    except ValueError:
+        pass
+    company = (job.get("company") or "").strip()
+    fill = {"title": (job.get("title") or "").strip(), "date": d, "at": WORDS[lang]["at"].format(company) if company else ""}
+    return "\n\n".join([subject.format(**fill), hello, body.format(**fill), offer, bye, profile.get("name", "")])
+
+
+# ---- interview preparation sheet ------------------------------------------------------------
+PREP = {
+    "en": {"title": "Interview preparation", "asks": "What the posting asks for", "have": "You have", "gap": "Prepare an answer for",
+           "yours": "Your experience to mention", "q": "Questions you will probably get", "ask": "Questions to ask them",
+           "practical": "Practical", "applied": "Applied on", "contact": "Contact", "travel": "Travel time", "min": "min by public transport",
+           "questions": ["Tell me about yourself.", "Why do you want this job, and why our company?",
+                         "What are your strengths for this role? And a weakness?", "Describe a difficult situation at work and how you handled it.",
+                         "Why did you leave your last job (or why are you looking now)?", "What salary do you expect, and at what work rate?",
+                         "When could you start?", "Where do you see yourself in three years?"],
+           "theirs": ["What does a typical day or week look like in this role?", "Who would I work with, and who would I report to?",
+                      "What are the first things you expect from the person in the first three months?",
+                      "How is the work organised (hours, on-site and remote days)?", "What are the next steps of the process, and when?"]},
+    "fr": {"title": "Préparation de l'entretien", "asks": "Ce que demande l'annonce", "have": "Vous avez", "gap": "Préparez une réponse pour",
+           "yours": "Votre expérience à mentionner", "q": "Questions qu'on vous posera probablement", "ask": "Questions à leur poser",
+           "practical": "Pratique", "applied": "Candidature du", "contact": "Contact", "travel": "Trajet", "min": "min en transports publics",
+           "questions": ["Parlez-moi de vous.", "Pourquoi ce poste, et pourquoi notre entreprise ?",
+                         "Quels sont vos points forts pour ce poste ? Et un point faible ?", "Décrivez une situation difficile au travail et comment vous l'avez gérée.",
+                         "Pourquoi avez-vous quitté votre dernier emploi (ou pourquoi cherchez-vous maintenant) ?",
+                         "Quelles sont vos prétentions salariales, et à quel taux d'activité ?", "Quand pourriez-vous commencer ?",
+                         "Où vous voyez-vous dans trois ans ?"],
+           "theirs": ["À quoi ressemble une journée ou une semaine type dans ce poste ?", "Avec qui travaillerais-je, et qui serait mon ou ma responsable ?",
+                      "Qu'attendez-vous de la personne durant les trois premiers mois ?",
+                      "Comment le travail est-il organisé (horaires, présence sur site et télétravail) ?",
+                      "Quelles sont les prochaines étapes du processus, et dans quel délai ?"]},
+    "de": {"title": "Vorbereitung auf das Vorstellungsgespräch", "asks": "Was das Inserat verlangt", "have": "Das bringen Sie mit", "gap": "Bereiten Sie eine Antwort vor zu",
+           "yours": "Ihre Erfahrung, die Sie erwähnen sollten", "q": "Fragen, die Sie wahrscheinlich erhalten", "ask": "Fragen, die Sie stellen können",
+           "practical": "Praktisches", "applied": "Beworben am", "contact": "Kontakt", "travel": "Reisezeit", "min": "Min. mit dem öffentlichen Verkehr",
+           "questions": ["Erzählen Sie etwas über sich.", "Warum diese Stelle, und warum unser Unternehmen?",
+                         "Was sind Ihre Stärken für diese Stelle? Und eine Schwäche?", "Beschreiben Sie eine schwierige Situation bei der Arbeit und wie Sie damit umgegangen sind.",
+                         "Warum haben Sie Ihre letzte Stelle verlassen (oder warum suchen Sie jetzt)?",
+                         "Welche Lohnvorstellung haben Sie, und bei welchem Pensum?", "Wann könnten Sie anfangen?", "Wo sehen Sie sich in drei Jahren?"],
+           "theirs": ["Wie sieht ein typischer Tag oder eine typische Woche in dieser Funktion aus?", "Mit wem würde ich arbeiten, und wem wäre ich unterstellt?",
+                      "Was erwarten Sie von der Person in den ersten drei Monaten?", "Wie ist die Arbeit organisiert (Arbeitszeiten, vor Ort und Homeoffice)?",
+                      "Wie geht es im Verfahren weiter, und bis wann?"]},
+    "it": {"title": "Preparazione al colloquio", "asks": "Cosa chiede l'annuncio", "have": "Lei ha", "gap": "Prepari una risposta per",
+           "yours": "La sua esperienza da citare", "q": "Domande che probabilmente riceverà", "ask": "Domande da fare",
+           "practical": "In pratica", "applied": "Candidatura del", "contact": "Contatto", "travel": "Tragitto", "min": "min con i mezzi pubblici",
+           "questions": ["Mi parli di lei.", "Perché questo posto, e perché la nostra azienda?", "Quali sono i suoi punti di forza per questo ruolo? E un punto debole?",
+                         "Descriva una situazione difficile sul lavoro e come l'ha gestita.", "Perché ha lasciato l'ultimo impiego (o perché cerca adesso)?",
+                         "Quali sono le sue aspettative salariali, e a quale grado d'occupazione?", "Quando potrebbe iniziare?", "Dove si vede fra tre anni?"],
+           "theirs": ["Com'è una giornata o una settimana tipo in questo ruolo?", "Con chi lavorerei, e a chi riferirei?",
+                      "Cosa vi aspettate dalla persona nei primi tre mesi?", "Com'è organizzato il lavoro (orari, presenza in sede e telelavoro)?",
+                      "Quali sono le prossime tappe della selezione, e con quali tempi?"]},
+}
