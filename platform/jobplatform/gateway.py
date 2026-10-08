@@ -215,7 +215,7 @@ async def forward(request, email):
     return out
 
 
-@app.get(PUBLIC_HOME, response_class=HTMLResponse)
+@app.api_route(PUBLIC_HOME, methods=["GET", "HEAD"], response_class=HTMLResponse)   # HEAD: link previews, monitors
 def welcome(request: Request):
     return home(request)
 

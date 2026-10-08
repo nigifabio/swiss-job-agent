@@ -39,7 +39,8 @@ CREATE TABLE IF NOT EXISTS jobs (
   enriched_at     TEXT,
   letter          TEXT,
   loose_key       TEXT,
-  dimmed          INTEGER DEFAULT 0
+  dimmed          INTEGER DEFAULT 0,
+  discard_reason  TEXT
 );
 CREATE TABLE IF NOT EXISTS status_history (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -97,8 +98,24 @@ def conn():
 MIGRATIONS = [
     ("work_rate", "TEXT"), ("apply_method", "TEXT"), ("orp_assigned", "INTEGER DEFAULT 0"),
     ("outcome_note", "TEXT"), ("enriched_at", "TEXT"), ("letter", "TEXT"), ("loose_key", "TEXT"),
-    ("dimmed", "INTEGER DEFAULT 0"),
+    ("dimmed", "INTEGER DEFAULT 0"), ("discard_reason", "TEXT"),
 ]
+
+# Why a posting was discarded (the list's "Why?" menu). Read on the Stats page to tune the search:
+# each reason points at a setting (title words, exclusions, towns, languages, sources).
+DISCARD_REASONS = {
+    "wrong_role": "Not my kind of job",
+    "too_senior": "Too senior / too much experience asked",
+    "too_junior": "Too junior / internship / apprenticeship",
+    "location": "Too far / wrong place",
+    "language": "A language I don't speak",
+    "workload": "Wrong work rate or contract (part-time, temporary...)",
+    "conditions": "Salary or conditions",
+    "company": "Not this company / recruitment agency",
+    "duplicate": "Duplicate / already seen",
+    "filled": "Position filled or expired",
+    "other": "Other",
+}
 
 # How an application was made, as the ORP "preuves de recherches" form asks it.
 APPLY_METHODS = {"written": "Écrite / e-mail / en ligne", "phone": "Téléphonique", "in_person": "Personnelle"}
@@ -210,6 +227,8 @@ def update_status(jid, status):
         return
     with conn() as c:
         c.execute("UPDATE jobs SET status=?, dimmed=0 WHERE id=?", (status, jid))
+        if status != "discarded":                 # back in play: the old reason no longer applies
+            c.execute("UPDATE jobs SET discard_reason=NULL WHERE id=?", (jid,))
         if status in ("new", "shortlisted"):      # not applied after all: out of the report and the stats too
             c.execute("UPDATE jobs SET applied_date=NULL WHERE id=?", (jid,))
         if status == "applied":
@@ -222,18 +241,30 @@ def update_status(jid, status):
                   (jid, status, now()))
 
 
-def dismiss(jid):
+def dismiss(jid, reason=None, now_=False):
     """The "not for me" button of the list: the first click greys the job out (it stays where it is),
-    a click on a greyed job discards it. Returns the new state: "dimmed", "discarded" or None."""
+    a click on a greyed job, or choosing a reason, discards it. Returns "dimmed", "discarded" or None."""
+    reason = reason if reason in DISCARD_REASONS else None
     with conn() as c:
         row = c.execute("SELECT dimmed, status FROM jobs WHERE id=?", (jid,)).fetchone()
         if not row or row["status"] == "discarded":
             return None
-        if not row["dimmed"]:
+        if not row["dimmed"] and not reason and not now_:
             c.execute("UPDATE jobs SET dimmed=1 WHERE id=?", (jid,))
             return "dimmed"
     update_status(jid, "discarded")
+    if reason:
+        with conn() as c:
+            c.execute("UPDATE jobs SET discard_reason=? WHERE id=?", (reason, jid))
     return "discarded"
+
+
+def discarded():
+    with conn() as c:
+        return [dict(r) for r in c.execute(
+            "SELECT j.id, j.title, j.company, j.location, j.source, j.score, j.discard_reason, "
+            "(SELECT MAX(changed_at) FROM status_history h WHERE h.job_id=j.id AND h.status='discarded') AS discarded_at "
+            "FROM jobs j WHERE j.status='discarded' ORDER BY discarded_at DESC").fetchall()]
 
 
 def keep(jid):
@@ -274,6 +305,8 @@ def mark_filled(jid):
     update_status(jid, status)
     with conn() as c:
         c.execute("UPDATE jobs SET outcome_note=? WHERE id=? AND COALESCE(outcome_note,'')=''", (FILLED_NOTE, jid))
+        if status == "discarded":
+            c.execute("UPDATE jobs SET discard_reason='filled' WHERE id=?", (jid,))
     return status
 
 

@@ -300,7 +300,7 @@ def test_position_filled_button(env):
     assert c.post(f"/job/{fresh}/filled", headers={"x-requested-with": "fetch"}).json()["state"] == "moved"
     j = env.store.get_job(fresh)
     assert j["status"] == "discarded" and j["outcome_note"] == "Poste déjà pourvu"
-    assert "Poste déjà pourvu" in c.get("/jobs?status=discarded").text
+    assert "Position filled or expired" in c.get("/jobs?status=discarded").text and j["discard_reason"] == "filled"
     # applied: a refusal with the reason, still in the ORP report
     assert c.post(f"/job/{sent}/filled", follow_redirects=False).status_code == 303
     j = env.store.get_job(sent)
@@ -326,3 +326,33 @@ def test_orp_report_links_to_the_posting(env):
     pdf = c.get(f"/report.pdf?month={month}")
     assert pdf.status_code == 200 and pdf.content[:4] == b"%PDF" and b"jobs.example.org/p/42" in pdf.content
     assert c.get("/jobs").headers["content-security-policy"].startswith("frame-ancestors 'none'")
+
+
+def test_discard_reasons_are_stored_and_shown_on_stats(env):
+    c = TestClient(env.web.app)
+    mk = lambda t, src="jobs.ch": env.store.add_manual({"title": t, "company": "Acme SA", "source": src})
+    a, b, d, e, f = mk("Dessinateur constructeur industriel"), mk("Constructeur industriel CFC"), mk("Planner", "job-room"), mk("Architect"), mk("Drafter")
+    for j in (a, b, d, e, f):
+        env.store.update_status(j, "new")
+    page = c.get("/jobs?status=new").text
+    assert 'name="reason"' in page and "Not my kind of job" in page and "Too far / wrong place" in page
+    # choosing a reason removes the job at once (the list's menu), also without greying first
+    assert c.post(f"/job/{a}/dismiss", data={"reason": "wrong_role"}, headers={"x-requested-with": "fetch"}).json()["state"] == "discarded"
+    c.post(f"/job/{b}/dismiss", headers={"x-requested-with": "fetch"})                                  # grey
+    c.post(f"/job/{b}/dismiss", data={"reason": "wrong_role"}, headers={"x-requested-with": "fetch"})
+    c.post(f"/job/{d}/dismiss", data={"reason": "location", "now": "1", "next": "/jobs?status=new"})    # job page form
+    c.post(f"/job/{e}/dismiss", data={"reason": "<script>", "now": "1"})                                # unknown reason: none
+    c.post(f"/job/{f}/filled")
+    got = {j: env.store.get_job(j)["discard_reason"] for j in (a, b, d, e, f)}
+    assert got == {a: "wrong_role", b: "wrong_role", d: "location", e: None, f: "filled"}
+    assert "Not my kind of job" in c.get("/jobs?status=discarded").text
+    st = env.report.discard_stats()
+    assert st["total"] == 5 and st["with_reason"] == 4 and st["rows"][0]["key"] == "wrong_role" and st["rows"][0]["n"] == 2
+    assert ("industriel", 2) in st["rows"][0]["words"] and st["rows"][0]["sources"] == [("jobs.ch", 2)]
+    page = c.get("/stats").text
+    assert "Why jobs were discarded" in page and "industriel" in page and "No reason given" in page
+    csv_text = c.get("/stats/discarded.csv").text
+    assert csv_text.splitlines()[0].endswith("Reason;Title;Company;Location;Source;Score") and "Too far / wrong place;Planner" in csv_text
+    # back in play: the reason is forgotten
+    c.post(f"/job/{a}/status", data={"status": "new"})
+    assert env.store.get_job(a)["discard_reason"] is None and env.report.discard_stats()["total"] == 4

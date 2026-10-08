@@ -127,6 +127,54 @@ def to_pdf(rs, label, name, out):
     return out
 
 
+# ---- why jobs were discarded -----------------------------------------------
+# What each reason suggests changing in Settings.
+HINTS = {
+    "wrong_role": "Add words these titles have in common to \"Skip titles containing\", or tighten \"Keep titles containing\".",
+    "too_senior": "Add words like senior, lead, head, responsable to \"Skip titles containing\".",
+    "too_junior": "Add words like junior, stage, stagiaire, apprenti* to \"Skip titles containing\".",
+    "location": "Reduce the towns in \"Where\" (or the commute radius in the setup wizard).",
+    "language": "Remove that language from the posting languages.",
+    "workload": "Add words like temporaire, 20%, stage to \"Skip titles containing\".",
+    "company": "Skipping a company or an agency isn't a setting yet: tell the administrator which ones.",
+    "duplicate": "The same job came from two sites with different wording: tell the administrator which ones.",
+}
+
+
+def _title_words(titles, limit=10):
+    from .compose import _tokens
+    c = Counter(w for t in titles for w in set(_tokens(t)) if len(w) > 3 and not w.isdigit())
+    return [(w, n) for w, n in c.most_common(limit) if n > 1]
+
+
+def discard_stats():
+    """Reasons given when discarding, most frequent first, with where those postings came from and
+    (for "not my kind of job") the title words they share: what to change in the search."""
+    jobs = store.discarded()
+    by = {}
+    for j in jobs:
+        by.setdefault(j["discard_reason"] or "", []).append(j)
+    rows = []
+    for key, js in sorted(by.items(), key=lambda kv: (-len(kv[1]), kv[0])):
+        rows.append({
+            "key": key, "label": store.DISCARD_REASONS.get(key, "No reason given"), "n": len(js),
+            "sources": Counter(j["source"] or "?" for j in js).most_common(4),
+            "words": _title_words([j["title"] or "" for j in js]) if key in ("wrong_role", "too_senior", "too_junior", "workload") else [],
+            "hint": HINTS.get(key, ""),
+        })
+    return {"total": len(jobs), "with_reason": sum(1 for j in jobs if j["discard_reason"]), "rows": rows}
+
+
+def discarded_csv():
+    buf = io.StringIO()
+    w = csv.writer(buf, delimiter=";")
+    w.writerow(["Discarded on", "Reason", "Title", "Company", "Location", "Source", "Score"])
+    for j in store.discarded():
+        w.writerow([(j["discarded_at"] or "")[:10], store.DISCARD_REASONS.get(j["discard_reason"] or "", ""),
+                    j["title"] or "", j["company"] or "", j["location"] or "", j["source"] or "", j["score"] if j["score"] is not None else ""])
+    return "\ufeff" + buf.getvalue()
+
+
 # ---- stats -----------------------------------------------------------------
 def _reached(history):
     """job_id -> {status: first date it was reached}"""

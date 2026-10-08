@@ -263,6 +263,7 @@ def test_public_home_page_is_the_only_page_without_a_login(gw):
     for path in ("/", "/jobs", "/welcome/x", "/_platform/admin", "/_platform/me", "/_platform/invite/abc"):
         assert gw.get(path).status_code == 403, path
     assert gw.post("/welcome").status_code == 403                       # reading only
+    assert gw.head("/welcome").status_code == 200
     assert not gw.seen                                                 # nothing reached a tenant
 
 

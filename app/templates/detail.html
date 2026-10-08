@@ -20,6 +20,14 @@
     <form method="post" action="/job/{{ job.id }}/filled">
       <button class="ghost" type="submit" title="The position is no longer open. If you applied, it counts as a refusal with that reason; otherwise it leaves the list.">⊘ Position filled already</button>
     </form>{% endif %}
+    {% if job.status in ("new", "shortlisted") %}
+    <form method="post" action="/job/{{ job.id }}/dismiss" style="display:flex;gap:6px;align-items:center">
+      <input type="hidden" name="now" value="1"><input type="hidden" name="next" value="/jobs?status={{ job.status }}">
+      <select name="reason" aria-label="Why discard" style="width:auto"><option value="">Why? (optional)</option>
+        {% for k, label in reasons.items() %}<option value="{{ k }}">{{ label }}</option>{% endfor %}</select>
+      <button class="ghost" type="submit">✕ Discard</button>
+    </form>{% endif %}
+    {% if job.status == "discarded" and job.discard_reason %}<span class="muted">Discarded: {{ reasons.get(job.discard_reason, job.discard_reason) }}</span>{% endif %}
   </div>
   {% if job.status != "applied" %}{% with j = job, back = "/job/" ~ job.id %}{% include "_apply_prompt.html" %}{% endwith %}{% endif %}
   {% if can_tailor %}

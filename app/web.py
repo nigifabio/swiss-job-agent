@@ -90,6 +90,7 @@ def jobs(request: Request, status: str = "new"):
         "status": status,
         "statuses": store.STATUSES,
         "counts": store.counts(),
+        "reasons": store.DISCARD_REASONS,
         "followups": store.followups_due(14),
     })
 
@@ -113,7 +114,7 @@ def job_detail(request: Request, jid: int):
         store.set_description(jid, job["description"])
     desc_html, have, missing, avoided = skills.analyse(job.get("description") or "")
     return render(request, "detail.html", {
-        "job": job, "statuses": store.STATUSES, "desc_html": desc_html, "have": have, "missing": missing,
+        "job": job, "statuses": store.STATUSES, "reasons": store.DISCARD_REASONS, "desc_html": desc_html, "have": have, "missing": missing,
         "avoided": avoided,
         "methods": store.APPLY_METHODS, "letter_engine": letter.config_note(), "cv_note": tailor.cv_note(),
         "can_tailor": tailor.load_profile() is not None,
@@ -165,8 +166,8 @@ def _quick(request, state, next, default):
 
 
 @app.post("/job/{jid}/dismiss")
-def dismiss(request: Request, jid: int, next: str = Form("")):
-    return _quick(request, store.dismiss(jid), next, "/jobs?status=new")
+def dismiss(request: Request, jid: int, next: str = Form(""), reason: str = Form(""), now: str = Form("")):
+    return _quick(request, store.dismiss(jid, reason, bool(now)), next, "/jobs?status=new")
 
 
 @app.post("/job/{jid}/filled")
@@ -294,8 +295,16 @@ def cv_custom_pdf():
 @app.get("/stats", response_class=HTMLResponse)
 def stats_page(request: Request):
     st = report.stats()
-    return render(request, "stats.html", {"s": st, "wmax": max([c for _, c in st["weeks"]] + [1]),
+    return render(request, "stats.html", {"s": st, "discards": report.discard_stats(),
+                                          "wmax": max([c for _, c in st["weeks"]] + [1]),
                                           "mmax": max([c for _, c in st["months"]] + [1])})
+
+
+@app.get("/stats/discarded.csv")
+def discarded_csv():
+    """Every discarded posting with its reason: to keep, or to send to whoever tunes the search."""
+    return Response(report.discarded_csv(), media_type="text/csv; charset=utf-8",
+                    headers={"Content-Disposition": 'attachment; filename="discarded-jobs.csv"'})
 
 
 def _period(month, week):

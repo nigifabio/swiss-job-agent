@@ -55,5 +55,20 @@
     <table class="data">{% for m, n in s.by_method %}<tr><td>{{ m }}</td><td>{{ n }}</td></tr>{% endfor %}</table>
   </div>
 </div>
+<div class="card">
+  <strong>Why jobs were discarded</strong>
+  <span class="muted">· {{ discards.total }} discarded, {{ discards.with_reason }} with a reason{% if discards.total %} · <a href="/stats/discarded.csv">download the list (CSV)</a>{% endif %}</span>
+  {% if discards.rows %}
+  <table class="data" style="margin-top:8px">
+    <tr><th>Reason</th><th>Jobs</th><th>Mostly from</th><th>What to change in <a href="/settings">Settings</a></th></tr>
+    {% for r in discards.rows %}<tr>
+      <td>{{ r.label }}</td><td>{{ r.n }}</td>
+      <td class="muted">{% for src, n in r.sources %}{{ src }} {{ n }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
+      <td>{{ r.hint }}{% if r.words %}<br><span class="muted">Words these titles share: {% for w, n in r.words %}<b>{{ w }}</b> ({{ n }}){% if not loop.last %}, {% endif %}{% endfor %}</span>{% endif %}</td>
+    </tr>{% endfor %}
+  </table>
+  {% else %}<p class="muted" style="margin-bottom:0">Nothing discarded yet. When you remove a job from a list, choose a reason in the <b>Why?</b> menu:
+    this table then shows what to change so fewer unsuitable jobs come in.</p>{% endif %}
+</div>
 <p><a class="btn" href="/report">ORP report for this month →</a> &nbsp;<a href="/report?week={{ s.this_week_key }}">this week</a></p>
 {% endblock %}

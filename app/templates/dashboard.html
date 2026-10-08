@@ -47,7 +47,7 @@
     </div>
     <div class="muted">
       {{ j.company }}{% if j.location %} · {{ j.location }}{% endif %} · {{ j.source }}{% if j.salary %} · {{ j.salary }}{% endif %}
-      {% if j.applied_date and status != "new" %} · applied {{ j.applied_date }}{% endif %}{% if j.outcome_note and status in ("rejected", "discarded") %} · {{ j.outcome_note }}{% endif %}
+      {% if j.applied_date and status != "new" %} · applied {{ j.applied_date }}{% endif %}{% if status == "discarded" and j.discard_reason %} · {{ reasons.get(j.discard_reason, j.discard_reason) }}{% elif j.outcome_note and status in ("rejected", "discarded") %} · {{ j.outcome_note }}{% endif %}
     </div>
     <div class="actions">
       {% if j.url | safe_url %}<a class="btn small apply-link" href="{{ j.url | safe_url }}" target="_blank" rel="noopener" data-job="{{ j.id }}">Open &amp; apply ↗</a>{% endif %}
@@ -63,6 +63,10 @@
         <input type="hidden" name="next" value="/jobs?status={{ status }}#job-{{ j.id }}">
         <button class="small ghost" type="submit" title="Not for me: grey it out. Click again to remove it from the list.">
           <span class="when-live">✕ Not for me</span><span class="when-dim">✕ Remove</span></button>
+        <select name="reason" class="when-dim small why" aria-label="Why? (removes the job)" title="Say why and it is removed. It helps tune the search: see Stats.">
+          <option value="">Why? …</option>
+          {% for k, label in reasons.items() %}<option value="{{ k }}">{{ label }}</option>{% endfor %}
+        </select>
       </form>
       {% endif %}
       {% if status not in ("discarded", "rejected") %}
@@ -83,6 +87,9 @@
   {% endfor %}
   <script>
   // "Not for me" / "Remove" / "Keep" without reloading the page (they work as plain forms without JavaScript)
+  document.querySelectorAll("select.why").forEach(function (s) {          // choosing a reason removes the job
+    s.addEventListener("change", function () { if (s.value) s.form.requestSubmit(); });
+  });
   document.querySelectorAll("form.quick").forEach(function (f) {
     f.addEventListener("submit", function (e) {
       e.preventDefault();

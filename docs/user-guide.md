@@ -16,6 +16,10 @@
 - On every job in a list: **✓ Applied**, **☆ Shortlist**, and **✕ Not for me**: the first click greys the job out (it
   stays where it is, **↩ Keep** brings it back), a second click (**✕ Remove**) moves it to *discarded*. From the
   *discarded* tab, **↩ Back to new** restores it.
+- **Why?** When a job is greyed out, the **Why?** menu removes it with a reason (not my kind of job, too senior, too
+  far, wrong language, work rate, company, duplicate...). The **Stats** page then shows *Why jobs were discarded*:
+  how many per reason, which sites they came from, the words those titles share and what to change in Settings.
+  The list can be downloaded as CSV, for example to send to the person who tunes the search.
 - **⊘ Position filled** (list and job page): the posting is no longer open. If you had applied, the job becomes a
   refusal with the reason "Poste déjà pourvu" and stays in your ORP report; if not, it leaves the list.
 - Entering an **applied date** on the job page moves the job to *Applied* (the report and the stats count by that
