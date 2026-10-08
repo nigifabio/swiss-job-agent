@@ -119,7 +119,7 @@ def prov(method, path, **kw):
 def page(request, name, ctx, status=200):
     ctx.update(email=getattr(request.state, "email", ""), csrf=csrf_token(getattr(request.state, "email", "")),
                is_admin=getattr(request.state, "email", "") in C.admins)
-    lang = "en" if name == "admin.html" else i18n.pick("", request.headers.get("accept-language", ""))
+    lang = "en" if name == "admin.html" else i18n.pick(request.cookies.get("lang", ""), request.headers.get("accept-language", ""))
     i18n.use(lang)
     return templates[lang].TemplateResponse(request, name, ctx, status_code=status)
 
@@ -151,6 +151,8 @@ async def gate(request: Request, call_next):
         # the visitor reached Cloudflare over plain http: everything here is https only
         host = urllib.parse.urlsplit(C.public_url).netloc or request.headers.get("host", "")
         return RedirectResponse(f"https://{host}{path}" + (f"?{request.url.query}" if request.url.query else ""), status_code=308)
+    if path.startswith(PUBLIC_HOME + "/lang/") and request.method == "GET":
+        return await call_next(request)          # the flags of the top bar: sets a cookie, nothing else
     if path.startswith(PUBLIC_HOME + "/cal/") and request.method == "GET":
         request.state.email = ""                 # a calendar app fetching a feed: no identity, the key is the access
         return await call_next(request)
@@ -238,6 +240,15 @@ def _seen(slug):
     if time.time() - _last_touch.get(slug, 0) > 600:
         _last_touch[slug] = time.time()
         db.touch(slug)
+
+
+@app.get(PUBLIC_HOME + "/lang/{code}")
+def set_lang(code: str, next: str = ""):
+    """Language of the platform's own pages (home, request, invite, account), chosen with the flags."""
+    to = next if re.fullmatch(r"/[A-Za-z0-9_/.-]{0,200}", next or "") and not next.startswith("//") else PUBLIC_HOME
+    resp = RedirectResponse(to, status_code=303)
+    resp.set_cookie("lang", code if code in i18n.LANGS else "", max_age=365 * 86400, path="/", samesite="lax", httponly=True, secure=True)
+    return resp
 
 
 # ---- calendar feeds ----------------------------------------------------------------------------

@@ -60,7 +60,7 @@ CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status);
 CREATE INDEX IF NOT EXISTS idx_history_job ON status_history(job_id);
 CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT);
 CREATE TABLE IF NOT EXISTS cv_versions (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, text TEXT NOT NULL,
-  is_default INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
+  is_default INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, kind TEXT NOT NULL DEFAULT 'cv');
 CREATE INDEX IF NOT EXISTS idx_jobs_loose ON jobs(loose_key);
 CREATE TABLE IF NOT EXISTS commutes (home TEXT NOT NULL, place TEXT NOT NULL, minutes INTEGER, checked_at TEXT NOT NULL,
   PRIMARY KEY (home, place));
@@ -143,6 +143,8 @@ def init_db():
             if have and col not in have:
                 c.execute(f"ALTER TABLE jobs ADD COLUMN {col} {decl}")
         c.executescript(SCHEMA)
+        if "kind" not in {r["name"] for r in c.execute("PRAGMA table_info(cv_versions)").fetchall()}:
+            c.execute("ALTER TABLE cv_versions ADD COLUMN kind TEXT NOT NULL DEFAULT 'cv'")      # versions were CVs only at first
         # an application recorded only by its date (job page) belongs in "applied", like the report counts it
         for r in c.execute("SELECT id FROM jobs WHERE status IN ('new','shortlisted') "
                            "AND COALESCE(applied_date,'') != ''").fetchall():
@@ -434,49 +436,56 @@ def followups_due(days=14):
         return [dict(r) for r in rows]
 
 
-# ---- named CV versions: texts the person wrote once and applies to jobs ----------------------
-MAX_CV_VERSIONS = 30
+# ---- named versions: CV texts and cover letters the person wrote once and applies to jobs ----
+MAX_CV_VERSIONS = 30          # per kind
+KINDS = ("cv", "letter")
 
 
-def cv_versions():
+def cv_versions(kind="cv"):
     with conn() as c:
-        return [dict(r) for r in c.execute("SELECT * FROM cv_versions ORDER BY is_default DESC, name COLLATE NOCASE").fetchall()]
+        return [dict(r) for r in c.execute("SELECT * FROM cv_versions WHERE kind=? ORDER BY is_default DESC, name COLLATE NOCASE",
+                                           (kind,)).fetchall()]
 
 
-def cv_version(vid):
+def cv_version(vid, kind=None):
     with conn() as c:
         r = c.execute("SELECT * FROM cv_versions WHERE id=?", (vid,)).fetchone()
-        return dict(r) if r else None
+        return dict(r) if r and kind in (None, r["kind"]) else None
 
 
-def default_cv_version():
+def default_cv_version(kind="cv"):
     with conn() as c:
-        r = c.execute("SELECT * FROM cv_versions WHERE is_default=1 LIMIT 1").fetchone()
+        r = c.execute("SELECT * FROM cv_versions WHERE is_default=1 AND kind=? LIMIT 1", (kind,)).fetchone()
         return dict(r) if r else None
 
 
-def save_cv_version(name, text, vid=None, default=None):
-    """Create a version, or change one (vid). A name already used by another version replaces that
-    version's text instead of making a second one with the same name. Returns its id, or None
-    (no name, or the limit of versions is reached)."""
+def save_cv_version(name, text, vid=None, default=None, kind="cv"):
+    """Create a version, or change one (vid). A name already used by another version of the same kind
+    replaces that version's text instead of making a second one with the same name. Returns its id,
+    or None (no name, a name taken when renaming, or the limit of versions is reached)."""
     name = " ".join((name or "").split())[:60]
-    if not name:
+    if not name or kind not in KINDS:
         return None
     with conn() as c:
-        same = c.execute("SELECT id FROM cv_versions WHERE name=? COLLATE NOCASE", (name,)).fetchone()
+        if vid is not None:
+            row = c.execute("SELECT kind FROM cv_versions WHERE id=?", (vid,)).fetchone()
+            if not row:
+                return None
+            kind = row["kind"]
+        same = c.execute("SELECT id FROM cv_versions WHERE name=? COLLATE NOCASE AND kind=?", (name, kind)).fetchone()
         if vid is None and same:
             vid = same["id"]
         elif vid is not None and same and same["id"] != vid:
             return None
         if vid is None:
-            if c.execute("SELECT COUNT(*) FROM cv_versions").fetchone()[0] >= MAX_CV_VERSIONS:
+            if c.execute("SELECT COUNT(*) FROM cv_versions WHERE kind=?", (kind,)).fetchone()[0] >= MAX_CV_VERSIONS:
                 return None
-            vid = c.execute("INSERT INTO cv_versions (name, text, created_at, updated_at) VALUES (?,?,?,?)",
-                            (name, text, now(), now())).lastrowid
+            vid = c.execute("INSERT INTO cv_versions (name, text, kind, created_at, updated_at) VALUES (?,?,?,?,?)",
+                            (name, text, kind, now(), now())).lastrowid
         else:
             c.execute("UPDATE cv_versions SET name=?, text=?, updated_at=? WHERE id=?", (name, text, now(), vid))
         if default:
-            c.execute("UPDATE cv_versions SET is_default = (id = ?)", (vid,))
+            c.execute("UPDATE cv_versions SET is_default = (id = ?) WHERE kind=?", (vid, kind))
         elif default is False:
             c.execute("UPDATE cv_versions SET is_default=0 WHERE id=?", (vid,))
     return vid

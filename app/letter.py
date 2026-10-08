@@ -4,6 +4,7 @@ the posting, in the posting's language when a translated profile exists. The use
 before sending.
 """
 import os
+import re
 import datetime
 
 from . import compose
@@ -77,6 +78,39 @@ def write(profile, job):
     cv, lang = tailor.localized(profile, job)
     lang = lang if lang in WORDS else "en"
     return _frame(profile, job, lang, compose.letter_body(cv, job, lang)), "rules"
+
+
+# ---- a letter kept under a name, for other jobs ------------------------------------------------
+# What changes from one job to the next is written as {company}, {title}, {location} and {date}.
+_DATE_LINE = re.compile(r"^[^\n]{0,40}\b\d{1,2}\.? [^\W\d]+ \d{4}$", re.M)
+
+
+def to_template(text, job):
+    """A job's letter with that job's company, title, place and the date turned into placeholders."""
+    out = text or ""
+    for key in ("title", "company", "location"):
+        value = " ".join((job.get(key) or "").split())
+        if len(value) >= 3:
+            out = out.replace(value, "{" + key + "}")
+    return _DATE_LINE.sub("{date}", out, count=1) if "{date}" not in out else out
+
+
+def from_template(text, profile, job):
+    """A kept letter for this job: the placeholders become this job's company, title, place and today's date."""
+    lang = detect_language(text)
+    lang = lang if lang in WORDS else "en"
+    place = _city(((profile.get("contact") or {}).get("location") or "").split(",")[0], lang) or "Suisse"
+    out = text or ""
+    for key, value in (("title", (job.get("title") or "").strip()), ("company", job.get("company") or ""),
+                       ("location", job.get("location") or ""), ("date", _date(lang, place))):
+        out = out.replace("{" + key + "}", value)
+    return out
+
+
+def blank(profile):
+    """A letter from the profile for no job in particular: the start of a named version."""
+    text, _ = write(profile, {"title": "{title}", "company": "{company}", "location": "{location}", "description": ""})
+    return to_template(text, {})
 
 
 def pdf(profile, job, text, out):

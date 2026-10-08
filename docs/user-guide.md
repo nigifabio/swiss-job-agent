@@ -138,6 +138,12 @@ those dates (job titles and companies, nothing else); **New address** makes the 
 - **My CV versions** (tab on the CV page): every version with its name; rename, edit, open the PDF, make one the
   default, delete, or start a new one from your profile. On a job page, choose which version to start from, or
   "From my profile, tailored to this job".
+- **Letters work the same way.** Under the letter of a job, **Save as a letter version** keeps it under a name and
+  **★ Save as default letter** makes it the one offered first. The company, the job title, the place and the date
+  are stored as `{company}`, `{title}`, `{location}` and `{date}` and filled in for the next job. **My letters**
+  (same tab as the CV versions) lists them; everyone gets one base letter written from their own profile to adapt.
+  The letter written for a job now has six short paragraphs: who you are and what you apply for, your background
+  in your own words, what you bring for this posting, examples, why you want to join, and an invitation to meet.
 - **Photo** (CV page): upload a portrait once; it is placed at the top right of every CV made afterwards.
 
 ## A stronger profile
@@ -157,4 +163,4 @@ those dates (job titles and companies, nothing else); **New address** makes the 
 
 ## Language of the site
 
-English, French, German and Italian. The site follows your browser; **Settings → Language of this site** fixes it.
+English, French, German and Italian. The site follows your browser; the **flags in the top bar** (or **Settings → Language of this site**) fix it.

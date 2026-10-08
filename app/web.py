@@ -58,7 +58,7 @@ async def _guarded(request, call_next):
         if not email:
             return PlainTextResponse("Forbidden", status_code=403)
         request.state.user = email
-    if onboard.needed() and not request.url.path.startswith(("/onboarding", "/healthz", "/cv/role/")):
+    if onboard.needed() and not request.url.path.startswith(("/onboarding", "/healthz", "/cv/role/", "/lang")):
         return RedirectResponse("/onboarding", status_code=303)
     return await call_next(request)
 
@@ -75,7 +75,7 @@ for _env in _envs.values():
 
 def ui_lang(request):
     """Interface language of this request: the person's setting, else the browser's."""
-    return i18n.pick(config.UI_LANG, request.headers.get("accept-language", ""))
+    return i18n.pick(config.UI_LANG or request.cookies.get("lang", ""), request.headers.get("accept-language", ""))
 
 
 def render(request, name, ctx):
@@ -84,6 +84,18 @@ def render(request, name, ctx):
     lang = ui_lang(request)
     i18n.use(lang)
     return templates[lang].TemplateResponse(request, name, ctx)
+
+
+@app.post("/lang")
+def set_lang(lang: str = Form(""), next: str = Form("")):
+    """The flags of the top bar: the language of the site, kept as the person's setting (and in a
+    cookie, so the sign-up and account pages of a platform follow)."""
+    lang = lang if lang in i18n.LANGS else ""
+    if not onboard.needed():                           # (the wizard writes the settings itself at its end)
+        config.save_settings({**{k: getattr(config, k) for k in config.EDITABLE}, "UI_LANG": lang})
+    resp = RedirectResponse(_local(next, "/"), status_code=303)
+    resp.set_cookie("lang", lang, max_age=365 * 86400, path="/", samesite="lax", httponly=True)
+    return resp
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -175,6 +187,7 @@ def job_detail(request: Request, jid: int):
         except Exception:  # noqa: BLE001  (timetable unreachable: the page still opens)
             pass
     profile = tailor.load_profile()
+    _base_letter(profile)
     follow = ""
     if profile and job.get("status") == "applied" and job.get("applied_date"):
         cv, lang = tailor.localized(profile, job)
@@ -182,6 +195,7 @@ def job_detail(request: Request, jid: int):
     return render(request, "detail.html", {
         "flags": requirements.flags(job.get("description") or ""), "followup_text": follow, "docs": docs.checklist(job),
         "cv_versions": store.cv_versions(), "kept": request.query_params.get("kept", ""),
+        "letter_versions": store.cv_versions("letter"), "lkept": request.query_params.get("lkept", ""),
         "home_town": commute.home(), "blocked": not filters.company_ok(job.get("company")),
         "job": job, "statuses": store.STATUSES, "reasons": store.DISCARD_REASONS, "desc_html": desc_html, "have": have, "missing": missing,
         "avoided": avoided,
@@ -226,20 +240,36 @@ def save_cv(jid: int, text: str = Form(""), then: str = Form(""), name: str = Fo
     return RedirectResponse(f"/job/{jid}?{kept[1:]}#cv" if kept else f"/job/{jid}#cv", status_code=303)
 
 
+BASE_LETTER = {"fr": "Lettre de base", "de": "Basisbrief", "it": "Lettera di base", "en": "Base letter"}
+
+
+def _base_letter(profile):
+    """Once per person: a base letter written from their profile, kept under "My letters" to adapt and
+    reuse. Made the first time the letters are shown; deleting it doesn't bring it back."""
+    if not profile or store.get_meta().get("base_letter") or store.cv_versions("letter"):
+        return
+    store.set_meta(base_letter=store.now())
+    store.save_cv_version(BASE_LETTER.get(tailor._profile_lang(profile), BASE_LETTER["en"]), letter.blank(profile), kind="letter")
+
+
 # ---- CV versions: named texts kept to apply to jobs -------------------------------------------
 @app.get("/cv/versions", response_class=HTMLResponse)
 def cv_versions_page(request: Request, saved: str = ""):
-    return render(request, "versions.html", {"versions": store.cv_versions(), "profile": tailor.load_profile(),
+    _base_letter(tailor.load_profile())
+    return render(request, "versions.html", {"versions": store.cv_versions(), "letters": store.cv_versions("letter"),
+                                             "profile": tailor.load_profile(),
                                              "saved": saved, "limit": store.MAX_CV_VERSIONS})
 
 
 @app.post("/cv/versions")
-def cv_version_new(name: str = Form("")):
+def cv_version_new(name: str = Form(""), kind: str = Form("cv")):
     profile = tailor.load_profile()
     if not profile:
         return RedirectResponse("/cv", status_code=303)
-    vid = store.save_cv_version(name, tailor.profile_text(profile)) if not any(
-        v["name"].lower() == " ".join(name.split()).lower() for v in store.cv_versions()) else None
+    kind = kind if kind in store.KINDS else "cv"
+    text = letter.blank(profile) if kind == "letter" else tailor.profile_text(profile)
+    vid = store.save_cv_version(name, text, kind=kind) if not any(
+        v["name"].lower() == " ".join(name.split()).lower() for v in store.cv_versions(kind)) else None
     return RedirectResponse(f"/cv/versions?saved=1#v{vid}" if vid else "/cv/versions?saved=0", status_code=303)
 
 
@@ -265,6 +295,10 @@ def cv_version_pdf(vid: int):
     v, profile = store.cv_version(vid), tailor.load_profile()
     if not v or not profile:
         return PlainTextResponse("No such CV version.", status_code=404)
+    if v["kind"] == "letter":
+        path = letter.pdf(profile, {"company": v["name"]}, v["text"], os.path.join(tailor.CV_DIR, f"letter-version-{vid}.pdf"))
+        return FileResponse(path, media_type="application/pdf", content_disposition_type="inline",
+                            filename=tailor.download_name(profile, {"company": v["name"]}).replace("_CV_", "_Letter_"))
     path = tailor.build_version(profile, v)
     return FileResponse(path, media_type="application/pdf", filename=tailor.download_name(profile, {"company": v["name"]}),
                         content_disposition_type="inline")
@@ -460,19 +494,33 @@ async def set_docs(request: Request, jid: int):
 
 # ---- cover letter ------------------------------------------------------------
 @app.post("/job/{jid}/letter")
-def make_letter(jid: int):
+def make_letter(jid: int, source: str = Form("")):
+    """Write the letter of a job: from the profile for this posting, or from one of the person's
+    kept letters (source = its id) with this job's company, title, place and today's date."""
     job, profile = store.get_job(jid), tailor.load_profile()
     if not job or not profile:
         return PlainTextResponse("No job or no candidate profile configured.", status_code=404)
-    text, _ = letter.write(profile, job)
+    version = store.cv_version(int(source), "letter") if source.isdigit() else None
+    text = letter.from_template(version["text"], profile, job) if version else letter.write(profile, job)[0]
     store.update_fields(jid, {"letter": text})
     return RedirectResponse(f"/job/{jid}#letter", status_code=303)
 
 
 @app.post("/job/{jid}/letter/save")
-def save_letter(jid: int, text: str = Form("")):
+def save_letter(jid: int, text: str = Form(""), then: str = Form(""), name: str = Form("")):
+    """then = "version": also keep the letter under a name for other jobs; "default": as the one offered first."""
+    job = store.get_job(jid)
+    if not job:
+        return RedirectResponse("/jobs?status=new", status_code=303)
+    text = text[:tailor.MAX_CV_TEXT]
     store.update_fields(jid, {"letter": text})
-    return RedirectResponse(f"/job/{jid}#letter", status_code=303)
+    kept = ""
+    if then in ("version", "default"):
+        name = " ".join(name.split())[:60] or ((store.default_cv_version("letter") or {}).get("name") if then == "default" else "") \
+            or (job.get("title") or "Letter")[:60]
+        ok = store.save_cv_version(name, letter.to_template(text, job), default=True if then == "default" else None, kind="letter")
+        kept = "?lkept=1" if ok else "?lkept=0"
+    return RedirectResponse(f"/job/{jid}{kept}#letter", status_code=303)
 
 
 @app.get("/job/{jid}/letter.pdf")

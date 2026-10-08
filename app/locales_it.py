@@ -360,7 +360,39 @@ TEMPLATES = {'base.html': {'<html lang="en">': '<html lang="it">',
                                                                                                                                                                               'Architettura '
                                                                                                                                                                               'd\'interni">',
                  'value="version">Save as a version</button>': 'value="version">Salva come versione</button>',
-                 'title="New CVs start from this text">★ Save as default</button>': 'title="I nuovi CV partono da questo testo">★ Salva come predefinito</button>'},
+                 'title="New CVs start from this text">★ Save as default</button>': 'title="I nuovi CV partono da questo testo">★ Salva come predefinito</button>',
+                 "confirm('Write the letter again? Your edits to this text will be lost.')": "confirm('Riscrivere la lettera? Le tue modifiche a questo testo andranno "
+                                                                                             "perse.')",
+                 'aria-label="Start the letter from"': 'aria-label="Partire da"',
+                 '>From my profile, written for this job</option>': '>Dal mio profilo, scritta per questa offerta</option>',
+                 '<a href="/cv/versions#letters">My letters</a>\n': '<a href="/cv/versions#letters">Le mie lettere</a>\n',
+                 '✓ Kept in <a href="/cv/versions#letters">My letters</a>.': '✓ Conservata in <a href="/cv/versions#letters">Le mie lettere</a>.',
+                 'Not kept: you have reached the number of letters. Delete one in <a href="/cv/versions#letters">My letters</a>.': 'Non conservata: hai raggiunto il '
+                                                                                                                                   'numero di lettere. Eliminane una in '
+                                                                                                                                   '<a href="/cv/versions#letters">Le '
+                                                                                                                                   'mie lettere</a>.',
+                 '<label>Keep this letter to use it for other jobs: give it a name</label><input name="name" maxlength="60" placeholder="e.g. Architecture office, Spontaneous">': '<label>Conserva '
+                                                                                                                                                                                   'questa '
+                                                                                                                                                                                   'lettera '
+                                                                                                                                                                                   'per '
+                                                                                                                                                                                   'altre '
+                                                                                                                                                                                   'offerte: '
+                                                                                                                                                                                   'dalle '
+                                                                                                                                                                                   'un '
+                                                                                                                                                                                   'nome</label><input '
+                                                                                                                                                                                   'name="name" '
+                                                                                                                                                                                   'maxlength="60" '
+                                                                                                                                                                                   'placeholder="p. '
+                                                                                                                                                                                   'es. '
+                                                                                                                                                                                   'Studio '
+                                                                                                                                                                                   'di '
+                                                                                                                                                                                   'architettura, '
+                                                                                                                                                                                   'Spontanea">',
+                 "The company, the job title, the place and the date are replaced by the next job's.": "L'azienda, il titolo del posto, il luogo e la data sono "
+                                                                                                       'sostituiti da quelli della prossima offerta.',
+                 'value="version">Save as a letter version</button>': 'value="version">Salva come modello di lettera</button>',
+                 'title="New letters start from this text">★ Save as default letter</button>': 'title="Le nuove lettere partono da questo testo">★ Salva come lettera '
+                                                                                               'predefinita</button>'},
  'add.html': {'← back</a>': '← indietro</a>',
               '+ Spontaneous application</h2>': '+ Candidatura spontanea</h2>',
               'You wrote to a company that had no posting. It counts as a job search in your ORP report.': "Hai scritto a un'azienda che non aveva un annuncio. Conta "
@@ -1311,10 +1343,74 @@ TEMPLATES = {'base.html': {'<html lang="en">': '<html lang="it">',
                    '>Open the PDF ↗</a>': '>Apri il PDF ↗</a>',
                    'value="undefault">No longer the default</button>': 'value="undefault">Non più predefinita</button>',
                    'value="default">★ Make it the default</button>': 'value="default">★ Rendi predefinita</button>',
-                   "confirm('Delete this version? CVs already made for jobs are kept.')": "confirm('Eliminare questa versione? I CV già fatti per le offerte restano.')",
                    '">Delete</button>': '">Elimina</button>',
                    'No version yet. Create one above, or use <b>Save as a version</b> under the CV of a job.': 'Ancora nessuna versione. Creane una qui sopra, o usa '
-                                                                                                               "<b>Salva come versione</b> sotto il CV di un'offerta."}}
+                                                                                                               "<b>Salva come versione</b> sotto il CV di un'offerta.",
+                   "{company}, {title}, {location} and {date} are replaced by the job's when you use this letter.": '{company}, {title}, {location} e {date} sono '
+                                                                                                                    "sostituiti da quelli dell'offerta quando usi questa "
+                                                                                                                    'lettera.',
+                   "confirm('Delete this version? What was already written for jobs is kept.')": "confirm('Eliminare questa versione? Ciò che è già stato scritto per le "
+                                                                                                 "offerte resta.')",
+                   '<h2 style="margin-top:0">My letters</h2>': '<h2 style="margin-top:0">Le mie lettere</h2>',
+                   'Cover letters kept under a name, for example one per kind of employer. On a job page you choose which one to start from: the company, the job title, the place and the date are filled in for that job, and you can still change the text.': 'Lettere '
+                                                                                                                                                                                                                                                                 'di '
+                                                                                                                                                                                                                                                                 'motivazione '
+                                                                                                                                                                                                                                                                 'conservate '
+                                                                                                                                                                                                                                                                 'con '
+                                                                                                                                                                                                                                                                 'un '
+                                                                                                                                                                                                                                                                 'nome, '
+                                                                                                                                                                                                                                                                 'per '
+                                                                                                                                                                                                                                                                 'esempio '
+                                                                                                                                                                                                                                                                 'una '
+                                                                                                                                                                                                                                                                 'per '
+                                                                                                                                                                                                                                                                 'tipo '
+                                                                                                                                                                                                                                                                 'di '
+                                                                                                                                                                                                                                                                 'datore '
+                                                                                                                                                                                                                                                                 'di '
+                                                                                                                                                                                                                                                                 'lavoro. '
+                                                                                                                                                                                                                                                                 'Nella '
+                                                                                                                                                                                                                                                                 'pagina '
+                                                                                                                                                                                                                                                                 'di '
+                                                                                                                                                                                                                                                                 "un'offerta "
+                                                                                                                                                                                                                                                                 'scegli '
+                                                                                                                                                                                                                                                                 'da '
+                                                                                                                                                                                                                                                                 'quale '
+                                                                                                                                                                                                                                                                 'partire: '
+                                                                                                                                                                                                                                                                 "l'azienda, "
+                                                                                                                                                                                                                                                                 'il '
+                                                                                                                                                                                                                                                                 'titolo '
+                                                                                                                                                                                                                                                                 'del '
+                                                                                                                                                                                                                                                                 'posto, '
+                                                                                                                                                                                                                                                                 'il '
+                                                                                                                                                                                                                                                                 'luogo '
+                                                                                                                                                                                                                                                                 'e '
+                                                                                                                                                                                                                                                                 'la '
+                                                                                                                                                                                                                                                                 'data '
+                                                                                                                                                                                                                                                                 'sono '
+                                                                                                                                                                                                                                                                 'inseriti '
+                                                                                                                                                                                                                                                                 'per '
+                                                                                                                                                                                                                                                                 "quell'offerta, "
+                                                                                                                                                                                                                                                                 'e '
+                                                                                                                                                                                                                                                                 'puoi '
+                                                                                                                                                                                                                                                                 'ancora '
+                                                                                                                                                                                                                                                                 'modificare '
+                                                                                                                                                                                                                                                                 'il '
+                                                                                                                                                                                                                                                                 'testo.',
+                   '<label>Name of a new letter</label><input name="name" maxlength="60" required placeholder="e.g. Architecture office, Spontaneous">': '<label>Nome di '
+                                                                                                                                                         'una nuova '
+                                                                                                                                                         'lettera</label><input '
+                                                                                                                                                         'name="name" '
+                                                                                                                                                         'maxlength="60" '
+                                                                                                                                                         'required '
+                                                                                                                                                         'placeholder="p. '
+                                                                                                                                                         'es. Studio di '
+                                                                                                                                                         'architettura, '
+                                                                                                                                                         'Spontanea">',
+                   '+ New letter from my profile</button>': '+ Nuova lettera dal mio profilo</button>',
+                   'No letter kept yet. Create one above, or use <b>Save as a letter version</b> under the letter of a job.': 'Ancora nessuna lettera conservata. Creane '
+                                                                                                                              'una qui sopra, o usa <b>Salva come '
+                                                                                                                              'modello di lettera</b> sotto la lettera '
+                                                                                                                              "di un'offerta."}}
 
 STRINGS = {'CV': 'CV',
  'Cover letter': 'Lettera di motivazione',

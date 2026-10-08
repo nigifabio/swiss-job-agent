@@ -32,9 +32,18 @@ def test_letter_body_is_built_from_profile_facts(env):
     body = env.compose.letter_body(PROFILE, JOB, "en")
     paras = body.split("\n\n")
     assert paras[0] == "I am applying for the DevOps Engineer position at Acme SA."
-    assert paras[1] == "In my current role as Technical Manager at GTT, my experience covers the key points of your posting: AWS and Terraform."
-    assert "– Automated DevOps infrastructure across AWS and Azure with Terraform." in paras[2]
-    assert paras[-1].startswith("I would welcome")
+    assert paras[1] == "Cloud and infrastructure architect with 14 years of experience. Background in security governance and ISO 27001."   # own words
+    assert paras[2] == "In my current role as Technical Manager at GTT, my experience covers the key points of your posting: AWS and Terraform."
+    assert "– Automated DevOps infrastructure across AWS and Azure with Terraform." in paras[3]
+    assert paras[4].startswith("I would now like to put this experience and my motivation to work at Acme SA")
+    assert paras[-1].startswith("I would be glad to meet you") and paras[-1].endswith("Thank you for considering my application.") and len(paras) == 6
+    named = env.compose.letter_body(dict(PROFILE, headline="Cloud Architect"), dict(JOB, company=""), "en").split("\n\n")
+    assert named[0] == "As a Cloud Architect, I am applying for the DevOps Engineer position." and "in your company" in named[4]
+    tag = env.compose.letter_body(dict(PROFILE, headline="Cloud | Security | Leadership"), JOB, "en")
+    assert tag.startswith("I am applying for the DevOps Engineer position at Acme SA.")          # a tag line is not a title
+    fr = env.compose.letter_body(dict(PROFILE, headline="Dessinatrice en bâtiment"), JOB, "fr").split("\n\n")
+    assert fr[0] == "Dessinatrice en bâtiment, je vous adresse ma candidature pour le poste de DevOps Engineer au sein de Acme SA."
+    assert "au service de Acme SA" in fr[4] and fr[-1].endswith("Je vous remercie de l'attention portée à ma candidature.")
     it = env.compose.letter_body(PROFILE, JOB, "it")
     assert it.startswith("Vi sottopongo la mia candidatura per la posizione di DevOps Engineer presso Acme SA.")
 

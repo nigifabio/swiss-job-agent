@@ -623,3 +623,15 @@ def test_nightly_backup_writes_one_archive_per_workspace_and_keeps_the_newest(pr
     assert prov.seconds_until(3, datetime.datetime(2026, 10, 8, 3, 0)) == 86400
     monkeypatch.setenv("BACKUP_HOUR", "off")
     assert prov.backup_hour() is None
+
+
+def test_flags_switch_the_language_of_the_platform_pages(gw):
+    home = gw.get("/welcome", headers={"accept-language": "fr"}).text
+    assert 'href="/welcome/lang/it?next=/welcome"' in home and 'class="on" title="Français"' in home
+    r = gw.get("/welcome/lang/it?next=/welcome", follow_redirects=False)              # no sign-in needed
+    assert r.status_code == 303 and r.headers["location"] == "/welcome" and "lang=it" in r.headers["set-cookie"]
+    gw.cookies.set("lang", "it")
+    assert "Il tuo assistente privato" in gw.get("/welcome", headers={"accept-language": "fr"}).text      # the choice wins over the browser
+    assert gw.get("/welcome/lang/it?next=//evil.example", follow_redirects=False).headers["location"] == "/welcome"
+    assert gw.get("/welcome/lang/it?next=https://evil.example", follow_redirects=False).headers["location"] == "/welcome"
+    assert gw.post("/welcome/lang/it").status_code == 403

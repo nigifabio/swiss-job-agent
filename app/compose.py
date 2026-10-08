@@ -8,7 +8,9 @@ translated profile exists) and ranked against the posting:
   (shared words + CV skills the posting mentions weigh most; ties keep the most recent role first)
 - summary(profile, job, lang): the profile's own opening sentence, its most relevant other
   sentence, and a "relevant to this role" line listing the CV skills the posting asks for
-- letter_body(profile, job, lang): four short paragraphs from those pieces
+- letter_body(profile, job, lang): a letter in six short paragraphs from those pieces: who I am and
+  what I apply for, my background in my own words, what I bring for this posting, examples, why I
+  want to join, and an invitation to meet
 """
 import re
 
@@ -32,25 +34,45 @@ WORDS = {
            "at": " at {}", "current": "In my current role as {role_at}, my experience covers the key points of your posting: {skills}.",
            "current_noskill": "In my current role as {role_at}, I bring experience that matches your posting.", "employer": "{role} at {org}",
            "examples": "A few concrete examples from my experience:",
-           "close": "I would welcome the opportunity to discuss how I can contribute to your team."},
+           "open_as": "As a {headline}, I am applying for the {title} position{at_company}.",
+           "why": "I would now like to put this experience and my motivation to work {where}, in a team where I can contribute "
+                  "from the start and keep developing my skills.",
+           "where": "at {}", "where_none": "in your company",
+           "close": "I would be glad to meet you and present my background and skills in more detail. "
+                    "Thank you for considering my application."},
     "fr": {"strengths": "Atouts directement liés à ce poste : {}.", "and": "et",
            "open": "Je vous adresse ma candidature pour le poste de {title}{at_company}.",
            "at": " au sein de {}", "current": "Dans mon poste actuel de {role_at}, mon expérience couvre les points clés de votre annonce : {skills}.",
            "current_noskill": "Dans mon poste actuel de {role_at}, j'ai acquis une expérience qui correspond à votre annonce.", "employer": "{role} chez {org}",
            "examples": "Quelques exemples concrets de mon expérience :",
-           "close": "Je serais heureux·se de vous présenter plus en détail ma motivation lors d'un entretien."},
+           "open_as": "{headline}, je vous adresse ma candidature pour le poste de {title}{at_company}.",
+           "why": "Je souhaite aujourd'hui mettre cette expérience et ma motivation au service {where}, au sein d'une équipe où je "
+                  "pourrai contribuer dès le départ tout en continuant à développer mes compétences.",
+           "where": "de {}", "where_none": "de votre entreprise",
+           "close": "Je serais heureux·se de vous rencontrer afin de vous présenter plus en détail mon parcours et mes compétences. "
+                    "Je vous remercie de l'attention portée à ma candidature."},
     "it": {"strengths": "Punti di forza per questo ruolo: {}.", "and": "e",
            "open": "Vi sottopongo la mia candidatura per la posizione di {title}{at_company}.",
            "at": " presso {}", "current": "Nel mio ruolo attuale di {role_at}, la mia esperienza copre i punti chiave del vostro annuncio: {skills}.",
            "current_noskill": "Nel mio ruolo attuale di {role_at} ho maturato un'esperienza in linea con il vostro annuncio.", "employer": "{role} presso {org}",
            "examples": "Alcuni esempi concreti della mia esperienza:",
-           "close": "Sarei lieto/a di illustrarvi la mia motivazione in un colloquio."},
+           "open_as": "In qualità di {headline}, vi sottopongo la mia candidatura per la posizione di {title}{at_company}.",
+           "why": "Desidero oggi mettere questa esperienza e la mia motivazione al servizio {where}, in un team in cui poter "
+                  "contribuire fin da subito e continuare a sviluppare le mie competenze.",
+           "where": "di {}", "where_none": "della vostra azienda",
+           "close": "Sarei lieto/a di incontrarvi per presentarvi più in dettaglio il mio percorso e le mie competenze. "
+                    "Vi ringrazio per l'attenzione dedicata alla mia candidatura."},
     "de": {"strengths": "Für diese Stelle besonders relevant: {}.", "and": "und",
            "open": "Hiermit bewerbe ich mich um die Stelle als {title}{at_company}.",
            "at": " bei {}", "current": "In meiner aktuellen Funktion als {role_at} deckt meine Erfahrung die Kernpunkte Ihrer Ausschreibung ab: {skills}.",
            "current_noskill": "In meiner aktuellen Funktion als {role_at} habe ich Erfahrung gesammelt, die zu Ihrer Ausschreibung passt.", "employer": "{role} bei {org}",
            "examples": "Einige konkrete Beispiele aus meiner Erfahrung:",
-           "close": "Gerne überzeuge ich Sie in einem persönlichen Gespräch von meiner Motivation."},
+           "open_as": "Als {headline} bewerbe ich mich um die Stelle als {title}{at_company}.",
+           "why": "Diese Erfahrung und meine Motivation möchte ich nun {where} einbringen, in einem Team, in dem ich von Anfang an "
+                  "mitwirken und meine Kompetenzen weiterentwickeln kann.",
+           "where": "bei {}", "where_none": "in Ihrem Unternehmen",
+           "close": "Gerne stelle ich Ihnen meinen Werdegang und meine Kompetenzen in einem persönlichen Gespräch näher vor. "
+                    "Ich danke Ihnen für die Prüfung meiner Bewerbung."},
 }
 
 
@@ -181,7 +203,15 @@ def letter_body(profile, job, lang):
     role = (profile.get("experience") or [{}])[0]
     org, title_now = _org(role), (role.get("title") or "").strip()
     role_at = w["employer"].format(role=title_now, org=org) if org else title_now
-    paras = [w["open"].format(title=title, at_company=w["at"].format(company) if company else "")]
+    at_company = w["at"].format(company) if company else ""
+    headline = " ".join((profile.get("headline") or "").split())
+    plain = (headline and len(headline.split()) <= 6 and not re.search(r"[|·•,;/()]", headline)   # a title, not a tag line
+             and headline.lower() not in title.lower() and title.lower() not in headline.lower())  # nor the job's own title again
+    paras = [w["open_as"].format(headline=headline, title=title, at_company=at_company) if plain
+             else w["open"].format(title=title, at_company=at_company)]
+    about = " ".join(_sentences(profile.get("summary"))[:2])          # who I am, in the person's own words
+    if len(about.split()) >= 6:
+        paras.append(about)
     if skills:
         paras.append(w["current"].format(role_at=role_at, skills=_join(skills, lang)))
     else:
@@ -189,6 +219,7 @@ def letter_body(profile, job, lang):
     top = [b for _, b, _ in rank_facts(profile, job)[:3]]
     if top:
         paras.append(w["examples"] + "\n" + "\n".join(f"– {b.rstrip('.')}." for b in top))
+    paras.append(w["why"].format(where=w["where"].format(company) if company else w["where_none"]))
     paras.append(w["close"])
     return "\n\n".join(paras)
 

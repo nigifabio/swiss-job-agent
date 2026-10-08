@@ -379,3 +379,73 @@ def test_photo_goes_on_the_cv(env):
     c.post("/cv/photo", data={"remove": "1"})
     c.post(f"/job/{jid}/cv")
     assert len(PdfReader(env.tailor.cv_path(jid)).pages[0].images) == 0 and c.get("/cv/photo.jpg").status_code == 404
+
+
+def test_letters_kept_under_a_name_are_refitted_to_the_next_job(env):
+    Path(env.config.PROFILE_PATH).write_text(json.dumps(PROFILE))
+    c = TestClient(env.web.app)
+    a = _job(env, "Cloud Architect", company="Acme SA", location="Lausanne, VD", description="We need AWS skills.")
+    b = _job(env, "DevOps Engineer", company="Globex AG", location="Morges", description="Pipelines and AWS.")
+    c.post(f"/job/{a}/letter")
+    text = env.store.get_job(a)["letter"]
+    assert "Acme SA" in text and "Cloud Architect" in text
+    mine = text.replace("Kind regards,", "I would be glad to show you my ZEBRA portfolio.\n\nKind regards,")
+    r = c.post(f"/job/{a}/letter/save", data={"text": mine, "then": "default", "name": "Offices"}, follow_redirects=False)
+    assert r.headers["location"] == f"/job/{a}?lkept=1#letter" and "Kept in" in c.get(r.headers["location"]).text
+    v = env.store.cv_versions("letter")
+    # next to it, the base letter every person gets once from their own profile (made when the job page was first shown)
+    assert [(x["name"], x["is_default"], x["kind"]) for x in v] == [("Offices", 1, "letter"), ("Base letter", 0, "letter")]
+    assert "{company}" in v[1]["text"] and "Sam Test" in v[1]["text"] and env.store.cv_versions() == []
+    env.store.delete_cv_version(v[1]["id"])
+    c.get(f"/job/{a}")
+    assert len(env.store.cv_versions("letter")) == 1                                    # deleted: it doesn't come back
+    kept = v[0]["text"]
+    assert "{company}" in kept and "{title}" in kept and "{location}" in kept and "{date}" in kept
+    assert "Acme SA" not in kept and "Cloud Architect" not in kept and "ZEBRA portfolio" in kept
+    # on another job the kept letter is offered first and comes out with that job's company, title, place and today's date
+    assert f'<option value="{v[0]["id"]}" selected>Offices ★</option>' in c.get(f"/job/{b}").text
+    c.post(f"/job/{b}/letter", data={"source": str(v[0]["id"])})
+    new = env.store.get_job(b)["letter"]
+    assert "Globex AG" in new and "DevOps Engineer" in new and "Morges" in new and "ZEBRA portfolio" in new
+    assert "{" not in new and "Acme" not in new and str(datetime.date.today().year) in new
+    assert c.get(f"/job/{b}/letter.pdf").content[:4] == b"%PDF"
+    # a CV version's id is not accepted as a letter, and the other way round
+    cvid = env.store.save_cv_version("My CV", "## PROFILE\nx\n")
+    c.post(f"/job/{b}/letter", data={"source": str(cvid)})
+    assert "x\n" not in env.store.get_job(b)["letter"][:20] and "Globex AG" in env.store.get_job(b)["letter"]
+    # the tab: both lists, a new letter from the profile, its PDF; names are per kind
+    page = c.get("/cv/versions").text
+    assert "My letters" in page and 'value="Offices"' in page and 'value="My CV"' in page and "are replaced by the job" in page
+    assert "saved=1" in c.post("/cv/versions", data={"name": "My CV", "kind": "letter"}, follow_redirects=False).headers["location"]
+    blank = next(x for x in env.store.cv_versions("letter") if x["name"] == "My CV")
+    assert "{company}" in blank["text"] and "{title}" in blank["text"] and "{date}" in blank["text"] and "Sam Test" in blank["text"]
+    assert c.get(f"/cv/versions/{blank['id']}.pdf").content[:4] == b"%PDF"
+    c.post(f"/cv/versions/{blank['id']}", data={"action": "default"})
+    assert env.store.default_cv_version("letter")["name"] == "My CV" and env.store.default_cv_version() is None     # defaults are per kind
+
+
+def test_versions_table_from_before_letters_gets_its_kind(env):
+    with env.store.conn() as k:
+        k.execute("DROP TABLE cv_versions")
+        k.execute("CREATE TABLE cv_versions (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, text TEXT NOT NULL, "
+                  "is_default INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)")
+        k.execute("INSERT INTO cv_versions (name, text, is_default, created_at, updated_at) VALUES ('Old', 't', 1, 'x', 'x')")
+    env.store.init_db()
+    assert [(v["name"], v["kind"]) for v in env.store.cv_versions()] == [("Old", "cv")] and env.store.default_cv_version()["name"] == "Old"
+
+
+def test_flags_in_the_top_bar_switch_the_language(env, monkeypatch):
+    c = TestClient(env.web.app)
+    page = c.get("/jobs").text
+    assert 'action="/lang"' in page and 'value="it" class="" title="Italiano"' in page and 'value="en" class="on"' in page
+    r = c.post("/lang", data={"lang": "it", "next": "/stats"}, follow_redirects=False)
+    assert r.headers["location"] == "/stats" and env.config.UI_LANG == "it" and "lang=it" in r.headers["set-cookie"]
+    page = c.get("/jobs", headers={"accept-language": "de"}).text
+    assert "Cerca ora" in page and 'value="it" class="on"' in page                      # the choice wins over the browser
+    assert c.post("/lang", data={"lang": "xx", "next": "//evil.example"}, follow_redirects=False).headers["location"] == "/"
+    assert env.config.UI_LANG == ""                                                    # unknown: back to the browser's language
+    # in the setup wizard nothing is saved yet: the cookie carries the choice
+    monkeypatch.setattr(env.config, "ONBOARDING", True)
+    fresh = TestClient(env.web.app)
+    assert fresh.post("/lang", data={"lang": "de", "next": "/onboarding"}, follow_redirects=False).headers["location"] == "/onboarding"
+    assert env.config.UI_LANG == "" and "Willkommen" in fresh.get("/onboarding").text

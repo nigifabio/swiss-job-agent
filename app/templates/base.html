@@ -84,6 +84,8 @@
   .pair .orig { color:var(--muted); font-size:14px; white-space:pre-wrap; } .pair .k { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
   .filterbar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:0 0 12px; }
   .filterbar input[type=search] { flex:2 1 200px; width:auto; padding:6px 8px; } .filterbar select { flex:1 1 140px; width:auto; padding:6px 8px; font-size:13px; }
+  .langs { display:flex; gap:2px; margin:0 0 0 auto; } .langs button { background:transparent; padding:2px 5px; font-size:18px; line-height:1.2; border-radius:6px; opacity:.45; min-height:0; }
+  .langs button.on { opacity:1; background:var(--border); } .langs button:hover { opacity:1; }
   .bottomnav { display:none; }
   @media (max-width:640px) {
     .wrap { padding:12px 12px 84px; } header { padding:10px 12px; } header .nav { display:none; }
@@ -113,7 +115,8 @@
   <h1><a href="/" style="color:var(--fg)">🇨🇭 Swiss Job Agent</a></h1>
   <nav class="nav"><a href="/jobs?status=new">Jobs</a><a href="/stats">Stats</a><a href="/report">ORP report</a><a href="/cv">CV</a><a href="/settings">Settings</a></nav>
   <a class="btn" href="/add">+ Add application</a>
-  {% if user or platform %}<span class="muted" style="margin-left:auto">{{ user }}{% if platform %} · <a href="/_platform/me">Account</a>{% endif %}</span>{% endif %}
+  <form method="post" action="/lang" class="langs"><input type="hidden" name="next" value="{{ request.url.path }}">{% for code, flag, name in [("en", "🇬🇧", "English"), ("fr", "🇫🇷", "Français"), ("de", "🇩🇪", "Deutsch"), ("it", "🇮🇹", "Italiano")] %}<button name="lang" value="{{ code }}" class="{{ 'on' if code == ui_lang }}" title="{{ name }}" aria-label="{{ name }}">{{ flag }}</button>{% endfor %}</form>
+  {% if user or platform %}<span class="muted">{{ user }}{% if platform %} · <a href="/_platform/me">Account</a>{% endif %}</span>{% endif %}
 </header>
 <div class="wrap">
 {% block body %}{% endblock %}

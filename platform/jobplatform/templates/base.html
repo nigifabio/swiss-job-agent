@@ -13,8 +13,10 @@
   .ghost { background:transparent; border:1px solid var(--border); color:var(--fg); } .danger { background:#8b2a31; }
   .small { padding:3px 9px; font-size:13px; } table { width:100%; border-collapse:collapse; font-size:14px; }
   td,th { padding:5px 8px; border-bottom:1px solid var(--border); text-align:left; vertical-align:top; } th { color:var(--muted); font-size:12px; }
+  .langs a { padding:2px 4px; font-size:18px; border-radius:6px; opacity:.45; } .langs a.on { opacity:1; background:var(--border); } .langs a:hover { opacity:1; }
   form.inline { display:inline; } .ok { color:var(--ok); } .bad { color:var(--bad); } code { word-break:break-all; }
 </style></head>
 <body><header><h1><a href="/" style="color:var(--fg)">🇨🇭 Swiss Job Agent</a></h1>
-<span class="muted" style="margin-left:auto">{% block nav %}{% endblock %}{{ email }}{% if is_admin %} · <a href="/_platform/admin">admin</a>{% endif %}</span></header>
+<span class="langs" style="margin-left:auto">{% for code, flag, name in [("en", "🇬🇧", "English"), ("fr", "🇫🇷", "Français"), ("de", "🇩🇪", "Deutsch"), ("it", "🇮🇹", "Italiano")] %}<a href="/welcome/lang/{{ code }}?next={{ request.url.path }}" class="{{ 'on' if code == ui_lang }}" title="{{ name }}" aria-label="{{ name }}">{{ flag }}</a>{% endfor %}</span>
+<span class="muted">{% block nav %}{% endblock %}{{ email }}{% if is_admin %} · <a href="/_platform/admin">admin</a>{% endif %}</span></header>
 <div class="wrap">{% block body %}{% endblock %}</div></body></html>

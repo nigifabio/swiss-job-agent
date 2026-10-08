@@ -682,9 +682,31 @@ _VERSIONS = [
     ('>Open the PDF ↗</a>', '>Ouvrir le PDF ↗</a>', '>PDF öffnen ↗</a>'),
     ('value="undefault">No longer the default</button>', 'value="undefault">Ne plus utiliser par défaut</button>', 'value="undefault">Nicht mehr Standard</button>'),
     ('value="default">★ Make it the default</button>', 'value="default">★ Utiliser par défaut</button>', 'value="default">★ Als Standard festlegen</button>'),
-    ("confirm('Delete this version? CVs already made for jobs are kept.')", "confirm('Supprimer cette version ? Les CV déjà faits pour des offres sont conservés.')", "confirm('Diese Version löschen? Bereits für Stellen erstellte Lebensläufe bleiben erhalten.')"),
     ('">Delete</button>', '">Supprimer</button>', '">Löschen</button>'),
     ('No version yet. Create one above, or use <b>Save as a version</b> under the CV of a job.', "Pas encore de version. Créez-en une ci-dessus, ou utilisez <b>Enregistrer comme version</b> sous le CV d'une offre.", 'Noch keine Version. Erstellen Sie oben eine, oder verwenden Sie <b>Als Version speichern</b> unter dem Lebenslauf einer Stelle.'),
+]
+
+# kept cover letters
+_DETAIL += [
+    ("confirm('Write the letter again? Your edits to this text will be lost.')", "confirm('Réécrire la lettre ? Vos modifications de ce texte seront perdues.')", "confirm('Den Brief neu schreiben? Ihre Änderungen an diesem Text gehen verloren.')"),
+    ('aria-label="Start the letter from"', 'aria-label="Partir de"', 'aria-label="Brief ausgehend von"'),
+    ('>From my profile, written for this job</option>', '>De mon profil, écrite pour cette offre</option>', '>Aus meinem Profil, für diese Stelle geschrieben</option>'),
+    ('<a href="/cv/versions#letters">My letters</a>\n', '<a href="/cv/versions#letters">Mes lettres</a>\n', '<a href="/cv/versions#letters">Meine Briefe</a>\n'),
+    ('✓ Kept in <a href="/cv/versions#letters">My letters</a>.', '✓ Conservée dans <a href="/cv/versions#letters">Mes lettres</a>.', '✓ Abgelegt in <a href="/cv/versions#letters">Meine Briefe</a>.'),
+    ('Not kept: you have reached the number of letters. Delete one in <a href="/cv/versions#letters">My letters</a>.', 'Non conservée : vous avez atteint le nombre de lettres. Supprimez-en une dans <a href="/cv/versions#letters">Mes lettres</a>.', 'Nicht abgelegt: Die Anzahl Briefe ist erreicht. Löschen Sie einen in <a href="/cv/versions#letters">Meine Briefe</a>.'),
+    ('<label>Keep this letter to use it for other jobs: give it a name</label><input name="name" maxlength="60" placeholder="e.g. Architecture office, Spontaneous">', '<label>Garder cette lettre pour d\'autres offres : donnez-lui un nom</label><input name="name" maxlength="60" placeholder="p. ex. Bureau d\'architecture, Spontanée">', '<label>Diesen Brief für andere Stellen behalten: Geben Sie ihm einen Namen</label><input name="name" maxlength="60" placeholder="z. B. Architekturbüro, Spontanbewerbung">'),
+    ("The company, the job title, the place and the date are replaced by the next job's.", "L'entreprise, l'intitulé du poste, le lieu et la date sont remplacés par ceux de la prochaine offre.", 'Firma, Stellentitel, Ort und Datum werden durch die der nächsten Stelle ersetzt.'),
+    ('value="version">Save as a letter version</button>', 'value="version">Enregistrer comme modèle de lettre</button>', 'value="version">Als Briefvorlage speichern</button>'),
+    ('title="New letters start from this text">★ Save as default letter</button>', 'title="Les nouvelles lettres partent de ce texte">★ Enregistrer comme lettre par défaut</button>', 'title="Neue Briefe gehen von diesem Text aus">★ Als Standardbrief speichern</button>'),
+]
+_VERSIONS += [
+    ("{company}, {title}, {location} and {date} are replaced by the job's when you use this letter.", "{company}, {title}, {location} et {date} sont remplacés par ceux de l'offre quand vous utilisez cette lettre.", '{company}, {title}, {location} und {date} werden beim Verwenden dieses Briefs durch die Angaben der Stelle ersetzt.'),
+    ("confirm('Delete this version? What was already written for jobs is kept.')", "confirm('Supprimer cette version ? Ce qui a déjà été écrit pour des offres est conservé.')", "confirm('Diese Version löschen? Was bereits für Stellen geschrieben wurde, bleibt erhalten.')"),
+    ('<h2 style="margin-top:0">My letters</h2>', '<h2 style="margin-top:0">Mes lettres</h2>', '<h2 style="margin-top:0">Meine Briefe</h2>'),
+    ('Cover letters kept under a name, for example one per kind of employer. On a job page you choose which one to start from: the company, the job title, the place and the date are filled in for that job, and you can still change the text.', "Des lettres de motivation gardées sous un nom, par exemple une par type d'employeur. Sur la page d'une offre, vous choisissez de laquelle partir : l'entreprise, l'intitulé du poste, le lieu et la date sont remplis pour cette offre, et vous pouvez encore modifier le texte.", 'Motivationsschreiben, die Sie unter einem Namen behalten, zum Beispiel eines pro Art von Arbeitgeber. Auf der Seite einer Stelle wählen Sie, von welchem Sie ausgehen: Firma, Stellentitel, Ort und Datum werden für diese Stelle eingesetzt, und Sie können den Text weiter ändern.'),
+    ('<label>Name of a new letter</label><input name="name" maxlength="60" required placeholder="e.g. Architecture office, Spontaneous">', '<label>Nom d\'une nouvelle lettre</label><input name="name" maxlength="60" required placeholder="p. ex. Bureau d\'architecture, Spontanée">', '<label>Name eines neuen Briefs</label><input name="name" maxlength="60" required placeholder="z. B. Architekturbüro, Spontanbewerbung">'),
+    ('+ New letter from my profile</button>', '+ Nouvelle lettre à partir de mon profil</button>', '+ Neuer Brief aus meinem Profil</button>'),
+    ('No letter kept yet. Create one above, or use <b>Save as a letter version</b> under the letter of a job.', "Pas encore de lettre gardée. Créez-en une ci-dessus, ou utilisez <b>Enregistrer comme modèle de lettre</b> sous la lettre d'une offre.", 'Noch kein Brief abgelegt. Erstellen Sie oben einen, oder verwenden Sie <b>Als Briefvorlage speichern</b> unter dem Brief einer Stelle.'),
 ]
 
 TEMPLATES = {

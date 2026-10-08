@@ -157,13 +157,25 @@
 <div class="card" id="letter">
   <strong>Cover letter</strong> <span class="muted">· {{ letter_engine }}</span>
   {% if can_tailor %}
-  <form method="post" action="/job/{{ job.id }}/letter" style="margin:8px 0">
+  <form method="post" action="/job/{{ job.id }}/letter" style="margin:8px 0"{% if job.letter %} onsubmit="return confirm('Write the letter again? Your edits to this text will be lost.')"{% endif %}>
+    {% if letter_versions %}<select name="source" aria-label="Start the letter from" style="width:auto;max-width:100%">
+      <option value="">From my profile, written for this job</option>
+      {% for v in letter_versions %}<option value="{{ v.id }}" {{ 'selected' if v.is_default and not job.letter }}>{{ v.name }}{% if v.is_default %} ★{% endif %}</option>{% endfor %}</select>{% endif %}
     <button type="submit">{% if job.letter %}Rewrite letter{% else %}Write cover letter{% endif %}</button>
+    <a href="/cv/versions#letters">My letters</a>
   </form>
   {% if job.letter %}
   <form method="post" action="/job/{{ job.id }}/letter/save">
     <textarea name="text" rows="18">{{ job.letter }}</textarea>
     <p><button class="ghost" type="submit">Save edits</button> &nbsp;<a href="/job/{{ job.id }}/letter.pdf">Download PDF</a></p>
+    {% if lkept == "1" %}<p class="muted">✓ Kept in <a href="/cv/versions#letters">My letters</a>.</p>
+    {% elif lkept == "0" %}<p class="bad">Not kept: you have reached the number of letters. Delete one in <a href="/cv/versions#letters">My letters</a>.</p>{% endif %}
+    <div class="row" style="align-items:flex-end;margin-top:6px">
+      <div><label>Keep this letter to use it for other jobs: give it a name</label><input name="name" maxlength="60" placeholder="e.g. Architecture office, Spontaneous">
+        <p class="muted" style="margin:2px 0 0">The company, the job title, the place and the date are replaced by the next job's.</p></div>
+      <div style="flex:0 0 auto"><button class="ghost" type="submit" name="then" value="version">Save as a letter version</button>
+        <button class="ghost" type="submit" name="then" value="default" title="New letters start from this text">★ Save as default letter</button></div>
+    </div>
   </form>
   {% endif %}
   {% else %}<p class="muted">Add a candidate profile (data/profile.json) to write letters.</p>{% endif %}
