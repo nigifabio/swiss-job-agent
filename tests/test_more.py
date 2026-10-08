@@ -535,3 +535,41 @@ def test_every_save_is_kept_and_the_pdf_buttons_save_first(env):
     # nothing of this may be kept by a browser, a proxy or a CDN: a stored PDF would be the old one (or someone else's)
     for url in (f"/job/{jid}", f"/job/{jid}/letter.pdf", f"/job/{jid}/cv", "/jobs", "/report.csv", "/cv/versions"):
         assert c.get(url).headers["cache-control"] == "no-store, private", url
+
+
+def test_improve_page_says_what_the_postings_ask_for(env, monkeypatch):
+    Path(env.config.PROFILE_PATH).write_text(json.dumps(PROFILE))
+    c = TestClient(env.web.app)
+    _job(env, "Cloud Architect", description="Kubernetes et AWS. Allemand B2 exigé, anglais courant. 5 ans d'expérience. Bachelor HES, ou CFC avec brevet fédéral. "
+                                             "Permis de conduire. Merci de joindre vos certificats de travail.")
+    _job(env, "Cloud Architect senior", "shortlisted", description="Kubernetes, docker, terraform, AWS. Allemand B2. Minimum 3 years of experience.")
+    _job(env, "DevOps Engineer", description="AWS, azure et kubernetes.")
+    _job(env, "DevOps Engineer", company="Globex", description="AWS, terraform, azure, api.")        # everything asked is in the list
+    env.store.dismiss(_job(env, "Architect gone", description="Ansible, ansible, ansible."), "location", True)   # discarded: not read
+    a = env.improve.analyse()
+    miss = {m["skill"]: m for m in a["missing"]}
+    assert a["total"] == 4 and a["full"] == 1 and miss["kubernetes"]["n"] == 3 and miss["kubernetes"]["pct"] == 75
+    assert miss["kubernetes"]["chosen"] == 1 and miss["kubernetes"]["only"] == 1 and "ansible" not in miss
+    assert a["missing"][0]["skill"] == "kubernetes" and len(miss["kubernetes"]["jobs"]) == 3
+    assert [s["skill"] for s in a["strengths"]][0] == "aws" and a["strengths"][0]["n"] == 4
+    langs = {l["name"]: l for l in a["langs"]}
+    assert langs["German"]["n"] == 2 and langs["German"]["levels"] == [("B2", 2)] and not langs["German"]["mine"]
+    assert langs["English"]["levels"] == [("fluent", 1)]
+    assert dict(a["years"]) == {"1-2": 0, "3-5": 2, "6+": 0} and a["years_n"] == 2
+    quals = {q[0] for q in a["quals"]}
+    assert "Bachelor / university of applied sciences (HES / FH)" in quals and "Vocational diploma (CFC / EFZ / AFC)" in quals
+    assert ("Driving licence", 1, 25) in a["conditions"] and a["papers"][0][0] == "Work certificates"
+    kinds = {k["label"]: k for k in a["by_kind"]}
+    assert kinds["architect"]["n"] == 2 and dict(kinds["architect"]["miss"])["kubernetes"] == 2
+    page = c.get("/improve").text
+    for w in ("Skills you miss most", "kubernetes", "Closest wins", "Your skills that are asked most", "Languages asked", "By kind of job",
+              "find a course", "What to do with this", 'href="/improve"'):
+        assert w in page, w
+    only = env.improve.analyse("kw:devops")
+    assert only["total"] == 2 and only["kind"] == "kw:devops" and "selected" in c.get("/improve?kind=kw:devops").text
+    # saying "I have it" takes it off the list at once
+    c.post("/skills", data={"action": "have", "term": "kubernetes", "next": "/improve#missing"})
+    assert "kubernetes" not in {m["skill"] for m in env.improve.analyse()["missing"]}
+    for lang, word in (("fr", "Les compétences qui vous manquent le plus"), ("de", "Kompetenzen, die Ihnen am häufigsten fehlen"), ("it", "Le competenze che ti mancano di più")):
+        assert word in c.get("/improve", headers={"accept-language": lang}).text
+    assert "Allemand" in c.get("/improve", headers={"accept-language": "fr"}).text

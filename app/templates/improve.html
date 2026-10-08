@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block body %}
+<h2 style="margin-top:0">Improve <span class="muted">· what the {{ a.total }} jobs found for you ask for</span></h2>
+{% if a.kinds | length > 1 %}
+<form method="get" action="/improve" class="filterbar">
+  <select name="kind" aria-label="Kind of job"><option value="">All kinds of job ({{ a.all }})</option>
+    {% for label, key, n in a.kinds %}<option value="{{ key }}" {{ 'selected' if key == a.kind }}>{{ label }} ({{ n }})</option>{% endfor %}</select>
+  <span class="muted">Choose a kind of job to see what that one asks for.</span>
+</form>
+{% endif %}
+{% if not a.total %}
+<p class="muted">No job to read yet. Come back after the first scan.</p>
+{% else %}
+<div class="kpis">
+  <div class="kpi"><div class="v">{{ a.coverage if a.coverage is not none else "–" }}{% if a.coverage is not none %}%{% endif %}</div><div class="l">of the skills asked, you have on average</div></div>
+  <div class="kpi"><div class="v">{{ a.full }}</div><div class="l">jobs where you have every skill asked</div></div>
+  <div class="kpi"><div class="v">{{ a.missing | length }}</div><div class="l">skills asked that are not in your list</div></div>
+  <div class="kpi"><div class="v">{{ profile_done }}</div><div class="l">profile check</div></div>
+</div>
+
+{% if a.quick %}
+<div class="card">
+  <strong>⚡ Closest wins</strong> <span class="muted">· one skill away from a full match</span>
+  <p class="muted" style="margin:4px 0 8px">In these jobs it is the only skill you miss. Learning it, or adding it if you already have it, completes the match.</p>
+  {% for m in a.quick %}<span class="chip miss">{{ m.skill }} <span class="muted">· {{ m.only }} job{{ 's' if m.only != 1 }}</span></span>{% endfor %}
+</div>
+{% endif %}
+
+<div class="card" id="missing">
+  <strong>📚 Skills you miss most</strong> <span class="muted">· what to study first</span>
+  {% if a.missing %}
+  <p class="muted" style="margin:4px 0 8px">Counted in the jobs still in your lists. “Chosen” = in jobs you shortlisted or applied to: those weigh more.
+    Do you already have one? Say so and every job is re-ranked.</p>
+  <table class="data">
+    <tr><th>Skill</th><th>Jobs asking</th><th>Chosen</th><th>Mostly for</th><th>For example</th><th></th></tr>
+    {% for m in a.missing %}<tr>
+      <td><b>{{ m.skill }}</b></td>
+      <td style="white-space:nowrap">{{ m.n }} <span class="muted">({{ m.pct }}%)</span><div class="meter" style="margin:3px 0 0;width:90px"><span style="width:{{ m.pct }}%"></span></div></td>
+      <td>{{ m.chosen or "" }}</td>
+      <td class="muted">{{ m.kinds | join(", ") }}</td>
+      <td>{% for j in m.jobs %}<a href="/job/{{ j.id }}">{{ j.title | truncate(46) }}</a>{% if not loop.last %}<br>{% endif %}{% endfor %}</td>
+      <td style="white-space:nowrap">
+        <form method="post" action="/skills" class="chip-actions"><input type="hidden" name="term" value="{{ m.skill }}"><input type="hidden" name="next" value="/improve{{ '?kind=' ~ a.kind if a.kind }}#missing">
+          <button name="action" value="have" title="I have this skill: count it from now on">+ I have it</button>
+          <button name="action" value="ignore" title="Stop suggesting this word">not relevant</button></form>
+        <div><a href="https://duckduckgo.com/?q={{ ('formation continue ' ~ m.skill ~ ' Suisse site:orientation.ch OR site:berufsberatung.ch') | urlencode }}" target="_blank" rel="noopener">find a course ↗</a></div>
+      </td>
+    </tr>{% endfor %}
+  </table>
+  <p class="muted" style="margin:8px 0 0">Registered with an ORP / RAV? Courses that close a gap asked by many jobs can be paid for as a labour-market measure:
+    show this table to your adviser. <a href="https://www.orientation.ch/" target="_blank" rel="noopener">orientation.ch ↗</a> lists further training in Switzerland.</p>
+  {% else %}<p class="muted" style="margin-bottom:0">Nothing missing in these jobs: every known skill they name is in your list.</p>{% endif %}
+</div>
+
+{% if a.strengths %}
+<div class="card">
+  <strong>💪 Your skills that are asked most</strong> <span class="muted">· put these first on your CV and in your letters</span>
+  <div style="margin-top:8px">{% for s in a.strengths %}
+    <div class="hbar" title="{{ s.skill }}: {{ s.n }}"><span class="lab" style="width:160px">{{ s.skill }}</span>
+      <span class="track"><span class="fill" style="display:block;width:{{ s.pct }}%"></span></span><b>{{ s.n }}</b> <span class="muted">{{ s.pct }}%</span></div>{% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<div class="row">
+  {% if a.langs %}
+  <div class="card">
+    <strong>🗣 Languages asked</strong>
+    <table class="data" style="margin-top:6px"><tr><th>Language</th><th>Jobs</th><th>Level asked most</th><th></th></tr>
+      {% for l in a.langs %}<tr><td>{{ l.name | tr }}</td><td>{{ l.n }} <span class="muted">({{ l.pct }}%)</span></td>
+        <td class="muted">{% for lv, c in l.levels %}{{ lv | tr }} ({{ c }}){% if not loop.last %}, {% endif %}{% endfor %}</td>
+        <td>{% if l.mine %}<span class="chip have">✓ in your skills</span>{% else %}<span class="chip miss">not in your skills</span>{% endif %}</td></tr>{% endfor %}
+    </table>
+    <p class="muted" style="margin:8px 0 0">A recognised certificate (DELF/DALF, Goethe/telc, Cambridge, CELI) proves a level better than a self-assessment.</p>
+  </div>
+  {% endif %}
+  {% if a.years or a.quals %}
+  <div class="card">
+    <strong>🎓 Experience and qualifications asked</strong>
+    {% if a.years %}<p class="muted" style="margin:6px 0 2px">Years of experience, in the {{ a.years_n }} jobs that state it{% if my_years %} (you: about {{ my_years }}){% endif %}:</p>
+    {% for label, c in a.years %}<div class="hbar"><span class="lab">{{ label }}</span><span class="track"><span class="fill" style="display:block;width:{{ (100 * c / a.years_n) | round }}%"></span></span><b>{{ c }}</b></div>{% endfor %}{% endif %}
+    {% if a.quals %}<table class="data" style="margin-top:8px"><tr><th>Qualification named</th><th>Jobs</th></tr>
+      {% for label, c, pct in a.quals %}<tr><td>{{ label | tr }}</td><td>{{ c }} <span class="muted">({{ pct }}%)</span></td></tr>{% endfor %}</table>
+    <p class="muted" style="margin:8px 0 0">A foreign diploma? Its Swiss equivalence (SEFRI / SBFI) is what employers look for: name it on your CV.</p>{% endif %}
+  </div>
+  {% endif %}
+</div>
+
+{% if a.by_kind %}
+<div class="card">
+  <strong>🧭 By kind of job</strong> <span class="muted">· where you match best, and what each kind asks that you miss</span>
+  <table class="data" style="margin-top:6px"><tr><th>Kind of job</th><th>Jobs</th><th>Average match</th><th>Missing most</th></tr>
+    {% for k in a.by_kind %}<tr><td><a href="/improve?kind={{ k.key | urlencode }}">{{ k.label }}</a></td><td>{{ k.n }}</td>
+      <td>{{ k.score if k.score is not none else "–" }}</td>
+      <td class="muted">{% for s, c in k.miss %}{{ s }} ({{ c }}){% if not loop.last %}, {% endif %}{% endfor %}</td></tr>{% endfor %}
+  </table>
+</div>
+{% endif %}
+
+<div class="row">
+  {% if a.conditions %}
+  <div class="card">
+    <strong>📋 Conditions named</strong>
+    <table class="data" style="margin-top:6px">{% for label, c, pct in a.conditions %}<tr><td>{{ label | tr }}</td><td>{{ c }} <span class="muted">({{ pct }}%)</span></td></tr>{% endfor %}</table>
+  </div>
+  {% endif %}
+  {% if a.papers %}
+  <div class="card">
+    <strong>📎 Documents asked</strong> <span class="muted">· have them ready as PDF</span>
+    <table class="data" style="margin-top:6px">{% for label, c, pct in a.papers %}<tr><td>{{ label | tr }}</td><td>{{ c }} <span class="muted">({{ pct }}%)</span></td></tr>{% endfor %}</table>
+  </div>
+  {% endif %}
+</div>
+
+<div class="card">
+  <strong>➡ What to do with this</strong>
+  <ol style="margin:8px 0 0;padding-left:20px">
+    <li>Tick the skills you already have: the list above gets shorter and your ranking better.</li>
+    <li>Pick one or two of the skills asked most and plan a course or a certificate for them.</li>
+    <li>Put your most asked skills at the top of your CV: <a href="/cv/versions">My CV versions</a>.</li>
+    <li>Complete your profile: <a href="/cv#check">Profile check</a>. See why you discard jobs: <a href="/stats">Stats</a>.</li>
+  </ol>
+</div>
+{% endif %}
+{% endblock %}

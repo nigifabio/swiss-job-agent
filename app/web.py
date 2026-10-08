@@ -11,7 +11,7 @@ from fastapi import FastAPI, Request, Form
 from fastapi.responses import RedirectResponse, HTMLResponse, PlainTextResponse, FileResponse, Response
 from fastapi.templating import Jinja2Templates
 
-from . import (agenda, auth, commute, compose, config, docs, enrich, fetch, filters, game, i18n, listfilter, locales, letter, onboard, places, prefs,
+from . import (agenda, auth, commute, compose, config, docs, enrich, fetch, filters, game, i18n, improve, listfilter, locales, letter, onboard, places, prefs,
                prep, report, requirements, roles, skills, store, strength, suggest, tailor, tune, twins, weekly)
 from .importers import cvparse, extract, linkedin
 
@@ -612,6 +612,19 @@ async def translate_save(request: Request, lang: str):
 def _base(request):
     host = request.headers.get("x-forwarded-host") or request.headers.get("host", "")
     return f'{request.headers.get("x-forwarded-proto", request.url.scheme)}://{host}'
+
+
+@app.get("/improve", response_class=HTMLResponse)
+def improve_page(request: Request, kind: str = ""):
+    """What the person's postings ask for that they miss: what to study or prepare first."""
+    profile = tailor.load_profile()
+    check = strength.report(profile) if profile else None
+    try:
+        years = onboard.years_of_experience(profile or {})
+    except Exception:  # noqa: BLE001  (dates written in a way the reader doesn't know)
+        years = 0
+    return render(request, "improve.html", {"a": improve.analyse(kind[:80], ui_lang(request)), "my_years": years,
+                                            "profile_done": f"{check['done']} / {check['total']}" if check else "–"})
 
 
 @app.get("/week", response_class=HTMLResponse)

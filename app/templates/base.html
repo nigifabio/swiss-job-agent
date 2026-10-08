@@ -113,7 +113,7 @@
 <body>
 <header>
   <h1><a href="/" style="color:var(--fg)">🇨🇭 Swiss Job Agent</a></h1>
-  <nav class="nav"><a href="/jobs?status=new">Jobs</a><a href="/stats">Stats</a><a href="/report">ORP report</a><a href="/cv">CV</a><a href="/settings">Settings</a></nav>
+  <nav class="nav"><a href="/jobs?status=new">Jobs</a><a href="/improve">Improve</a><a href="/stats">Stats</a><a href="/report">ORP report</a><a href="/cv">CV</a><a href="/settings">Settings</a></nav>
   <a class="btn" href="/add">+ Add application</a>
   <form method="post" action="/lang" class="langs"><input type="hidden" name="next" value="{{ request.url.path }}">{% for code, flag, name in [("en", "🇬🇧", "English"), ("fr", "🇫🇷", "Français"), ("de", "🇩🇪", "Deutsch"), ("it", "🇮🇹", "Italiano")] %}<button name="lang" value="{{ code }}" class="{{ 'on' if code == ui_lang }}" title="{{ name }}" aria-label="{{ name }}">{{ flag }}</button>{% endfor %}</form>
   {% if user or platform %}<span class="muted">{{ user }}{% if platform %} · <a href="/_platform/league" title="League">🏆</a> · <a href="/_platform/me">Account</a>{% endif %}</span>{% endif %}

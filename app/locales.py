@@ -730,14 +730,74 @@ _DETAIL += [
     ('>Save and download the PDF</button>', '>Enregistrer et télécharger le PDF</button>', '>Speichern und PDF herunterladen</button>'),
 ]
 
+# the Improve page
+_BASE += [
+    ('>Improve</a>', '>Progresser</a>', '>Weiterkommen</a>'),
+]
+_IMPROVE = [
+    ('Improve <span class="muted">· what the {{ a.total }} jobs found for you ask for</span>', 'Progresser <span class="muted">· ce que demandent les {{ a.total }} offres trouvées pour vous</span>', 'Weiterkommen <span class="muted">· was die {{ a.total }} für Sie gefundenen Stellen verlangen</span>'),
+    ('aria-label="Kind of job"><option value="">All kinds of job ({{ a.all }})</option>', 'aria-label="Type de poste"><option value="">Tous les types de poste ({{ a.all }})</option>', 'aria-label="Art der Stelle"><option value="">Alle Stellenarten ({{ a.all }})</option>'),
+    ('Choose a kind of job to see what that one asks for.', 'Choisissez un type de poste pour voir ce que celui-ci demande.', 'Wählen Sie eine Stellenart, um zu sehen, was diese verlangt.'),
+    ('No job to read yet. Come back after the first scan.', "Pas encore d'offre à analyser. Revenez après la première recherche.", 'Noch keine Stelle zum Auswerten. Kommen Sie nach der ersten Suche wieder.'),
+    ('of the skills asked, you have on average', 'des compétences demandées, vous les avez en moyenne', 'der verlangten Kompetenzen haben Sie im Schnitt'),
+    ('jobs where you have every skill asked', 'offres où vous avez toutes les compétences demandées', 'Stellen, bei denen Sie alle verlangten Kompetenzen haben'),
+    ('skills asked that are not in your list', 'compétences demandées absentes de votre liste', 'verlangte Kompetenzen, die nicht auf Ihrer Liste stehen'),
+    ('<div class="l">profile check</div>', '<div class="l">contrôle du profil</div>', '<div class="l">Profil-Check</div>'),
+    ('<strong>⚡ Closest wins</strong> <span class="muted">· one skill away from a full match</span>', '<strong>⚡ Gains les plus proches</strong> <span class="muted">· à une compétence d\'une correspondance complète</span>', '<strong>⚡ Am nächsten dran</strong> <span class="muted">· eine Kompetenz von der vollen Übereinstimmung entfernt</span>'),
+    ('In these jobs it is the only skill you miss. Learning it, or adding it if you already have it, completes the match.', "Dans ces offres, c'est la seule compétence qui vous manque. L'apprendre, ou l'ajouter si vous l'avez déjà, complète la correspondance.", 'Bei diesen Stellen ist es die einzige Kompetenz, die Ihnen fehlt. Sie zu lernen, oder hinzuzufügen, falls Sie sie schon haben, macht die Übereinstimmung vollständig.'),
+    ("· {{ m.only }} job{{ 's' if m.only != 1 }}</span>", "· {{ m.only }} offre{{ 's' if m.only != 1 }}</span>", "· {{ m.only }} Stelle{{ 'n' if m.only != 1 }}</span>"),
+    ('<strong>📚 Skills you miss most</strong> <span class="muted">· what to study first</span>', '<strong>📚 Les compétences qui vous manquent le plus</strong> <span class="muted">· quoi étudier en premier</span>', '<strong>📚 Kompetenzen, die Ihnen am häufigsten fehlen</strong> <span class="muted">· was Sie zuerst lernen sollten</span>'),
+    ('Counted in the jobs still in your lists. “Chosen” = in jobs you shortlisted or applied to: those weigh more. Do you already have one? Say so and every job is re-ranked.', 'Comptées dans les offres encore dans vos listes. « Choisies » = dans les offres que vous avez retenues ou auxquelles vous avez postulé : elles pèsent davantage. Vous en avez déjà une ? Dites-le et toutes les offres sont reclassées.', 'Gezählt in den Stellen, die noch auf Ihren Listen stehen. «Gewählt» = in Stellen, die Sie gemerkt oder auf die Sie sich beworben haben: Diese wiegen mehr. Haben Sie eine schon? Sagen Sie es, und alle Stellen werden neu geordnet.'),
+    ('<tr><th>Skill</th><th>Jobs asking</th><th>Chosen</th><th>Mostly for</th><th>For example</th><th></th></tr>', '<tr><th>Compétence</th><th>Offres qui la demandent</th><th>Choisies</th><th>Surtout pour</th><th>Par exemple</th><th></th></tr>', '<tr><th>Kompetenz</th><th>Stellen, die sie verlangen</th><th>Gewählt</th><th>Vor allem für</th><th>Zum Beispiel</th><th></th></tr>'),
+    ('title="I have this skill: count it from now on">+ I have it</button>', 'title="J\'ai cette compétence : la compter dès maintenant">+ Je l\'ai</button>', 'title="Diese Kompetenz habe ich: ab jetzt zählen">+ Habe ich</button>'),
+    ('title="Stop suggesting this word">not relevant</button>', 'title="Ne plus proposer ce mot">sans intérêt</button>', 'title="Dieses Wort nicht mehr vorschlagen">nicht relevant</button>'),
+    ('>find a course ↗</a>', '>trouver une formation ↗</a>', '>Kurs finden ↗</a>'),
+    ('Registered with an ORP / RAV? Courses that close a gap asked by many jobs can be paid for as a labour-market measure: show this table to your adviser.', "Inscrit·e à un ORP ? Les cours qui comblent une lacune demandée par beaucoup d'offres peuvent être pris en charge comme mesure du marché du travail : montrez ce tableau à votre conseiller·ère.", 'Beim RAV angemeldet? Kurse, die eine von vielen Stellen verlangte Lücke schliessen, können als arbeitsmarktliche Massnahme bezahlt werden: Zeigen Sie diese Tabelle Ihrer Beratungsperson.'),
+    ('lists further training in Switzerland.', 'recense les formations continues en Suisse.', 'führt die Weiterbildungen in der Schweiz auf.'),
+    ('Nothing missing in these jobs: every known skill they name is in your list.', "Rien ne manque dans ces offres : toutes les compétences connues qu'elles citent sont dans votre liste.", 'Bei diesen Stellen fehlt nichts: Alle bekannten Kompetenzen, die sie nennen, stehen auf Ihrer Liste.'),
+    ('<strong>💪 Your skills that are asked most</strong> <span class="muted">· put these first on your CV and in your letters</span>', '<strong>💪 Vos compétences les plus demandées</strong> <span class="muted">· mettez-les en premier sur votre CV et dans vos lettres</span>', '<strong>💪 Ihre am häufigsten verlangten Kompetenzen</strong> <span class="muted">· stellen Sie diese im Lebenslauf und in Briefen nach vorn</span>'),
+    ('<strong>🗣 Languages asked</strong>', '<strong>🗣 Langues demandées</strong>', '<strong>🗣 Verlangte Sprachen</strong>'),
+    ('<tr><th>Language</th><th>Jobs</th><th>Level asked most</th><th></th></tr>', '<tr><th>Langue</th><th>Offres</th><th>Niveau le plus demandé</th><th></th></tr>', '<tr><th>Sprache</th><th>Stellen</th><th>Meistverlangtes Niveau</th><th></th></tr>'),
+    ('<span class="chip have">✓ in your skills</span>', '<span class="chip have">✓ dans vos compétences</span>', '<span class="chip have">✓ in Ihren Kompetenzen</span>'),
+    ('<span class="chip miss">not in your skills</span>', '<span class="chip miss">pas dans vos compétences</span>', '<span class="chip miss">nicht in Ihren Kompetenzen</span>'),
+    ('A recognised certificate (DELF/DALF, Goethe/telc, Cambridge, CELI) proves a level better than a self-assessment.', "Un certificat reconnu (DELF/DALF, Goethe/telc, Cambridge, CELI) prouve un niveau mieux qu'une auto-évaluation.", 'Ein anerkanntes Zertifikat (DELF/DALF, Goethe/telc, Cambridge, CELI) belegt ein Niveau besser als eine Selbsteinschätzung.'),
+    ('<strong>🎓 Experience and qualifications asked</strong>', '<strong>🎓 Expérience et titres demandés</strong>', '<strong>🎓 Verlangte Erfahrung und Abschlüsse</strong>'),
+    ('Years of experience, in the {{ a.years_n }} jobs that state it{% if my_years %} (you: about {{ my_years }}){% endif %}:', "Années d'expérience, dans les {{ a.years_n }} offres qui l'indiquent{% if my_years %} (vous : environ {{ my_years }}){% endif %} :", 'Jahre Erfahrung, in den {{ a.years_n }} Stellen, die es angeben{% if my_years %} (Sie: etwa {{ my_years }}){% endif %}:'),
+    ('<tr><th>Qualification named</th><th>Jobs</th></tr>', '<tr><th>Titre cité</th><th>Offres</th></tr>', '<tr><th>Genannter Abschluss</th><th>Stellen</th></tr>'),
+    ('A foreign diploma? Its Swiss equivalence (SEFRI / SBFI) is what employers look for: name it on your CV.', 'Un diplôme étranger ? Son équivalence suisse (SEFRI) est ce que regardent les employeurs : indiquez-la sur votre CV.', 'Ein ausländisches Diplom? Arbeitgeber achten auf die Schweizer Gleichwertigkeit (SBFI): Nennen Sie sie im Lebenslauf.'),
+    ('<strong>🧭 By kind of job</strong> <span class="muted">· where you match best, and what each kind asks that you miss</span>', '<strong>🧭 Par type de poste</strong> <span class="muted">· où vous correspondez le mieux, et ce que chaque type demande et qui vous manque</span>', '<strong>🧭 Nach Stellenart</strong> <span class="muted">· wo Sie am besten passen und was jeder Art fehlt</span>'),
+    ('<tr><th>Kind of job</th><th>Jobs</th><th>Average match</th><th>Missing most</th></tr>', '<tr><th>Type de poste</th><th>Offres</th><th>Score moyen</th><th>Manque le plus</th></tr>', '<tr><th>Stellenart</th><th>Stellen</th><th>Durchschnittliche Übereinstimmung</th><th>Fehlt am häufigsten</th></tr>'),
+    ('<strong>📋 Conditions named</strong>', '<strong>📋 Conditions citées</strong>', '<strong>📋 Genannte Bedingungen</strong>'),
+    ('<strong>📎 Documents asked</strong> <span class="muted">· have them ready as PDF</span>', '<strong>📎 Documents demandés</strong> <span class="muted">· préparez-les en PDF</span>', '<strong>📎 Verlangte Unterlagen</strong> <span class="muted">· halten Sie sie als PDF bereit</span>'),
+    ('<strong>➡ What to do with this</strong>', '<strong>➡ Que faire de tout cela</strong>', '<strong>➡ Was Sie damit tun können</strong>'),
+    ('<li>Tick the skills you already have: the list above gets shorter and your ranking better.</li>', "<li>Cochez les compétences que vous avez déjà : la liste ci-dessus raccourcit et votre classement s'améliore.</li>", '<li>Haken Sie ab, was Sie schon können: Die Liste oben wird kürzer und Ihre Rangfolge besser.</li>'),
+    ('<li>Pick one or two of the skills asked most and plan a course or a certificate for them.</li>', '<li>Choisissez une ou deux des compétences les plus demandées et prévoyez un cours ou un certificat.</li>', '<li>Wählen Sie eine oder zwei der meistverlangten Kompetenzen und planen Sie dafür einen Kurs oder ein Zertifikat.</li>'),
+    ('<li>Put your most asked skills at the top of your CV: <a href="/cv/versions">My CV versions</a>.</li>', '<li>Mettez vos compétences les plus demandées en tête de votre CV : <a href="/cv/versions">Mes versions de CV</a>.</li>', '<li>Stellen Sie Ihre meistverlangten Kompetenzen im Lebenslauf nach oben: <a href="/cv/versions">Meine Lebenslauf-Versionen</a>.</li>'),
+    ('<li>Complete your profile: <a href="/cv#check">Profile check</a>. See why you discard jobs: <a href="/stats">Stats</a>.</li>', '<li>Complétez votre profil : <a href="/cv#check">Contrôle du profil</a>. Voyez pourquoi vous écartez des offres : <a href="/stats">Statistiques</a>.</li>', '<li>Vervollständigen Sie Ihr Profil: <a href="/cv#check">Profil-Check</a>. Sehen Sie, warum Sie Stellen verwerfen: <a href="/stats">Statistik</a>.</li>'),
+]
+
 TEMPLATES = {
     "base.html": _BASE, "_apply_prompt.html": _APPLY_PROMPT, "_chip.html": _CHIP, "dashboard.html": _DASHBOARD,
     "detail.html": _DETAIL, "add.html": _ADD, "report.html": _REPORT, "stats.html": _STATS, "cv.html": _CV,
     "settings.html": _SETTINGS, "_settings_form.html": _SETTINGS_FORM, "onboarding.html": _ONBOARDING,
-    "week.html": _WEEK, "translate.html": _TRANSLATE, "versions.html": _VERSIONS,
+    "week.html": _WEEK, "translate.html": _TRANSLATE, "versions.html": _VERSIONS, "improve.html": _IMPROVE,
 }
 
 STRINGS = {   # English -> (French, German); Italian is added below
+    # the Improve page: languages, levels, qualifications (improve.py)
+    'German': ('Allemand', 'Deutsch'),
+    'French': ('Français', 'Französisch'),
+    'English': ('Anglais', 'Englisch'),
+    'Italian': ('Italien', 'Italienisch'),
+    'native': ('langue maternelle', 'Muttersprache'),
+    'fluent': ('courant', 'fliessend'),
+    'basic': ('connaissances', 'Kenntnisse'),
+    'Vocational diploma (CFC / EFZ / AFC)': ('CFC (certificat fédéral de capacité)', 'EFZ (Fähigkeitszeugnis)'),
+    'Federal certificate or diploma (brevet, Fachausweis)': ('Brevet ou diplôme fédéral', 'Eidg. Fachausweis oder Diplom'),
+    'College of higher education (ES / HF)': ('École supérieure (ES)', 'Höhere Fachschule (HF)'),
+    'Bachelor / university of applied sciences (HES / FH)': ('Bachelor / haute école spécialisée (HES)', 'Bachelor / Fachhochschule (FH)'),
+    'Master / university (EPF, Uni)': ('Master / université (EPF, Uni)', 'Master / Universität (ETH, Uni)'),
+    'Further training (CAS / DAS / MAS)': ('Formation continue (CAS / DAS / MAS)', 'Weiterbildung (CAS / DAS / MAS)'),
     # the score: levels, badges and how to get them (game.py)
     'Warming up': ("À l'échauffement", 'Beim Aufwärmen'),
     'On the move': ('En mouvement', 'In Bewegung'),

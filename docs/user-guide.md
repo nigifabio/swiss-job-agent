@@ -161,6 +161,22 @@ those dates (job titles and companies, nothing else); **New address** makes the 
   references, permit copy, criminal-record and debt-register extracts, salary expectations, photo). The ones the
   posting names are marked; tick what is ready.
 
+## Improve: what to study
+
+The **Improve** page reads the jobs found for you and says what they ask for, for all of them or for one kind of job:
+
+- **Skills you miss most**: each skill with how many jobs ask for it, how many of the jobs you shortlisted or applied to,
+  which kinds of job, three example postings, "I have it" / "not relevant", and a link to look for a course.
+- **Closest wins**: skills that are the only thing missing in some jobs.
+- **Your skills that are asked most**: what to put first on your CV.
+- **Languages asked** with the level stated most (B2, fluent...), and whether the language is in your skills.
+- **Experience and qualifications asked**: years of experience against yours, and the diplomas named (CFC, brevet, HES, Master...).
+- **By kind of job**: where you match best and what each kind asks that you miss.
+- **Conditions and documents** named most (driving licence, permit, work certificates, diplomas...).
+
+People registered with an ORP / RAV can show the first table to their adviser: courses that close a gap asked by many jobs
+can be financed as a labour-market measure.
+
 ## Score, badges and the league
 
 - **🏅 My score** (on *My week*, and next to it on the job list): points for what moves a search forward. Application sent 10,

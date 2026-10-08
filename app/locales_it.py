@@ -13,7 +13,8 @@ TEMPLATES = {'base.html': {'<html lang="en">': '<html lang="it">',
                '>Settings</a>': '>Impostazioni</a>',
                '+ Add application</a>': '+ Aggiungi una candidatura</a>',
                '>Account</a>': '>Account</a>',
-               '</b>My week</a>': '</b>La mia settimana</a>'},
+               '</b>My week</a>': '</b>La mia settimana</a>',
+               '>Improve</a>': '>Migliorare</a>'},
  '_apply_prompt.html': {'Did you apply to <b>{{ j.title }}</b>?': 'Ti sei candidato a <b>{{ j.title }}</b>?',
                         '✓ Yes, add to Applied': '✓ Sì, aggiungi alle candidature',
                         '>Not yet</button>': '>Non ancora</button>'},
@@ -1491,7 +1492,156 @@ TEMPLATES = {'base.html': {'<html lang="en">': '<html lang="it">',
                    'No letter kept yet. Create one above, or use <b>Save as a letter version</b> under the letter of a job.': 'Ancora nessuna lettera conservata. Creane '
                                                                                                                               'una qui sopra, o usa <b>Salva come '
                                                                                                                               'modello di lettera</b> sotto la lettera '
-                                                                                                                              "di un'offerta."}}
+                                                                                                                              "di un'offerta."},
+ 'improve.html': {'Improve <span class="muted">· what the {{ a.total }} jobs found for you ask for</span>': 'Migliorare <span class="muted">· cosa chiedono le {{ '
+                                                                                                            'a.total }} offerte trovate per te</span>',
+                  'aria-label="Kind of job"><option value="">All kinds of job ({{ a.all }})</option>': 'aria-label="Tipo di posto"><option value="">Tutti i tipi di '
+                                                                                                       'posto ({{ a.all }})</option>',
+                  'Choose a kind of job to see what that one asks for.': 'Scegli un tipo di posto per vedere cosa chiede.',
+                  'No job to read yet. Come back after the first scan.': 'Ancora nessuna offerta da analizzare. Torna dopo la prima ricerca.',
+                  'of the skills asked, you have on average': 'delle competenze richieste, le hai in media',
+                  'jobs where you have every skill asked': 'offerte in cui hai tutte le competenze richieste',
+                  'skills asked that are not in your list': 'competenze richieste assenti dalla tua lista',
+                  '<div class="l">profile check</div>': '<div class="l">controllo del profilo</div>',
+                  '<strong>⚡ Closest wins</strong> <span class="muted">· one skill away from a full match</span>': '<strong>⚡ I traguardi più vicini</strong> <span '
+                                                                                                                   'class="muted">· a una competenza dalla '
+                                                                                                                   'corrispondenza completa</span>',
+                  'In these jobs it is the only skill you miss. Learning it, or adding it if you already have it, completes the match.': "In queste offerte è l'unica "
+                                                                                                                                         'competenza che ti manca. '
+                                                                                                                                         'Impararla, o aggiungerla se ce '
+                                                                                                                                         "l'hai già, completa la "
+                                                                                                                                         'corrispondenza.',
+                  "· {{ m.only }} job{{ 's' if m.only != 1 }}</span>": "· {{ m.only }} offert{{ 'e' if m.only != 1 else 'a' }}</span>",
+                  '<strong>📚 Skills you miss most</strong> <span class="muted">· what to study first</span>': '<strong>📚 Le competenze che ti mancano di più</strong> '
+                                                                                                              '<span class="muted">· cosa studiare per primo</span>',
+                  'Counted in the jobs still in your lists. “Chosen” = in jobs you shortlisted or applied to: those weigh more. Do you already have one? Say so and every job is re-ranked.': 'Contate '
+                                                                                                                                                                                              'nelle '
+                                                                                                                                                                                              'offerte '
+                                                                                                                                                                                              'ancora '
+                                                                                                                                                                                              'nelle '
+                                                                                                                                                                                              'tue '
+                                                                                                                                                                                              'liste. '
+                                                                                                                                                                                              '«Scelte» '
+                                                                                                                                                                                              '= '
+                                                                                                                                                                                              'nelle '
+                                                                                                                                                                                              'offerte '
+                                                                                                                                                                                              'che '
+                                                                                                                                                                                              'hai '
+                                                                                                                                                                                              'tenuto '
+                                                                                                                                                                                              'o '
+                                                                                                                                                                                              'a '
+                                                                                                                                                                                              'cui '
+                                                                                                                                                                                              'ti '
+                                                                                                                                                                                              'sei '
+                                                                                                                                                                                              'candidato: '
+                                                                                                                                                                                              'pesano '
+                                                                                                                                                                                              'di '
+                                                                                                                                                                                              'più. '
+                                                                                                                                                                                              'Ne '
+                                                                                                                                                                                              'hai '
+                                                                                                                                                                                              'già '
+                                                                                                                                                                                              'una? '
+                                                                                                                                                                                              'Dillo '
+                                                                                                                                                                                              'e '
+                                                                                                                                                                                              'tutte '
+                                                                                                                                                                                              'le '
+                                                                                                                                                                                              'offerte '
+                                                                                                                                                                                              'vengono '
+                                                                                                                                                                                              'riordinate.',
+                  '<tr><th>Skill</th><th>Jobs asking</th><th>Chosen</th><th>Mostly for</th><th>For example</th><th></th></tr>': '<tr><th>Competenza</th><th>Offerte che '
+                                                                                                                                'la '
+                                                                                                                                'chiedono</th><th>Scelte</th><th>Soprattutto '
+                                                                                                                                'per</th><th>Per '
+                                                                                                                                'esempio</th><th></th></tr>',
+                  'title="I have this skill: count it from now on">+ I have it</button>': 'title="Ho questa competenza: contala da subito">+ Ce l\'ho</button>',
+                  'title="Stop suggesting this word">not relevant</button>': 'title="Non proporre più questa parola">non pertinente</button>',
+                  '>find a course ↗</a>': '>trova un corso ↗</a>',
+                  'Registered with an ORP / RAV? Courses that close a gap asked by many jobs can be paid for as a labour-market measure: show this table to your adviser.': 'Iscritto '
+                                                                                                                                                                            'a '
+                                                                                                                                                                            'un '
+                                                                                                                                                                            'URC? '
+                                                                                                                                                                            'I '
+                                                                                                                                                                            'corsi '
+                                                                                                                                                                            'che '
+                                                                                                                                                                            'colmano '
+                                                                                                                                                                            'una '
+                                                                                                                                                                            'lacuna '
+                                                                                                                                                                            'richiesta '
+                                                                                                                                                                            'da '
+                                                                                                                                                                            'molte '
+                                                                                                                                                                            'offerte '
+                                                                                                                                                                            'possono '
+                                                                                                                                                                            'essere '
+                                                                                                                                                                            'finanziati '
+                                                                                                                                                                            'come '
+                                                                                                                                                                            'provvedimento '
+                                                                                                                                                                            'del '
+                                                                                                                                                                            'mercato '
+                                                                                                                                                                            'del '
+                                                                                                                                                                            'lavoro: '
+                                                                                                                                                                            'mostra '
+                                                                                                                                                                            'questa '
+                                                                                                                                                                            'tabella '
+                                                                                                                                                                            'al '
+                                                                                                                                                                            'tuo '
+                                                                                                                                                                            'consulente.',
+                  'lists further training in Switzerland.': 'elenca le formazioni continue in Svizzera.',
+                  'Nothing missing in these jobs: every known skill they name is in your list.': 'Non manca niente in queste offerte: tutte le competenze note che '
+                                                                                                 'citano sono nella tua lista.',
+                  '<strong>💪 Your skills that are asked most</strong> <span class="muted">· put these first on your CV and in your letters</span>': '<strong>💪 Le tue '
+                                                                                                                                                    'competenze più '
+                                                                                                                                                    'richieste</strong> '
+                                                                                                                                                    '<span '
+                                                                                                                                                    'class="muted">· '
+                                                                                                                                                    'mettile per prime '
+                                                                                                                                                    'nel CV e nelle '
+                                                                                                                                                    'lettere</span>',
+                  '<strong>🗣 Languages asked</strong>': '<strong>🗣 Lingue richieste</strong>',
+                  '<tr><th>Language</th><th>Jobs</th><th>Level asked most</th><th></th></tr>': '<tr><th>Lingua</th><th>Offerte</th><th>Livello più '
+                                                                                               'richiesto</th><th></th></tr>',
+                  '<span class="chip have">✓ in your skills</span>': '<span class="chip have">✓ tra le tue competenze</span>',
+                  '<span class="chip miss">not in your skills</span>': '<span class="chip miss">non tra le tue competenze</span>',
+                  'A recognised certificate (DELF/DALF, Goethe/telc, Cambridge, CELI) proves a level better than a self-assessment.': 'Un certificato riconosciuto '
+                                                                                                                                      '(DELF/DALF, Goethe/telc, '
+                                                                                                                                      'Cambridge, CELI) prova un livello '
+                                                                                                                                      "meglio di un'autovalutazione.",
+                  '<strong>🎓 Experience and qualifications asked</strong>': '<strong>🎓 Esperienza e titoli richiesti</strong>',
+                  'Years of experience, in the {{ a.years_n }} jobs that state it{% if my_years %} (you: about {{ my_years }}){% endif %}:': 'Anni di esperienza, nelle '
+                                                                                                                                             '{{ a.years_n }} offerte '
+                                                                                                                                             'che lo indicano{% if '
+                                                                                                                                             'my_years %} (tu: circa {{ '
+                                                                                                                                             'my_years }}){% endif %}:',
+                  '<tr><th>Qualification named</th><th>Jobs</th></tr>': '<tr><th>Titolo citato</th><th>Offerte</th></tr>',
+                  'A foreign diploma? Its Swiss equivalence (SEFRI / SBFI) is what employers look for: name it on your CV.': 'Un diploma estero? La sua equivalenza '
+                                                                                                                             'svizzera (SEFRI) è ciò che guardano i '
+                                                                                                                             'datori di lavoro: indicala nel CV.',
+                  '<strong>🧭 By kind of job</strong> <span class="muted">· where you match best, and what each kind asks that you miss</span>': '<strong>🧭 Per tipo di '
+                                                                                                                                                'posto</strong> <span '
+                                                                                                                                                'class="muted">· dove '
+                                                                                                                                                'corrispondi meglio, e '
+                                                                                                                                                'cosa chiede ogni tipo '
+                                                                                                                                                'che ti manca</span>',
+                  '<tr><th>Kind of job</th><th>Jobs</th><th>Average match</th><th>Missing most</th></tr>': '<tr><th>Tipo di posto</th><th>Offerte</th><th>Punteggio '
+                                                                                                           'medio</th><th>Manca di più</th></tr>',
+                  '<strong>📋 Conditions named</strong>': '<strong>📋 Condizioni citate</strong>',
+                  '<strong>📎 Documents asked</strong> <span class="muted">· have them ready as PDF</span>': '<strong>📎 Documenti richiesti</strong> <span '
+                                                                                                            'class="muted">· tienili pronti in PDF</span>',
+                  '<strong>➡ What to do with this</strong>': '<strong>➡ Cosa farne</strong>',
+                  '<li>Tick the skills you already have: the list above gets shorter and your ranking better.</li>': '<li>Spunta le competenze che hai già: la lista qui '
+                                                                                                                     'sopra si accorcia e la tua classifica '
+                                                                                                                     'migliora.</li>',
+                  '<li>Pick one or two of the skills asked most and plan a course or a certificate for them.</li>': '<li>Scegli una o due delle competenze più richieste '
+                                                                                                                    'e pianifica un corso o un certificato.</li>',
+                  '<li>Put your most asked skills at the top of your CV: <a href="/cv/versions">My CV versions</a>.</li>': '<li>Metti le tue competenze più richieste in '
+                                                                                                                           'cima al CV: <a href="/cv/versions">Le mie '
+                                                                                                                           'versioni del CV</a>.</li>',
+                  '<li>Complete your profile: <a href="/cv#check">Profile check</a>. See why you discard jobs: <a href="/stats">Stats</a>.</li>': '<li>Completa il tuo '
+                                                                                                                                                  'profilo: <a '
+                                                                                                                                                  'href="/cv#check">Controllo '
+                                                                                                                                                  'del profilo</a>. '
+                                                                                                                                                  'Guarda perché scarti '
+                                                                                                                                                  'le offerte: <a '
+                                                                                                                                                  'href="/stats">Statistiche</a>.</li>'}}
 
 STRINGS = {'CV': 'CV',
  'Cover letter': 'Lettera di motivazione',
@@ -1650,4 +1800,17 @@ STRINGS = {'CV': 'CV',
  'Get an interview': 'Ottieni un colloquio',
  '5 refusals and still going': '5 rifiuti e ancora in gara',
  'Complete the profile check': 'Completa il controllo del profilo',
- 'Get an offer': "Ricevi un'offerta"}
+ 'Get an offer': "Ricevi un'offerta",
+ 'German': 'Tedesco',
+ 'French': 'Francese',
+ 'English': 'Inglese',
+ 'Italian': 'Italiano',
+ 'native': 'madrelingua',
+ 'fluent': 'fluente',
+ 'basic': 'conoscenze',
+ 'Vocational diploma (CFC / EFZ / AFC)': 'AFC (attestato federale di capacità)',
+ 'Federal certificate or diploma (brevet, Fachausweis)': 'Attestato o diploma federale',
+ 'College of higher education (ES / HF)': 'Scuola specializzata superiore (SSS)',
+ 'Bachelor / university of applied sciences (HES / FH)': 'Bachelor / scuola universitaria professionale (SUP)',
+ 'Master / university (EPF, Uni)': 'Master / università (PF, Uni)',
+ 'Further training (CAS / DAS / MAS)': 'Formazione continua (CAS / DAS / MAS)'}
