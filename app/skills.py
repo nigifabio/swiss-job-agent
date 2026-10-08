@@ -61,9 +61,9 @@ def _pattern(term):
     return r"(?<!\w)" + re.escape(term.rstrip("*")) + end
 
 
-def analyse(text):
-    """Return (html, have, missing, avoided): the text with <mark>s, and the skill lists."""
-    text = text or ""
+def plan():
+    """What analyse() looks for, worked out once: (regex or None, terms, {term: (skill, class)}).
+    Pass it to analyse() when reading many postings in a row."""
     kws, avoid = prefs.skills(), [k.rstrip("*") for k in prefs.avoided()]
     cv_terms = [k.rstrip("*") for k in kws]
     groups, term_group = _groups(), {}
@@ -77,9 +77,16 @@ def analyse(text):
         for t in g:
             term_group.setdefault(t, (g[0].rstrip("*"), cls))
     terms = sorted(term_group, key=len, reverse=True)
+    rx = re.compile("|".join(f"({_pattern(t)})" for t in terms), re.IGNORECASE) if terms else None
+    return rx, terms, term_group
+
+
+def analyse(text, plan_=None):
+    """Return (html, have, missing, avoided): the text with <mark>s, and the skill lists."""
+    text = text or ""
+    rx, terms, term_group = plan_ or plan()
     if not terms or not text:
         return Markup(escape(text)), [], [], []
-    rx = re.compile("|".join(f"({_pattern(t)})" for t in terms), re.IGNORECASE)
     found = {"have": [], "miss": [], "avoid": []}
     tips = {"have": "in your CV", "miss": "not in your CV", "avoid": "you avoid this"}
     out, pos = [], 0

@@ -1,3 +1,5 @@
+import datetime
+import hmac
 import os
 import re
 import json
@@ -9,8 +11,8 @@ from fastapi import FastAPI, Request, Form
 from fastapi.responses import RedirectResponse, HTMLResponse, PlainTextResponse, FileResponse, Response
 from fastapi.templating import Jinja2Templates
 
-from . import (auth, commute, compose, config, enrich, fetch, filters, i18n, locales, letter, onboard, places, prefs, prep, report,
-               requirements, roles, skills, store, tailor, tune)
+from . import (agenda, auth, commute, compose, config, docs, enrich, fetch, filters, i18n, locales, letter, onboard, places, prefs,
+               prep, report, requirements, roles, skills, store, strength, suggest, tailor, tune, twins, weekly)
 from .importers import cvparse, extract, linkedin
 
 store.init_db()
@@ -47,6 +49,8 @@ async def require_access(request: Request, call_next):
 
 
 async def _guarded(request, call_next):
+    if request.url.path.startswith("/calendar/") or request.url.path == "/ops/summary":
+        return await call_next(request)         # no sign-in possible there: each checks its own key in the route
     if auth.ENABLED and request.url.path != "/healthz":
         token = (request.headers.get("cf-access-jwt-assertion")
                  or request.cookies.get("CF_Authorization"))
@@ -87,17 +91,47 @@ def root():
     return RedirectResponse("/jobs?status=new")
 
 
+def _visit():
+    """When the person was last here before this visit ("" the first time). A visit lasts 4 hours:
+    coming back later the same day shows what arrived in between as new."""
+    meta = store.get_meta()
+    last, prev = meta.get("visit_at", ""), meta.get("visit_prev", "")
+    try:
+        old = not last or (datetime.datetime.fromisoformat(store.now()) - datetime.datetime.fromisoformat(last)).total_seconds() > 4 * 3600
+    except ValueError:
+        old = True
+    if old:
+        store.set_meta(visit_prev=last, visit_at=store.now())
+        return last
+    return prev
+
+
+BEST = 10        # how many postings "Best new" shows
+
+
 @app.get("/jobs", response_class=HTMLResponse)
-def jobs(request: Request, status: str = "new"):
+def jobs(request: Request, status: str = "new", view: str = "", done: int = -1):
     if status not in store.STATUSES:
         status = "new"
     meta = store.get_meta()
+    rows = store.list_jobs(status)
+    if status in ("new", "shortlisted"):
+        rows = twins.group(rows)                 # the same job from several agencies: one card
+    since = _visit() or (datetime.datetime.fromisoformat(store.now()) - datetime.timedelta(hours=48)).isoformat()
+    for j in rows:
+        j["fresh"] = status == "new" and j.get("origin") != "manual" and (j.get("created_at") or "") > since
+    fresh = [j for j in rows if j["fresh"]] if status == "new" else []
+    best = view == "best" and status == "new"
+    if best:
+        rows = fresh[:BEST]
     return render(request, "dashboard.html", {
+        "view": "best" if best else "", "fresh_n": min(BEST, len(fresh)), "done": done,
+        "bulk": status in ("new", "shortlisted") and len(rows) > 1,
         "scanning": fetch.is_running(),
         "meta": meta,
         "scan_report": _json(meta.get("last_scan_report"), {}),
         "scan_warnings": _json(meta.get("last_scan_warnings"), []),
-        "jobs": store.list_jobs(status),
+        "jobs": rows,
         "status": status,
         "statuses": store.STATUSES,
         "counts": store.counts(),
@@ -140,7 +174,7 @@ def job_detail(request: Request, jid: int):
         cv, lang = tailor.localized(profile, job)
         follow = compose.followup(cv, job, lang)
     return render(request, "detail.html", {
-        "flags": requirements.flags(job.get("description") or ""), "followup_text": follow,
+        "flags": requirements.flags(job.get("description") or ""), "followup_text": follow, "docs": docs.checklist(job),
         "home_town": commute.home(), "blocked": not filters.company_ok(job.get("company")),
         "job": job, "statuses": store.STATUSES, "reasons": store.DISCARD_REASONS, "desc_html": desc_html, "have": have, "missing": missing,
         "avoided": avoided,
@@ -180,9 +214,15 @@ def _local(path, default):
     return path if path.startswith("/") and not path.startswith("//") else default
 
 
+def _ids(raw):
+    return [int(x) for x in re.findall(r"\d+", raw or "")][:30]
+
+
 @app.post("/job/{jid}/status")
-def set_status(jid: int, status: str = Form(...), next: str = Form("")):
+def set_status(jid: int, status: str = Form(...), next: str = Form(""), twins: str = Form("")):
     store.update_status(jid, status)
+    for t in _ids(twins) if status in store.STATUSES else []:          # the copies of the same job follow
+        store.dismiss(t, "duplicate", True) if status == "applied" else store.update_status(t, status)
     return RedirectResponse(_local(next, f"/job/{jid}"), status_code=303)
 
 
@@ -194,19 +234,49 @@ def _quick(request, state, next, default):
 
 
 @app.post("/job/{jid}/dismiss")
-def dismiss(request: Request, jid: int, next: str = Form(""), reason: str = Form(""), now: str = Form("")):
-    return _quick(request, store.dismiss(jid, reason, bool(now)), next, "/jobs?status=new")
+def dismiss(request: Request, jid: int, next: str = Form(""), reason: str = Form(""), now: str = Form(""),
+            twins: str = Form("")):
+    state = store.dismiss(jid, reason, bool(now))
+    for t in _ids(twins):
+        store.dismiss(t, reason or "duplicate", True) if state == "discarded" else store.dim(t)
+    return _quick(request, state, next, "/jobs?status=new")
+
+
+@app.post("/jobs/bulk")
+async def jobs_bulk(request: Request):
+    """Several cards at once: discard the ticked ones (with one reason), shortlist them, or discard
+    everything of the list under a score."""
+    form = await request.form()
+    status = form.get("status") if form.get("status") in ("new", "shortlisted") else "new"
+    action, reason = form.get("action"), str(form.get("reason") or "")
+    rows = store.list_jobs(status)
+    if action == "below":
+        try:
+            ids = store.below_score(status, min(101, max(0, int(str(form.get("below")).strip()))))
+        except ValueError:
+            ids = []
+    else:
+        ids = twins.expand([int(i) for i in form.getlist("ids") if str(i).isdigit()], rows)
+    mine, n = {j["id"] for j in rows}, 0
+    for i in ids:
+        if i in mine:
+            store.update_status(i, "shortlisted") if action == "shortlist" else store.dismiss(i, reason, True)
+            n += 1
+    return RedirectResponse(f"/jobs?status={status}&done={n}", status_code=303)
 
 
 @app.post("/job/{jid}/filled")
-def filled(request: Request, jid: int, next: str = Form("")):
+def filled(request: Request, jid: int, next: str = Form(""), twins: str = Form("")):
     """One click: the position is filled already (refusal if applied to, else out of the list)."""
+    for t in _ids(twins):
+        store.mark_filled(t)
     return _quick(request, "moved" if store.mark_filled(jid) else None, next, f"/job/{jid}")
 
 
 @app.post("/job/{jid}/keep")
-def keep(request: Request, jid: int, next: str = Form("")):
-    store.keep(jid)
+def keep(request: Request, jid: int, next: str = Form(""), twins: str = Form("")):
+    for t in [jid] + _ids(twins):
+        store.keep(t)
     return _quick(request, "kept", next, "/jobs?status=new")
 
 
@@ -221,6 +291,32 @@ def refine_skills(action: str = Form(...), term: str = Form(...), next: str = Fo
     if prefs.apply(action, term):
         store.rescore(fetch.score_job)
     return RedirectResponse(_local(next, "/cv"), status_code=303)
+
+
+SEARCH_KEYS = ("SEARCH_TERMS", "WHERE", "PROVIDERS", "LANGUAGES", "TITLE_KEYWORDS", "TITLE_EXCLUDE", "LOCATION_KEYWORDS",
+               "ALLOW_REMOTE", "JOBROOM_CANTONS", "COMPANY_EXCLUDE", "WORK_RATE_MIN", "WORK_RATE_MAX")
+RESCAN_GAP = 180        # seconds between two scans started by a change of settings
+
+
+def _searched():
+    return {k: getattr(config, k) for k in SEARCH_KEYS}
+
+
+def _rescan():
+    """What is searched has changed: scan now instead of at the next scheduled time. Several saves
+    in a row start one scan, not one each. Returns whether a scan is running or was started."""
+    if fetch.is_running():
+        return True
+    started = store.get_meta().get("scan_started_at", "")
+    try:
+        recent = bool(started) and (datetime.datetime.fromisoformat(store.now())
+                                    - datetime.datetime.fromisoformat(started)).total_seconds() < RESCAN_GAP
+    except ValueError:
+        recent = False
+    if recent:
+        return False
+    _start_background(fetch.run)
+    return True
 
 
 @app.post("/scan")
@@ -244,8 +340,10 @@ def set_fields(
     orp_assigned: str = Form(""),
     outcome_note: str = Form(""),
     orp_deadline: str = Form(""),
+    interview_at: str = Form(""),
 ):
     store.update_fields(jid, {
+        "interview_at": interview_at if re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}", interview_at or "") else "",
         "orp_deadline": orp_deadline if re.fullmatch(r"\d{4}-\d{2}-\d{2}", orp_deadline or "") else "",
         "contact": contact, "recruiter": recruiter, "cv_version": cv_version,
         "applied_date": applied_date, "followup_date": followup_date, "notes": notes,
@@ -253,6 +351,14 @@ def set_fields(
         "apply_method": apply_method if apply_method in store.APPLY_METHODS else "written",
     })
     return RedirectResponse(f"/job/{jid}", status_code=303)
+
+
+@app.post("/job/{jid}/docs")
+async def set_docs(request: Request, jid: int):
+    """The documents ticked as ready for this application."""
+    form = await request.form()
+    store.update_fields(jid, {"docs": docs.dump([str(k) for k in form.getlist("docs")])})
+    return RedirectResponse(f"/job/{jid}#docs", status_code=303)
 
 
 # ---- cover letter ------------------------------------------------------------
@@ -286,7 +392,11 @@ def letter_pdf(jid: int):
 def _cv_ctx(profile, **extra):
     targets = onboard.state().get("targets") or {}
     first = (targets.get("roles") or (roles.suggest(profile) if profile else []) or [""])[0]
+    asked, of = suggest.missing_skills() if profile else ([], 0)
+    own = tailor._profile_lang(profile) if profile else ""
     ctx = {"profile": profile, "keywords": store.get_meta().get("cv_keywords", ""),
+           "asked": asked, "asked_of": of, "check": strength.report(profile) if profile else None,
+           "translatable": [l for l in ("fr", "de", "it", "en") if l != own] if profile else [],
            "built": os.path.exists(tailor.CUSTOM_CV), "prefs": prefs.summary(),
            "versions": tailor.profile_versions(),
            "roles": [{"id": r["id"], "label": roles.label(r, i18n.current())} for r in roles.ROLES], "role_default": first}
@@ -319,6 +429,80 @@ def cv_custom_pdf():
     name = tailor.download_name(profile, {"company": "keywords"})
     return FileResponse(tailor.CUSTOM_CV, media_type="application/pdf", filename=name,
                         content_disposition_type="inline")
+
+
+# ---- profile in another language, written next to the original --------------------------------
+def _translatable(lang):
+    profile = tailor.load_profile()
+    return profile if profile and lang in tailor.HEADINGS and lang != tailor._profile_lang(profile) else None
+
+
+@app.get("/profile/translate/{lang}", response_class=HTMLResponse)
+def translate_form(request: Request, lang: str, saved: int = -1):
+    profile = _translatable(lang)
+    if not profile:
+        return RedirectResponse("/cv", status_code=303)
+    fields = strength.fields(profile)
+    return render(request, "translate.html", {"lang": lang, "fields": fields, "done": strength.translation(profile, lang),
+                                              "saved": saved, "total": len(fields)})
+
+
+@app.post("/profile/translate/{lang}")
+async def translate_save(request: Request, lang: str):
+    profile = _translatable(lang)
+    if not profile:
+        return RedirectResponse("/cv", status_code=303)
+    n = strength.save_translation(profile, lang, await request.form())
+    return RedirectResponse(f"/profile/translate/{lang}?saved={n}", status_code=303)
+
+
+# ---- the week, and the calendar feed ------------------------------------------------------------
+def _base(request):
+    host = request.headers.get("x-forwarded-host") or request.headers.get("host", "")
+    return f'{request.headers.get("x-forwarded-proto", request.url.scheme)}://{host}'
+
+
+@app.get("/week", response_class=HTMLResponse)
+def week_page(request: Request):
+    return render(request, "week.html", {"w": weekly.summary()})
+
+
+@app.get("/calendar/{name}")
+def calendar_feed(request: Request, name: str):
+    """The calendar feed. No sign-in (a calendar app can't): the key in the address is the access."""
+    if not name.endswith(".ics") or not agenda.valid(name[:-4]) or onboard.needed():
+        return PlainTextResponse("Not found", status_code=404)
+    return Response(agenda.ics(base=_base(request)), media_type="text/calendar; charset=utf-8",
+                    headers={"Cache-Control": "private, max-age=900"})
+
+
+@app.post("/settings/calendar")
+def calendar_reset():
+    agenda.reset()
+    return RedirectResponse("/settings#calendar", status_code=303)
+
+
+def _kind(errors):
+    """What went wrong with a source, without its text (which may hold search words): "HTTP 403", "Timeout"..."""
+    m = re.search(r"HTTP \d{3}|\b\d{3}\b(?= )|[A-Z][A-Za-z]+(?:Error|Timeout|Exception)|timed out|crashed", " ".join(errors or []))
+    return (m.group(0) if m else "error") if errors else ""
+
+
+@app.get("/ops/summary")
+def ops_summary(request: Request):
+    """Totals for whoever runs the installation (the platform's admin page): how many postings per
+    list, when the last scan ran, which sources failed. Counts only: no title, no company, no name.
+    Needs OPS_TOKEN (set by the platform for each workspace); without it this address doesn't exist."""
+    token = os.environ.get("OPS_TOKEN", "")
+    given = request.headers.get("authorization", "")
+    if not token or not hmac.compare_digest(given.encode(), f"Bearer {token}".encode()):
+        return PlainTextResponse("Not found", status_code=404)
+    meta = store.get_meta()
+    rep = _json(meta.get("last_scan_report"), {})
+    return {"jobs": store.counts(), "last_scan_at": meta.get("last_scan_at", ""), "last_scan_new": meta.get("last_scan_new", ""),
+            "last_visit_at": meta.get("visit_at", ""), "setup_done": not onboard.needed(), "scanning": fetch.is_running(),
+            "sources": {src: {"count": r.get("count", 0), "errors": len(r.get("errors") or []), "kind": _kind(r.get("errors"))}
+                        for src, r in rep.items()}}
 
 
 # ---- stats + ORP report -------------------------------------------------------
@@ -693,13 +877,15 @@ def _current_settings():
 
 
 @app.get("/settings", response_class=HTMLResponse)
-def settings_page(request: Request, saved: int = 0):
-    return render(request, "settings.html", {"s": _current_settings(), "saved": saved, "rescored": saved})
+def settings_page(request: Request, saved: int = 0, scan: int = 0):
+    return render(request, "settings.html", {"s": _current_settings(), "saved": saved, "rescored": saved, "scan": scan,
+                                             "feed": agenda.address(_base(request))})
 
 
 @app.post("/settings")
 async def settings_save(request: Request):
     new = _settings_from_form(await request.form())
+    before = _searched()
     moved = (new.get("HOME_TOWN", "").lower(), new.get("RADIUS_KM")) != (config.HOME_TOWN.lower(), config.RADIUS_KM)
     if moved:                                   # home or radius changed: the towns follow, travel times too
         new.update(onboard.area_settings(new.get("HOME_TOWN"), new.get("RADIUS_KM")) or {})
@@ -707,7 +893,8 @@ async def settings_save(request: Request):
     config.save_settings(new)
     prefs.invalidate()
     store.rescore(fetch.score_job)
-    return RedirectResponse("/settings?saved=1", status_code=303)
+    scan = _searched() != before and _rescan()         # what is searched changed: look for jobs now
+    return RedirectResponse("/settings?saved=1" + ("&scan=1" if scan else ""), status_code=303)
 
 
 # ---- CV for a target role -----------------------------------------------------------------

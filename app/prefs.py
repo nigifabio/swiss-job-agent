@@ -8,7 +8,7 @@ import json
 
 from . import config, store
 
-KEYS = ("skills_added", "skills_removed", "skills_avoided")
+KEYS = ("skills_added", "skills_removed", "skills_avoided", "skills_ignored")
 _cache = None
 
 
@@ -49,6 +49,10 @@ def avoided():
     return list(_get()["skills_avoided"])
 
 
+def ignored():
+    return list(_get()["skills_ignored"])
+
+
 def summary():
     p = _get()
     return {"skills": skills(), "added": p["skills_added"], "removed": p["skills_removed"],
@@ -56,12 +60,15 @@ def summary():
 
 
 def apply(action, term):
-    """action: have | remove | avoid | unavoid | restore. Returns False for an invalid request."""
+    """action: have | remove | avoid | unavoid | restore | ignore (stop suggesting it).
+    Returns False for an invalid request."""
     term = _norm(term)
-    if not term or action not in ("have", "remove", "avoid", "unavoid", "restore"):
+    if not term or action not in ("have", "remove", "avoid", "unavoid", "restore", "ignore"):
         return False
     p = {k: list(v) for k, v in _get().items()}
     add, rem, avo = p["skills_added"], p["skills_removed"], p["skills_avoided"]
+    if action == "ignore" and term not in p["skills_ignored"]:
+        p["skills_ignored"].append(term)
 
     def drop(lst):
         while term in lst:

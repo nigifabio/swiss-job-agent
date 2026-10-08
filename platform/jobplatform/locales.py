@@ -69,9 +69,9 @@ _WELCOME = [
      "<b>Wählen Sie, was Sie suchen</b>: Funktionen, Ort, wie weit Sie pendeln würden, Sprachen. Daraus wird Ihre Suche erstellt."),
     ('<b>Read your first results</b> a few minutes later, and generate your first CV and letter.', '<b>Consultez vos premiers résultats</b> quelques minutes plus tard, et générez votre premier CV et votre première lettre.',
      '<b>Sehen Sie Ihre ersten Ergebnisse</b> wenige Minuten später und erstellen Sie Ihren ersten Lebenslauf und Brief.'),
-    ("<h3>Private</h3><p>Each person gets a separate workspace with its own database. Other users can't see your data, and the administrator has no page to look into it.</p>",
-     "<h3>Privé</h3><p>Chaque personne a un espace séparé avec sa propre base de données. Les autres utilisateurs ne voient pas vos données, et l'administrateur n'a aucune page pour les consulter.</p>",
-     "<h3>Privat</h3><p>Jede Person erhält einen eigenen Bereich mit eigener Datenbank. Andere Nutzer sehen Ihre Daten nicht, und der Administrator hat keine Seite, um hineinzuschauen.</p>"),
+    ("<h3>Private</h3><p>Each person gets a separate workspace with its own database. Other users can't see your data, and the administrator has no page to look into it: only totals (how many jobs, when the last search ran, when you last signed in).</p>",
+     "<h3>Privé</h3><p>Chaque personne a un espace séparé avec sa propre base de données. Les autres utilisateurs ne voient pas vos données, et l'administrateur n'a aucune page pour les consulter : il ne voit que des totaux (nombre d'offres, date de la dernière recherche, date de votre dernière connexion).</p>",
+     "<h3>Privat</h3><p>Jede Person erhält einen eigenen Bereich mit eigener Datenbank. Andere Nutzer sehen Ihre Daten nicht, und der Administrator hat keine Seite, um hineinzuschauen: Er sieht nur Summen (Anzahl Stellen, Zeitpunkt der letzten Suche, Zeitpunkt Ihrer letzten Anmeldung).</p>"),
     ('<h3>Yours</h3><p>Download everything, or delete your workspace, at any time from the Account page.</p>',
      '<h3>À vous</h3><p>Téléchargez tout, ou supprimez votre espace, à tout moment depuis la page Compte.</p>',
      '<h3>Ihres</h3><p>Laden Sie jederzeit alles herunter oder löschen Sie Ihren Bereich über die Seite Konto.</p>'),
@@ -172,3 +172,10 @@ STRINGS = {
         ("Votre espace et ses données ont été supprimés. Une copie de sauvegarde scellée est conservée 30 jours par l'administrateur, puis effacée.",
          "Ihr Bereich und seine Daten wurden gelöscht. Eine versiegelte Sicherungskopie bleibt 30 Tage beim Administrator und wird dann entfernt."),
 }
+
+
+# ---- Italian: its own file, same English keys ------------------------------------------------
+from . import locales_it as _it  # noqa: E402
+
+TEMPLATES = {name: [e + (_it.TEMPLATES.get(name, {}).get(e[0], ""),) for e in entries] for name, entries in TEMPLATES.items()}
+STRINGS = {k: v + (_it.STRINGS.get(k, ""),) for k, v in STRINGS.items()}

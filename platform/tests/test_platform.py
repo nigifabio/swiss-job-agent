@@ -34,6 +34,7 @@ def gw(tmp_path, monkeypatch):
             return {"archive": "/archives/x.tar.gz"}
         return {}
     monkeypatch.setattr(g, "prov", prov)
+    monkeypatch.setattr(g, "tenant_summary", lambda slug: {})          # no workspace to ask in these tests
     # stands in for the verified Cloudflare Access email (tests only; the gateway has no such header)
     monkeypatch.setattr(g, "identify", lambda request: (request.headers.get("x-test-user") or "").lower() or None)
     seen = []
@@ -427,18 +428,24 @@ def test_plain_http_is_sent_to_https_and_pages_carry_hsts(gw, monkeypatch):
     assert "frame-ancestors 'none'" in r.headers["content-security-policy"]
 
 
-def test_platform_pages_in_french_and_german(gw):
+def test_platform_pages_in_french_german_and_italian(gw):
     from pathlib import Path
     tdir = Path(gw.g.__file__).parent / "templates"
     for name, entries in gw.g.locales.TEMPLATES.items():
         assert gw.g.i18n.missing((tdir / name).read_text(), entries) == [], name
-    for lang in ("fr", "de"):
+        assert all(len(e) == 4 and all(e) for e in entries), name       # English, French, German, Italian
+    assert all(len(v) == 3 and all(v) for v in gw.g.locales.STRINGS.values())
+    for lang in ("fr", "de", "it"):
         for p in tdir.glob("*.html"):
             gw.g.templates[lang].get_template(p.name)                   # every page compiles in every language
     fr, de = {"accept-language": "fr-CH,fr;q=0.9"}, {"accept-language": "de"}
     home = gw.get("/welcome", headers=fr).text
     assert "Votre assistant privé pour chercher un emploi en Suisse" in home and "Demander un compte" in home and '<html lang="fr">' in home
     assert "Ihr privater Assistent" in gw.get("/welcome", headers=de).text and "Your private assistant" in gw.get("/welcome").text
+    it = {"accept-language": "it-CH,it;q=0.9,de;q=0.5"}
+    home = gw.get("/welcome", headers=it).text
+    assert "Il tuo assistente privato per cercare lavoro in Svizzera" in home and "Chiedi un account" in home and '<html lang="it">' in home
+    assert "Invito non valido" in gw.get("/_platform/invite/nope", headers=dict(as_("zoe@example.org"), **it)).text
     who = dict(as_("zoe@example.org"), **fr)
     assert "vous n'avez pas encore d'espace" in gw.get("/", headers=who).text
     assert "Envoyer ma demande" in gw.get("/_platform/request", headers=who).text
@@ -490,3 +497,129 @@ def test_listing_and_upgrade_survive_an_image_the_store_no_longer_has(prov, monk
     logs = []
     assert prov.upgrade(D(), log=logs.append) is False and calls == ["sha256:new", "sha256:bd760b3b2ab8b8bf58602b750408"]
     assert "CAN'T ROLL BACK" in logs[-1]
+
+
+def test_calendar_feed_is_passed_to_the_workspace_that_checks_the_key(gw):
+    gw.db.add_tenant("marie", "marie@example.org")
+    key = "k" * 32
+    r = gw.get(f"/welcome/cal/marie/{key}.ics")                         # no sign-in: a calendar app can't
+    assert r.status_code == 200 and r.headers["content-type"].startswith("text/calendar")
+    sent = gw.seen[-1]
+    assert str(sent.url) == f"http://jat-marie-web:8080/calendar/{key}.ics"
+    assert "cookie" not in sent.headers and "cf-access-jwt-assertion" not in sent.headers
+    # nothing else of a workspace is reachable that way
+    for bad in ("/welcome/cal/marie/short.ics", f"/welcome/cal/nobody/{key}.ics", f"/welcome/cal/marie/{key}.txt",
+                f"/welcome/cal/MARIE/{key}.ics", "/welcome/cal/marie/..%2Fjobs", f"/welcome/cal/marie/{key}.ics/x", "/welcome/other"):
+        assert gw.get(bad).status_code in (403, 404), bad
+    assert len(gw.seen) == 1
+    assert gw.post(f"/welcome/cal/marie/{key}.ics").status_code == 403
+    gw.db.set_status("marie", "paused")
+    assert gw.get(f"/welcome/cal/marie/{key}.ics").status_code == 404
+
+
+def test_wrong_calendar_keys_are_cut_short(gw):
+    gw.db.add_tenant("marie", "marie@example.org")
+    gw.g._http = httpx.AsyncClient(transport=httpx.MockTransport(lambda request: httpx.Response(404)))
+    codes = [gw.get(f"/welcome/cal/marie/{'x' * 30}{i:02d}.ics").status_code for i in range(25)]
+    assert set(codes) == {404}
+    gw.g._http = httpx.AsyncClient(transport=httpx.MockTransport(lambda request: httpx.Response(200, text="BEGIN:VCALENDAR")))
+    assert gw.get(f"/welcome/cal/marie/{'k' * 32}.ics").status_code == 404          # still locked out after 20 misses
+
+
+def test_admin_sees_totals_and_what_needs_a_look_never_content(gw, monkeypatch):
+    gw.db.add_tenant("marie", "marie@example.org")
+    gw.db.add_tenant("paul", "paul@example.org")
+    gw.db.add_tenant("zoe", "zoe@example.org")
+    gw.db.set_status("zoe", "paused")
+    asked = []
+
+    def totals(slug):
+        asked.append(slug)
+        return {"marie": {"jobs": {"new": 40, "applied": 3, "rejected": 1, "discarded": 9}, "last_scan_at": gw.db.now()[:19], "setup_done": True,
+                          "sources": {"jobup": {"count": 120, "errors": 0, "kind": ""}, "ats": {"count": 0, "errors": 2, "kind": "HTTP 403"}}},
+                "paul": {"jobs": {}, "last_scan_at": "2020-01-01T00:00:00", "setup_done": True,
+                         "sources": {"ats": {"count": 0, "errors": 1, "kind": "HTTP 403"}}}}.get(slug, {})
+    monkeypatch.setattr(gw.g, "tenant_summary", totals)
+    gw.get("/jobs", headers=as_("marie@example.org"))                      # marie uses her workspace
+    page = gw.get("/_platform/admin", headers=as_("admin@example.org")).text
+    assert sorted(asked) == ["marie", "paul"]                                # a paused workspace isn't asked
+    assert "Activity and scan health" in page and "ats 0 ⚠ HTTP 403" in page and "jobup 120" in page
+    assert "source ats: HTTP 403 for 2 of 2 workspaces (marie, paul)" in page and "paul: no scan for" in page
+    assert gw.db.tenant("marie")["last_seen"] and not gw.db.tenant("paul")["last_seen"]
+    assert ">53<" in page and ">4<" in page and "never" in page             # all jobs, applied, paul never signed in
+    # the token a workspace expects is its own, not the platform's
+    assert gw.g.ops_token("marie") != gw.g.ops_token("paul") and "tok" not in gw.g.ops_token("marie")
+
+
+def test_health_lines(gw):
+    from jobplatform import health
+    now = __import__("datetime").datetime(2026, 10, 8, 12, tzinfo=__import__("datetime").timezone.utc)
+    rows = [{"slug": "a", "status": "active", "web": "running (healthy)",
+             "ops": {"setup_done": True, "last_scan_at": "2026-10-08T06:00:00", "sources": {"jobup": {"errors": 0}}}},
+            {"slug": "b", "status": "active", "web": "exited", "ops": {}},
+            {"slug": "c", "status": "active", "web": "running (healthy)", "ops": {"setup_done": False, "last_scan_at": "", "sources": {}}},
+            {"slug": "d", "status": "paused", "web": "exited", "ops": {}}]
+    assert health.problems(rows, now=now) == ["b: app is exited"]           # wizard not finished: no scan expected; paused: ignored
+    assert health.problems(rows[:1], {"hour": 3, "at": "2026-10-08T03:00:10+00:00", "failed": []}, now) == []
+    assert health.problems(rows[:1], {"hour": 3, "at": "2026-10-05T03:00:10+00:00", "failed": ["a"]}, now) == [
+        "backup: last one 80 h ago", "backup: failed for a"]
+    assert health.problems(rows[:1], {"hour": 3}, now) == ["backup: none yet"]
+    assert health.problems(rows[:1], {"hour": None}, now) == []              # backups turned off: nothing to say
+
+
+def test_workspaces_get_their_own_totals_token(prov):
+    a = prov.spec("marie", "marie@example.org", "web", "img")["environment"]
+    b = prov.spec("paul", "paul@example.org", "web", "img")["environment"]
+    assert a["TENANT_SLUG"] == "marie" and a["OPS_TOKEN"] == prov.ops_token("marie") != b["OPS_TOKEN"]
+    assert len(a["OPS_TOKEN"]) == 64 and "tok" not in a["OPS_TOKEN"]
+
+
+def test_nightly_backup_writes_one_archive_per_workspace_and_keeps_the_newest(prov, tmp_path, monkeypatch):
+    dest = tmp_path / "bk"
+    execs = []
+
+    class C:
+        status = "running"
+
+        def __init__(self, name):
+            self.name = name
+
+        def exec_run(self, cmd, user=None):
+            execs.append((self.name, user))
+
+        def get_archive(self, path):
+            return iter([b"platform-db"]), {}
+
+    class Coll:
+        def __init__(self, known):
+            self.known = known
+
+        def get(self, name):
+            if name not in self.known:
+                import docker.errors
+                raise docker.errors.NotFound(name)
+            return C(name)
+
+    class D:
+        volumes = Coll({"jat-a-data", "jat-b-data"})
+        containers = Coll({"jat-a-web", "jobplatform-gateway"})
+    monkeypatch.setattr(prov, "tenants", lambda d: [{"slug": "a"}, {"slug": "b"}, {"slug": "gone"}])
+    monkeypatch.setattr(prov, "export", lambda d, slug: (_ for _ in ()).throw(RuntimeError("disk")) if slug == "b" else b"data-" + slug.encode())
+    logs = []
+    res = prov.backup(D(), str(dest), keep=2, log=logs.append)
+    assert res["ok"] == ["a", "platform"] and res["failed"] == ["b"] and any("backup of b failed" in l for l in logs)
+    files = sorted(p.name for p in dest.iterdir())
+    assert len(files) == 3 and files[0].startswith("a-") and files[1] == "last.json" and files[2].startswith("platform-")
+    assert (dest / files[0]).read_bytes() == b"data-a" and oct((dest / files[0]).stat().st_mode)[-3:] == "600"
+    assert execs == [("jat-a-web", "1000:1000"), ("jobplatform-gateway", "1000:1000")]      # databases settled before the copy
+    assert prov.last_backup(str(dest))["failed"] == ["b"]
+    for stamp in ("20200101-030000", "20200102-030000", "20200103-030000"):
+        (dest / f"a-{stamp}.tar.gz").write_bytes(b"old")
+    prov._keep_newest(str(dest), "a", 2)
+    left = sorted(p.name for p in dest.iterdir() if p.name.startswith("a-"))
+    assert len(left) == 2 and "a-20200101-030000.tar.gz" not in left and "a-20200102-030000.tar.gz" not in left
+    import datetime
+    assert prov.seconds_until(3, datetime.datetime(2026, 10, 8, 2, 0)) == 3600
+    assert prov.seconds_until(3, datetime.datetime(2026, 10, 8, 3, 0)) == 86400
+    monkeypatch.setenv("BACKUP_HOUR", "off")
+    assert prov.backup_hour() is None

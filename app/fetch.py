@@ -65,7 +65,7 @@ def run():
         scanlog.start()
         new = _run()
         report = scanlog.result()
-        for chore in (_commutes, _closed):          # extras: never fail a scan
+        for chore in (_commutes, _closed, _weekly):          # extras: never fail a scan
             try:
                 chore()
             except Exception as e:  # noqa: BLE001
@@ -82,6 +82,11 @@ def run():
 def _commutes():
     from . import commute
     commute.fill()
+
+
+def _weekly():
+    from . import weekly
+    weekly.send_if_due()
 
 
 def _closed():

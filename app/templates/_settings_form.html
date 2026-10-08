@@ -6,7 +6,7 @@
 {%- endmacro %}
 {% macro settings_fields(s, compact=False) -%}
   <label>Language of this site</label>
-  <select name="UI_LANG" style="max-width:260px">{% for code, name in [("", "Automatic (your browser's)"), ("en", "English"), ("fr", "Français"), ("de", "Deutsch")] %}<option value="{{ code }}" {{ 'selected' if s.UI_LANG == code }}>{{ name }}</option>{% endfor %}</select>
+  <select name="UI_LANG" style="max-width:260px">{% for code, name in [("", "Automatic (your browser's)"), ("en", "English"), ("fr", "Français"), ("de", "Deutsch"), ("it", "Italiano")] %}<option value="{{ code }}" {{ 'selected' if s.UI_LANG == code }}>{{ name }}</option>{% endfor %}</select>
   <div class="row">
     <div><label>Home town</label><input name="HOME_TOWN" value="{{ s.HOME_TOWN }}" placeholder="e.g. Genève, Lausanne, Pully">
       <p class="muted" style="margin:2px 0 0">Used for the travel time to each job, and for the search area below.</p></div>

@@ -336,7 +336,7 @@ def test_settings_page_and_role_cv_page(env, client):
     assert "Search settings" in c.get("/settings").text
     r = c.post("/settings", data={"SEARCH_TERMS": "Cloud Engineer\nDevOps, SRE", "TITLE_KEYWORDS": "cloud",
                                   "FETCH_INTERVAL_HOURS": "6", "LANGUAGES": "en"}, follow_redirects=False)
-    assert r.headers["location"] == "/settings?saved=1"
+    assert r.headers["location"] == "/settings?saved=1&scan=1"          # what is searched changed: a scan started
     assert env.config.SEARCH_TERMS == ["Cloud Engineer", "DevOps", "SRE"] and env.config.ALLOW_REMOTE is False
     assert env.config.FETCH_INTERVAL_HOURS == 6.0
     r = c.post("/cv/role", data={"role": "cloud-architect"})

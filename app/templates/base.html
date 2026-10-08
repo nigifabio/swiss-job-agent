@@ -68,10 +68,40 @@
   .hbar { display:flex; align-items:center; gap:8px; margin:4px 0; }
   .hbar .lab { width:110px; color:var(--muted); font-size:13px; }
   .hbar .track { flex:1; } .hbar .fill { height:14px; background:var(--bar); border-radius:0 4px 4px 0; }
+  .fresh { display:inline-block; padding:0 7px; border-radius:9px; background:var(--accent); color:#fff; font-size:11px; vertical-align:2px; }
+  .tab.best { border-color:var(--accent); }
+  .bulkbar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:0 0 12px; font-size:13px; }
+  .bulkbar label { display:flex; gap:6px; align-items:center; margin:0; color:var(--fg); } .bulkbar input[type=checkbox], input.pick { width:auto; }
+  .bulkbar .below { display:flex; gap:6px; align-items:center; flex-wrap:wrap; } .bulkbar input[name=below] { width:54px; padding:3px 6px; }
+  input.pick { margin:0 6px 0 0; transform:scale(1.2); } .twins { margin-top:2px; }
+  .weeklink { margin-left:auto; white-space:nowrap; }
+  .checks { list-style:none; margin:8px 0 0; padding:0; } .checks li { padding:5px 0; border-bottom:1px solid var(--border); }
+  .checks .st { display:inline-block; width:22px; } .meter { height:8px; background:var(--border); border-radius:4px; overflow:hidden; margin:6px 0; }
+  .meter span { display:block; height:100%; background:var(--bar); }
+  .doclist { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:4px 14px; margin:8px 0; }
+  .doclist label { display:flex; gap:8px; align-items:center; margin:0; color:var(--fg); font-size:14px; } .doclist input { width:auto; }
+  .pair { display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:8px 0; border-bottom:1px solid var(--border); }
+  .pair .orig { color:var(--muted); font-size:14px; white-space:pre-wrap; } .pair .k { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+  .bottomnav { display:none; }
+  @media (max-width:640px) {
+    .wrap { padding:12px 12px 84px; } header { padding:10px 12px; } header .nav { display:none; }
+    button, .btn, .tab { min-height:44px; display:inline-flex; align-items:center; justify-content:center; }
+    .small { padding:8px 12px; font-size:14px; } select.why { min-height:44px; max-width:100%; }
+    .tabs { flex-wrap:nowrap; overflow-x:auto; padding-bottom:4px; -webkit-overflow-scrolling:touch; } .tab { white-space:nowrap; flex:0 0 auto; }
+    .actions { gap:8px; } .card { padding:12px; } input, select, textarea { font-size:16px; }
+    .chip-actions button { min-height:32px; padding:2px 10px; font-size:13px; } .chip { padding:4px 8px; margin:3px 4px 3px 0; }
+    input.pick { transform:scale(1.5); margin:0 10px 0 2px; } .pair { grid-template-columns:1fr; }
+    .weeklink { margin-left:0; } td { padding:8px 6px; }
+    .bottomnav { display:flex; position:fixed; left:0; right:0; bottom:0; z-index:5; background:var(--card); border-top:1px solid var(--border);
+                 padding-bottom:env(safe-area-inset-bottom); }
+    .bottomnav a { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:56px; gap:1px;
+                   color:var(--muted); font-size:11px; } .bottomnav a b { font-size:19px; font-weight:400; line-height:1.1; }
+    .bottomnav a.on { color:var(--fg); }
+  }
   table.data th { text-align:left; font-size:12px; color:var(--muted); padding:4px 8px; border-bottom:1px solid var(--border); }
   @media print {
     :root { --bg:#fff; --card:#fff; --fg:#000; --muted:#444; --border:#999; }
-    header, .noprint { display:none !important; } body { font-size:11px; } .wrap { max-width:none; padding:0; }
+    header, .noprint, .bottomnav { display:none !important; } body { font-size:11px; } .wrap { max-width:none; padding:0; }
     .card { border:none; padding:0; }
   }
 </style>
@@ -86,6 +116,13 @@
 <div class="wrap">
 {% block body %}{% endblock %}
 </div>
+<nav class="bottomnav">{% set here = request.url.path %}
+  <a href="/jobs?status=new" class="{{ 'on' if here.startswith('/job') }}"><b>🔍</b>Jobs</a>
+  <a href="/week" class="{{ 'on' if here == '/week' }}"><b>📋</b>My week</a>
+  <a href="/report" class="{{ 'on' if here.startswith('/report') or here == '/stats' }}"><b>🗓</b>ORP report</a>
+  <a href="/cv" class="{{ 'on' if here.startswith('/cv') or here.startswith('/profile') }}"><b>📄</b>CV</a>
+  <a href="/settings" class="{{ 'on' if here == '/settings' }}"><b>⚙</b>Settings</a>
+</nav>
 <script>
   // "Open & apply" opens the posting in a new tab; ask here whether to move it to Applied.
   document.querySelectorAll(".apply-link").forEach(function (a) {

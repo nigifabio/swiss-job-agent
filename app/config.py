@@ -88,7 +88,7 @@ ORP_MONTHLY_TARGET = int(os.environ.get("ORP_MONTHLY_TARGET", "10") or 10)
 # Home town, for the public-transport time to each job; COMMUTE_MAX minutes greys out the ones further (0 = off).
 HOME_TOWN = os.environ.get("HOME_TOWN", "")
 COMMUTE_MAX = int(os.environ.get("COMMUTE_MAX", "0") or 0)
-# Language of the interface: en, fr or de ("" = the browser's).
+# Language of the interface: en, fr, de or it ("" = the browser's).
 UI_LANG = os.environ.get("UI_LANG", "")
 # Search radius around the home town, in km: when set, the towns and cantons searched are computed
 # from home + radius each time either changes on the Settings page (0 = the towns are kept as typed).
@@ -115,7 +115,7 @@ def _coerce(kind, v, name=""):
         return min(hi, max(lo, int(float(v))))
     if kind == "text":
         v = " ".join(str(v).split())[:60]
-        return (v if v in ("en", "fr", "de") else "") if name == "UI_LANG" else v
+        return (v if v in ("en", "fr", "de", "it") else "") if name == "UI_LANG" else v
     if kind == "hours":
         return min(168.0, max(1.0, float(v)))
     items = v if isinstance(v, list) else str(v).replace(";", ",").split(",")

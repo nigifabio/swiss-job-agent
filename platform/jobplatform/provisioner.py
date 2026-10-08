@@ -14,12 +14,17 @@ HTTP API (bearer PROVISIONER_TOKEN), used by the gateway:
   GET    /tenants/{slug}/export         tar.gz of the tenant's data
   DELETE /tenants/{slug}                archive the data, then remove everything
   POST   /sync                          re-attach the gateway to every tenant network
+  GET    /backups                       when the last backup ran and what it holds
 CLI (on the host: docker compose exec provisioner python -m jobplatform.provisioner ...):
   list | sync | upgrade [slug...]       upgrade = re-create on the current image, one at a
                                           time, health-checked, rolled back on failure
+  backup                                every workspace's data + the platform's own database
+                                          into BACKUP_DIR now (it also runs by itself every night)
 """
+import contextlib
 import datetime
 import gzip
+import hashlib
 import hmac
 import io
 import ipaddress
@@ -27,6 +32,7 @@ import json
 import os
 import re
 import sys
+import threading
 import time
 
 from fastapi import Depends, FastAPI, Header, HTTPException
@@ -53,6 +59,7 @@ class Settings:
         self.sched_mem = env("TENANT_SCHED_MEMORY", "512m")
         self.cpus = float(env("TENANT_CPUS", "0.5"))
         self.archives = env("ARCHIVE_DIR", "/archives")
+        self.backups = env("BACKUP_DIR", "/backups")
         # Platform-wide settings passed to every tenant (keys, access check). Per-tenant ones
         # (ALLOWED_EMAILS) are added at creation.
         self.passthrough = {k: env(k) for k in (
@@ -72,6 +79,12 @@ def check_slug(slug):
     if not SLUG.match(slug or ""):
         raise HTTPException(400, "bad tenant id")
     return slug
+
+
+def ops_token(slug, secret=None):
+    """What the gateway shows to a workspace to read its totals (/ops/summary): derived from the
+    platform token, different for every workspace, never the platform token itself."""
+    return hmac.new((secret if secret is not None else S.token).encode(), f"ops:{slug}".encode(), hashlib.sha256).hexdigest()
 
 
 def names(slug):
@@ -132,7 +145,7 @@ def spec(slug, email, role, image, extra=()):
     n = names(slug)
     extra = [e for e in extra if e and e != email]
     environment = dict(S.passthrough, DB_PATH="/data/jobs.db", ONBOARDING="1", PLATFORM_TENANT="1",
-                       ALLOWED_EMAILS=",".join([email] + extra),
+                       ALLOWED_EMAILS=",".join([email] + extra), TENANT_SLUG=slug, OPS_TOKEN=ops_token(slug),
                        HOME="/tmp", PYTHONDONTWRITEBYTECODE="1", PROVIDERS="")
     common = dict(
         image=image, detach=True, environment=environment, user="1000:1000",
@@ -305,6 +318,98 @@ def prune_archives(days=None):
     return gone
 
 
+# ---- nightly backup ------------------------------------------------------------------------------
+CHECKPOINT = ("import sqlite3; c = sqlite3.connect('/data/jobs.db', timeout=20); "
+              "c.execute('PRAGMA wal_checkpoint(TRUNCATE)'); c.close()")
+STATE_COPY = ("import sqlite3; s = sqlite3.connect('/state/platform.db', timeout=20); "
+              "t = sqlite3.connect('/state/platform.backup.db'); s.backup(t); t.close(); s.close()")
+
+
+def _keep_newest(folder, prefix, keep):
+    files = sorted(f for f in os.listdir(folder) if f.startswith(prefix + "-") and f.endswith(".tar.gz"))
+    for f in files[:-keep] if keep > 0 else []:
+        os.remove(os.path.join(folder, f))
+
+
+def _write(folder, name, data):
+    path = os.path.join(folder, name)
+    with open(path + ".part", "wb") as f:
+        f.write(data)
+    os.chmod(path + ".part", 0o600)
+    os.replace(path + ".part", path)
+    return len(data)
+
+
+def backup(d, dest=None, keep=None, log=print):
+    """One archive per workspace (its whole data folder) plus the platform's own database, into
+    BACKUP_DIR; the newest BACKUP_KEEP of each are kept. A workspace that fails doesn't stop the
+    others. Returns {"at", "ok": [...], "failed": [...], "bytes"} (also written to last.json)."""
+    dest = dest or S.backups
+    keep = int(env("BACKUP_KEEP", "14")) if keep is None else keep
+    os.makedirs(dest, exist_ok=True)
+    stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    res = {"at": datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat(), "ok": [], "failed": [], "bytes": 0}
+    for t in tenants(d):
+        slug = t["slug"]
+        if not slug or _get(d.volumes, names(slug)["vol"]) is None:
+            continue
+        try:
+            web = _get(d.containers, names(slug)["web"])
+            if web is not None and web.status == "running":      # fold pending writes into the database file first
+                web.exec_run(["python", "-c", CHECKPOINT], user="1000:1000")
+            res["bytes"] += _write(dest, f"{slug}-{stamp}.tar.gz", export(d, slug))
+            _keep_newest(dest, slug, keep)
+            res["ok"].append(slug)
+        except Exception as e:  # noqa: BLE001
+            res["failed"].append(slug)
+            log(f"backup of {slug} failed: {type(e).__name__}: {str(e)[:160]}")
+    try:
+        gw = _get(d.containers, S.gateway)
+        if gw is not None:
+            gw.exec_run(["python", "-c", STATE_COPY], user="1000:1000")
+            stream, _ = gw.get_archive("/state/platform.backup.db")
+            res["bytes"] += _write(dest, f"platform-{stamp}.tar.gz", gzip.compress(b"".join(stream)))
+            _keep_newest(dest, "platform", keep)
+            res["ok"].append("platform")
+    except Exception as e:  # noqa: BLE001
+        res["failed"].append("platform")
+        log(f"backup of the platform database failed: {type(e).__name__}: {str(e)[:160]}")
+    with open(os.path.join(dest, "last.json"), "w") as f:
+        json.dump(res, f)
+    log(f"backup: {len(res['ok'])} ok, {len(res['failed'])} failed, {res['bytes'] // 1024} KiB in {dest}")
+    return res
+
+
+def last_backup(dest=None):
+    try:
+        with open(os.path.join(dest or S.backups, "last.json")) as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {}
+
+
+def seconds_until(hour, now=None):
+    now = now or datetime.datetime.now()
+    nxt = now.replace(hour=hour, minute=0, second=0, microsecond=0)
+    return ((nxt if nxt > now else nxt + datetime.timedelta(days=1)) - now).total_seconds()
+
+
+def backup_hour():
+    """Hour of the day (container clock) of the nightly backup; BACKUP_HOUR=off turns it off."""
+    raw = env("BACKUP_HOUR", "3").strip().lower()
+    return int(raw) % 24 if raw.isdigit() else None
+
+
+def _nightly():
+    while True:
+        time.sleep(seconds_until(backup_hour()))
+        try:
+            backup(client())
+        except Exception as e:  # noqa: BLE001
+            print(f"[backup] failed: {type(e).__name__}: {str(e)[:200]}")
+        time.sleep(90)
+
+
 def sync(d):
     prune_archives()
     return {t["slug"]: attach_gateway(d, t["slug"]) for t in tenants(d) if t["slug"]}
@@ -340,7 +445,14 @@ def upgrade(d, slugs=None, log=print):
 
 
 # ---- HTTP API --------------------------------------------------------------------------------
-app = FastAPI(title="jobplatform provisioner", docs_url=None, redoc_url=None, openapi_url=None)
+@contextlib.asynccontextmanager
+async def lifespan(_app):
+    if backup_hour() is not None and S.token:
+        threading.Thread(target=_nightly, daemon=True).start()
+    yield
+
+
+app = FastAPI(title="jobplatform provisioner", docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
 _client = None
 
 
@@ -412,6 +524,11 @@ def api_notify(body: Notice):
     return {"sent": True}
 
 
+@app.get("/backups", dependencies=[Depends(auth)])
+def api_backups():
+    return dict(last_backup(), hour=backup_hour())
+
+
 @app.post("/sync", dependencies=[Depends(auth)])
 def api_sync():
     return sync(client())
@@ -424,6 +541,8 @@ def main(argv):
         print(json.dumps(tenants(d), indent=1))
     elif cmd == "sync":
         print(json.dumps(sync(d)))
+    elif cmd == "backup":
+        return 1 if backup(d)["failed"] else 0
     elif cmd == "upgrade":
         ok = upgrade(d, rest or None)
         sync(d)

@@ -16,6 +16,10 @@ The app holds personal data (your CV, your applications, notes about employers),
 - **Cross-site requests are refused:** every state-changing request must come from the app's own
   origin (`Sec-Fetch-Site` / `Origin` check), and pages can't be framed (`X-Frame-Options: DENY`).
 - **HTTPS only on the platform:** a visitor arriving over plain http is redirected, and pages send HSTS.
+- **Two addresses work without a sign-in, each with its own secret.** The calendar feed
+  (`/calendar/<key>.ics`): a 192-bit random key in the address, read-only, dates with job titles and
+  company names only; "New address" in Settings revokes it. The operator's totals (`/ops/summary`):
+  only when `OPS_TOKEN` is set (the platform sets one per workspace), and it returns counts, never content.
 - **Output is escaped** (Jinja autoescape); stored links are kept only if they are `http(s)`.
 - **Secrets stay out of git and logs:** `.env` (mode 600) and `data/` are git-ignored; API keys, the
   IMAP password and key-bearing URLs are never written into error messages. The alert mailbox is

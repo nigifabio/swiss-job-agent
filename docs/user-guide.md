@@ -9,6 +9,16 @@
   **⚠ Last scan had problems** banner explains it.
 - New jobs are sorted by a **match score** (0-100): how many of your skills the posting mentions
   (words in the title count triple).
+- **★ Best new** (first tab): the ten best-ranked jobs that arrived since your last visit. In the full list
+  those jobs carry a **new** badge.
+- **The same job from several agencies is one card.** When the employer and one or more agencies advertise
+  the same position, the list shows it once with "Same job also posted by". What you do to the card
+  (discard, shortlist, applied) is done to its copies; applying to one discards the others as duplicates.
+- **Several jobs at once:** tick jobs (or **Select all**), choose a reason, then **Discard the selected**
+  or **Shortlist the selected**. Or type a score and discard every job of the list under it (jobs the
+  ORP assigned to you are never swept away).
+- **📋 My week:** what came in during the last 7 days, the best of it, applications against the monthly
+  target, interviews coming up, and what waits for a follow-up.
 
 ## Tracking applications
 
@@ -55,8 +65,16 @@
 ## Settings
 
 **Settings** (top menu) holds the search itself: search terms, titles to keep or skip, towns,
-languages, skills, sources, scan interval. Saving re-ranks the jobs already found. With the wizard
-enabled you can also **edit your profile** or **re-run the setup wizard** there.
+languages, skills, sources, scan interval. Saving re-ranks the jobs already found, and when what is
+searched has changed (terms, titles, towns, languages, sources, work rate) a new scan starts by itself:
+the results are on the Jobs page a few minutes later. Changing your skills only re-ranks; it needs no scan.
+With the wizard enabled you can also **edit your profile** or **re-run the setup wizard** there.
+
+**Calendar:** the Settings page gives an address to add to your phone's or computer's calendar
+(Apple, Google, Outlook: "subscribe" / "add by URL"). It shows your interviews (enter the date and time
+on the job page), ORP deadlines, follow-up dates, the hand-in of your proofs of job search on the 5th and
+a summary of the week every Monday. The address contains a long random key: anyone who has it can read
+those dates (job titles and companies, nothing else); **New address** makes the old one stop working.
 
 ## Stats and the ORP report
 
@@ -105,6 +123,21 @@ enabled you can also **edit your profile** or **re-run the setup wizard** there.
 - **Interview preparation sheet:** for a job you applied to, a one-page PDF with what the posting asks for against your
   skills, your experience to mention, usual questions and questions to ask.
 
+## A stronger profile
+
+- **Often asked in your jobs** (CV page): skills that the jobs found for you mention most and that are not in
+  your list, with how many jobs ask for each. **+ I have it** counts it from now on, **⛔ Avoid** pushes
+  those jobs down, **not relevant** stops the suggestion. Nothing is put on your CV unless your profile mentions it.
+- **Profile check** (CV page): what a Swiss recruiter looks for and what is missing, with the reason: contact
+  details, a job title, a summary of 3 to 5 lines, skills, dates, what you did in your last jobs, results with
+  numbers, education, languages with their level, and a version of your profile in each language you search in.
+- **Your profile in another language:** from the CV page, a form with your own text on the left and a box for
+  the translation on the right. Nothing is machine-translated. A box left empty keeps the original; once saved,
+  CVs and letters for postings in that language are written in it.
+- **Documents to send** (job page): a checklist per application (CV, letter, work certificates, diplomas,
+  references, permit copy, criminal-record and debt-register extracts, salary expectations, photo). The ones the
+  posting names are marked; tick what is ready.
+
 ## Language of the site
 
-English, French and German. The site follows your browser; **Settings → Language of this site** fixes it.
+English, French, German and Italian. The site follows your browser; **Settings → Language of this site** fixes it.

@@ -45,7 +45,9 @@ CREATE TABLE IF NOT EXISTS jobs (
   followed_up_at  TEXT,
   url_checked_at  TEXT,
   closed_at       TEXT,
-  commute_min     INTEGER
+  commute_min     INTEGER,
+  interview_at    TEXT,
+  docs            TEXT
 );
 CREATE TABLE IF NOT EXISTS status_history (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -107,7 +109,7 @@ MIGRATIONS = [
     ("outcome_note", "TEXT"), ("enriched_at", "TEXT"), ("letter", "TEXT"), ("loose_key", "TEXT"),
     ("dimmed", "INTEGER DEFAULT 0"), ("discard_reason", "TEXT"),
     ("orp_deadline", "TEXT"), ("followed_up_at", "TEXT"), ("url_checked_at", "TEXT"), ("closed_at", "TEXT"),
-    ("commute_min", "INTEGER"),
+    ("commute_min", "INTEGER"), ("interview_at", "TEXT"), ("docs", "TEXT"),
 ]
 
 # Why a posting was discarded (the list's "Why?" menu). Read on the Stats page to tune the search:
@@ -269,12 +271,46 @@ def dismiss(jid, reason=None, now_=False):
     return "discarded"
 
 
+def below_score(status, score):
+    """Ids of the scored jobs of one list under `score`; never one the ORP assigned or one typed in by hand."""
+    with conn() as c:
+        return [r["id"] for r in c.execute(
+            "SELECT id FROM jobs WHERE status=? AND score IS NOT NULL AND score < ? AND COALESCE(orp_assigned,0)=0 "
+            "AND origin != 'manual'", (status, int(score))).fetchall()]
+
+
+def open_jobs(limit=600):
+    """Postings still in play (not refused, not discarded), newest first: what the person's market asks for."""
+    with conn() as c:
+        return [dict(r) for r in c.execute(
+            "SELECT id, title, description, status, score, created_at FROM jobs WHERE status NOT IN ('rejected','discarded') "
+            "AND COALESCE(dimmed,0)=0 ORDER BY id DESC LIMIT ?", (limit,)).fetchall()]
+
+
+def interviews():
+    with conn() as c:
+        return [dict(r) for r in c.execute(
+            "SELECT * FROM jobs WHERE COALESCE(interview_at,'') != '' AND status NOT IN ('rejected','discarded') "
+            "ORDER BY interview_at").fetchall()]
+
+
+def created_since(ts):
+    with conn() as c:
+        return [dict(r) for r in c.execute(
+            "SELECT * FROM jobs WHERE created_at >= ? AND origin != 'manual' ORDER BY COALESCE(score,-1) DESC, id DESC", (ts,)).fetchall()]
+
+
 def discarded():
     with conn() as c:
         return [dict(r) for r in c.execute(
             "SELECT j.id, j.title, j.company, j.location, j.source, j.score, j.discard_reason, "
             "(SELECT MAX(changed_at) FROM status_history h WHERE h.job_id=j.id AND h.status='discarded') AS discarded_at "
             "FROM jobs j WHERE j.status='discarded' ORDER BY discarded_at DESC").fetchall()]
+
+
+def dim(jid):
+    with conn() as c:
+        c.execute("UPDATE jobs SET dimmed=1 WHERE id=? AND status != 'discarded'", (jid,))
 
 
 def keep(jid):
@@ -286,7 +322,7 @@ def keep(jid):
 def update_fields(jid, fields):
     allowed = ["contact", "recruiter", "cv_version", "applied_date", "followup_date", "notes",
                "work_rate", "apply_method", "orp_assigned", "outcome_note", "location", "letter",
-               "orp_deadline", "followed_up_at"]
+               "orp_deadline", "followed_up_at", "interview_at", "docs"]
     sets, vals = [], []
     for k in allowed:
         if k in fields:
@@ -301,6 +337,8 @@ def update_fields(jid, fields):
     # an applied date means "I applied": the job moves to Applied (the report and stats go by the date)
     if row and row["applied_date"] and row["status"] in ("new", "shortlisted"):
         update_status(jid, "applied")
+    if fields.get("interview_at") and row and row["status"] in ("new", "shortlisted", "applied"):
+        update_status(jid, "interview")          # an interview date means "I got an interview"
 
 
 FILLED_NOTE = "Poste déjà pourvu"      # in French: it is shown in the ORP report's "Résultat" column

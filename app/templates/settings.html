@@ -1,13 +1,23 @@
 {% extends "base.html" %}
 {% from "_settings_form.html" import settings_fields %}
 {% block body %}
-{% if saved %}<div class="banner">Saved. The next scan uses these settings{% if rescored %}; jobs already found were re-ranked{% endif %}.</div>{% endif %}
+{% if saved %}<div class="banner">Saved. The next scan uses these settings{% if rescored %}; jobs already found were re-ranked{% endif %}.{% if scan %} A new search has started with them: the results arrive on the Jobs page in a few minutes.{% endif %}</div>{% endif %}
 <div class="card">
   <h2 style="margin-top:0">Search settings</h2>
   <form method="post" action="/settings">
     {{ settings_fields(s) }}
     <p style="margin-top:14px"><button type="submit">Save</button></p>
   </form>
+</div>
+<div class="card" id="calendar">
+  <h3 style="margin-top:0">Calendar</h3>
+  <p class="muted">Interviews, ORP deadlines, follow-up dates and the monthly hand-in of your proofs of job search, in the calendar of your phone or computer.
+    Copy this address into your calendar app (“subscribe to a calendar” / “add by URL”). It updates by itself.</p>
+  <input readonly value="{{ feed }}" onclick="this.select()" aria-label="Calendar address">
+  <p style="margin:8px 0 0"><a class="btn small" href="{{ feed | replace('https://', 'webcal://') | replace('http://', 'webcal://') }}">Add to my calendar</a></p>
+  <form method="post" action="/settings/calendar" style="margin-top:8px" onsubmit="return confirm('The current address will stop working. Continue?')">
+    <button class="ghost small" type="submit">New address</button>
+    <span class="muted">Anyone who has this address can read these dates (job titles and companies, nothing else). A new address makes the old one stop working.</span></form>
 </div>
 <div class="card">
   <h3 style="margin-top:0">Profile &amp; setup</h3>

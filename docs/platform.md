@@ -95,7 +95,27 @@ set the source link and an optional "ask for an invite" address.
 | Upgrade some workspaces only | `docker exec jobplatform-provisioner python -m jobplatform.provisioner upgrade <id>…` |
 | A workspace's logs | `docker logs jat-<id>-web` / `jat-<id>-sched` |
 | Check the egress rules | `iptables -S JOBAGENT-EGRESS` |
-| Backups | back up the Docker volumes (`jobplatform_state`, `jat-*-data`); each person can export their own data from **Account** |
+| Backups | every night (`BACKUP_HOUR`, default 03:00 UTC) the provisioner writes one archive per workspace plus the platform database to `platform/backups/` (`BACKUP_HOST_DIR`), keeping the newest `BACKUP_KEEP` (14) of each; `... provisioner backup` runs it now. Point `BACKUP_HOST_DIR` at a NAS mount, or copy the folder elsewhere, so the copies don't live on the same disk. Each person can also export their own data from **Account** |
+| Restore one workspace | stop it on the admin page, then `docker run --rm -v jat-<id>-data:/data -v "$PWD/platform/backups":/b alpine sh -c "rm -rf /data/* && tar -xzf /b/<id>-<stamp>.tar.gz -C / && chown -R 1000:1000 /data"`, and resume it |
+
+### What the admin page shows about a workspace
+
+**Activity and scan health** lists, per workspace: when it was last used, when it last scanned, how many
+jobs it holds (new, applied, all) and how each job source did at the last scan (postings found, and an
+error kind such as `HTTP 403` when it failed). These are totals: each workspace answers a counts-only
+address (`/ops/summary`) that needs a token derived for that workspace; no job title, company, name or
+text leaves a workspace, and there is no page to look inside one.
+
+Above the table, **what needs a look**: an app that is not healthy, a workspace whose scans stopped,
+a source failing and for how many workspaces, a backup that didn't run. Every `HEALTH_CHECK_HOURS`
+(default 6) the same list is checked and, when it changed, sent through `NOTIFY_WEBHOOK`.
+
+### Calendar feeds
+
+A person's calendar address is `https://<host>/welcome/cal/<workspace>/<key>.ics`. Calendar apps can't
+sign in, so this path must be public like `/welcome`: the Cloudflare Access bypass for `/welcome` already
+covers it. The gateway passes only that one request to the workspace, which checks the key; repeated
+wrong keys from one address are refused for ten minutes.
 
 Workspace containers are read-only: `docker cp` into them fails; pipe scripts with
 `docker exec -i jat-<id>-web python - < script.py`.

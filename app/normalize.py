@@ -30,3 +30,11 @@ def loose_key(title, company, location):
     c = " ".join(w for w in _plain(company).split() if w not in _CO_NOISE)
     loc = _plain(location).split()
     return content_hash(t, c, loc[0] if loc else "")
+
+
+def title_key(title, location):
+    """The job without its company: the same position advertised by the employer and by agencies
+    shares it (see twins.py, which also compares the texts before calling two postings one job)."""
+    t = _plain(_RATE.sub(" ", _GENDER.sub(" ", title or "")))
+    loc = _plain(location).split()
+    return f"{t}|{loc[0] if loc else ''}"

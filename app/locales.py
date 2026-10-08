@@ -1,7 +1,8 @@
 """Translations of the interface (see i18n.py).
 
-TEMPLATES[file] = [(English fragment exactly as in the template, French, German)]
-STRINGS[English text produced by Python] = (French, German)
+TEMPLATES[file] = [(English fragment exactly as in the template, French, German, Italian)]
+STRINGS[English text produced by Python] = (French, German, Italian)
+French and German are written here; Italian lives in locales_it.py and is merged in at the bottom.
 """
 
 _BASE = [
@@ -483,13 +484,214 @@ _ONBOARDING = [
     ('formnovalidate>← Change my choices</button>', 'formnovalidate>← Modifier mes choix</button>', 'formnovalidate>← Meine Auswahl ändern</button>'),
 ]
 
+# ---- best new, bulk actions, duplicates, documents, profile check, calendar, week, translated profile ----
+_BASE += [
+    ('</b>My week</a>', '</b>Ma semaine</a>', '</b>Meine Woche</a>'),
+]
+
+_DASHBOARD += [
+    ('📋 My week</a>', '📋 Ma semaine</a>', '📋 Meine Woche</a>'),
+    ("{{ done }} job{{ 's' if done != 1 }} moved.", "{{ done }} offre{{ 's' if done != 1 }} déplacée{{ 's' if done != 1 }}.",
+     "{{ done }} Stelle{{ 'n' if done != 1 }} verschoben."),
+    ('title="The best-ranked jobs that arrived since your last visit">★ Best new ({{ fresh_n }})</a>',
+     'title="Les offres les mieux classées arrivées depuis votre dernière visite">★ Meilleures nouvelles ({{ fresh_n }})</a>',
+     'title="Die am besten bewerteten Stellen seit Ihrem letzten Besuch">★ Beste neue ({{ fresh_n }})</a>'),
+    ("The {{ jobs | length }} best-ranked job{{ 's' if jobs | length != 1 }} that arrived since your last visit. <a href=\"/jobs?status=new\">See the whole list</a>",
+     "Les {{ jobs | length }} offres les mieux classées arrivées depuis votre dernière visite. <a href=\"/jobs?status=new\">Voir toute la liste</a>",
+     "Die {{ jobs | length }} am besten bewerteten Stellen seit Ihrem letzten Besuch. <a href=\"/jobs?status=new\">Ganze Liste anzeigen</a>"),
+    ('> Select all</label>', '> Tout sélectionner</label>', '> Alle auswählen</label>'),
+    ('aria-label="Reason for the selected jobs"', 'aria-label="Raison pour les offres sélectionnées"', 'aria-label="Grund für die ausgewählten Stellen"'),
+    ('✕ Discard the selected</button>', '✕ Écarter la sélection</button>', '✕ Auswahl verwerfen</button>'),
+    ('☆ Shortlist the selected</button>', '☆ Retenir la sélection</button>', '☆ Auswahl merken</button>'),
+    ('or discard every job scoring below</span>', 'ou écarter toutes les offres dont le score est inférieur à</span>',
+     'oder alle Stellen verwerfen mit Score unter</span>'),
+    ('aria-label="Score"', 'aria-label="Score"', 'aria-label="Score"'),
+    ("confirm('Discard every job of this list scoring below ' + this.form.below.value + '?')",
+     "confirm('Écarter toutes les offres de cette liste dont le score est inférieur à ' + this.form.below.value + ' ?')",
+     "confirm('Alle Stellen dieser Liste mit Score unter ' + this.form.below.value + ' verwerfen?')"),
+    ('✕ Discard them</button>', '✕ Les écarter</button>', '✕ Verwerfen</button>'),
+    ('aria-label="Select this job"', 'aria-label="Sélectionner cette offre"', 'aria-label="Diese Stelle auswählen"'),
+    ('<span class="fresh">new</span>', '<span class="fresh">nouveau</span>', '<span class="fresh">neu</span>'),
+    ('Same job also posted by:', 'Même poste aussi publié par :', 'Dieselbe Stelle auch ausgeschrieben von:'),
+    ('Nothing new since your last visit.', 'Rien de nouveau depuis votre dernière visite.', 'Nichts Neues seit Ihrem letzten Besuch.'),
+]
+
+_DETAIL += [
+    ('<label>Interview (date and time)</label>', "<label>Entretien (date et heure)</label>", '<label>Gespräch (Datum und Zeit)</label>'),
+    ('<strong>Documents to send</strong>', '<strong>Documents à envoyer</strong>', '<strong>Unterlagen zum Mitsenden</strong>'),
+    ('ready · tick what is ready for this application</span>', 'prêts · cochez ce qui est prêt pour cette candidature</span>',
+     'bereit · haken Sie ab, was für diese Bewerbung bereit ist</span>'),
+    ('<span class="flag">asked in the posting</span>', "<span class=\"flag\">demandé dans l'annonce</span>", '<span class="flag">im Inserat verlangt</span>'),
+    ('Save the list</button>', 'Enregistrer la liste</button>', 'Liste speichern</button>'),
+    ('Swiss employers usually expect the full file: CV, letter, work certificates and diplomas, in one PDF if you can.',
+     'Les employeurs suisses attendent en général le dossier complet : CV, lettre, certificats de travail et diplômes, si possible en un seul PDF.',
+     'Schweizer Arbeitgeber erwarten in der Regel das vollständige Dossier: Lebenslauf, Brief, Arbeitszeugnisse und Diplome, wenn möglich in einem PDF.'),
+]
+
+_CV += [
+    ('Often asked in your jobs</h2>', 'Souvent demandé dans vos offres</h2>', 'In Ihren Stellen oft verlangt</h2>'),
+    ('Skills that the {{ asked_of }} jobs found for you mention and that are not in your list. Do you have them? '
+     'Saying so re-ranks the list at once. Nothing is added to your CV unless your profile mentions it.',
+     "Des compétences citées par les {{ asked_of }} offres trouvées pour vous et absentes de votre liste. Les avez-vous ? "
+     "Le dire reclasse la liste tout de suite. Rien n'est ajouté à votre CV si votre profil ne le mentionne pas.",
+     'Kompetenzen, die die {{ asked_of }} für Sie gefundenen Stellen nennen und die nicht auf Ihrer Liste stehen. Haben Sie sie? '
+     'Ihre Antwort ordnet die Liste sofort neu. Auf Ihren Lebenslauf kommt nur, was Ihr Profil erwähnt.'),
+    ("· {{ n }} job{{ 's' if n != 1 }}</span>", "· {{ n }} offre{{ 's' if n != 1 }}</span>", "· {{ n }} Stelle{{ 'n' if n != 1 }}</span>"),
+    ('title="I have this skill: count it from now on">+ I have it</button>', 'title="J\'ai cette compétence : la compter dès maintenant">+ Je l\'ai</button>',
+     'title="Diese Kompetenz habe ich: ab jetzt zählen">+ Habe ich</button>'),
+    ('title="Push jobs that ask for this down the list">⛔ Avoid</button>', 'title="Faire descendre les offres qui la demandent">⛔ Éviter</button>',
+     'title="Stellen, die das verlangen, nach unten schieben">⛔ Vermeiden</button>'),
+    ('title="Stop suggesting this word">not relevant</button>', 'title="Ne plus proposer ce mot">sans intérêt</button>',
+     'title="Dieses Wort nicht mehr vorschlagen">nicht relevant</button>'),
+    ('Profile check <span class="muted">', 'Contrôle du profil <span class="muted">', 'Profil-Check <span class="muted">'),
+    ('Translate my profile →</a>', 'Traduire mon profil →</a>', 'Mein Profil übersetzen →</a>'),
+    ('>Edit my profile</button>', '>Modifier mon profil</button>', '>Mein Profil bearbeiten</button>'),
+    ('Write your profile in another language, next to the original:</span>', "Écrire votre profil dans une autre langue, à côté de l'original :</span>",
+     'Ihr Profil in einer anderen Sprache schreiben, neben dem Original:</span>'),
+]
+
+_SETTINGS += [
+    (' A new search has started with them: the results arrive on the Jobs page in a few minutes.',
+     ' Une nouvelle recherche a démarré avec ces réglages : les résultats arrivent sur la page Offres dans quelques minutes.',
+     ' Eine neue Suche mit diesen Einstellungen läuft: Die Ergebnisse erscheinen in wenigen Minuten auf der Seite Stellen.'),
+    ('<h3 style="margin-top:0">Calendar</h3>', '<h3 style="margin-top:0">Calendrier</h3>', '<h3 style="margin-top:0">Kalender</h3>'),
+    ('Interviews, ORP deadlines, follow-up dates and the monthly hand-in of your proofs of job search, in the calendar of your phone or computer. '
+     'Copy this address into your calendar app (“subscribe to a calendar” / “add by URL”). It updates by itself.',
+     "Entretiens, délais de l'ORP, dates de relance et remise mensuelle de vos preuves de recherches, dans le calendrier de votre téléphone ou de votre ordinateur. "
+     "Copiez cette adresse dans votre application de calendrier (« s'abonner à un calendrier » / « ajouter par URL »). Il se met à jour tout seul.",
+     'Gespräche, RAV-Fristen, Nachfass-Termine und die monatliche Abgabe Ihrer Nachweise, im Kalender Ihres Telefons oder Computers. '
+     'Kopieren Sie diese Adresse in Ihre Kalender-App («Kalender abonnieren» / «per URL hinzufügen»). Er aktualisiert sich von selbst.'),
+    ('aria-label="Calendar address"', 'aria-label="Adresse du calendrier"', 'aria-label="Kalenderadresse"'),
+    ('Add to my calendar</a>', 'Ajouter à mon calendrier</a>', 'Zu meinem Kalender hinzufügen</a>'),
+    ("confirm('The current address will stop working. Continue?')", "confirm('L\\'adresse actuelle ne fonctionnera plus. Continuer ?')",
+     "confirm('Die aktuelle Adresse funktioniert dann nicht mehr. Fortfahren?')"),
+    ('New address</button>', 'Nouvelle adresse</button>', 'Neue Adresse</button>'),
+    ('Anyone who has this address can read these dates (job titles and companies, nothing else). A new address makes the old one stop working.',
+     "Toute personne qui a cette adresse peut lire ces dates (intitulés de poste et entreprises, rien d'autre). Une nouvelle adresse désactive l'ancienne.",
+     'Wer diese Adresse hat, kann diese Termine lesen (Stellentitel und Firmen, sonst nichts). Eine neue Adresse macht die alte ungültig.'),
+]
+
+_WEEK = [
+    ('My week <span class="muted">· week {{ w.week }}</span>', 'Ma semaine <span class="muted">· semaine {{ w.week }}</span>',
+     'Meine Woche <span class="muted">· Woche {{ w.week }}</span>'),
+    ('new jobs in the last 7 days', 'nouvelles offres ces 7 derniers jours', 'neue Stellen in den letzten 7 Tagen'),
+    ('applications this week', 'candidatures cette semaine', 'Bewerbungen diese Woche'),
+    ('this month (ORP target)', 'ce mois (objectif ORP)', 'diesen Monat (RAV-Ziel)'),
+    ('days left in the month', 'jours restants dans le mois', 'Tage bis Monatsende'),
+    ('🎯 Interviews in the next 7 days', '🎯 Entretiens dans les 7 prochains jours', '🎯 Gespräche in den nächsten 7 Tagen'),
+    ('📌 Assigned by the ORP, to apply', "📌 Assignations de l'ORP, à postuler", '📌 Zuweisungen des RAV, noch zu bewerben'),
+    ('★ The best new jobs of the week', '★ Les meilleures nouvelles offres de la semaine', '★ Die besten neuen Stellen der Woche'),
+    ('score {{ j.score }}', 'score {{ j.score }}', 'Score {{ j.score }}'),
+    ('Open the best new jobs →</a>', 'Ouvrir les meilleures nouvelles offres →</a>', 'Die besten neuen Stellen öffnen →</a>'),
+    ('Nothing new this week. Widen the search in <a href="/settings">Settings</a>: more towns, more job titles.',
+     'Rien de nouveau cette semaine. Élargissez la recherche dans les <a href="/settings">Réglages</a> : plus de localités, plus d\'intitulés de poste.',
+     'Nichts Neues diese Woche. Erweitern Sie die Suche in den <a href="/settings">Einstellungen</a>: mehr Orte, mehr Stellentitel.'),
+    ('✉ No answer yet: time to follow up?', '✉ Pas encore de réponse : relancer ?', '✉ Noch keine Antwort: nachfassen?'),
+    ('applied {{ j.days_waiting }} days ago', 'postulé il y a {{ j.days_waiting }} jours', 'vor {{ j.days_waiting }} Tagen beworben'),
+    ('⏰ Follow-ups due this week', '⏰ Relances prévues cette semaine', '⏰ Diese Woche fällige Nachfass-Termine'),
+    ('✓ Applied this week', '✓ Postulé cette semaine', '✓ Diese Woche beworben'),
+    ('No application recorded this week yet.', 'Aucune candidature enregistrée cette semaine pour le moment.', 'Diese Woche noch keine Bewerbung erfasst.'),
+    ("{{ w.orp.missing }} more application{{ 's' if w.orp.missing != 1 }} to reach this month's target.",
+     "Encore {{ w.orp.missing }} candidature{{ 's' if w.orp.missing != 1 }} pour atteindre l'objectif du mois.",
+     "Noch {{ w.orp.missing }} Bewerbung{{ 'en' if w.orp.missing != 1 }} bis zum Monatsziel."),
+    ('+ spontaneous application</a>', '+ candidature spontanée</a>', '+ Spontanbewerbung</a>'),
+    ('Want these dates in your phone\'s calendar? <a href="/settings#calendar">Add the calendar</a>.',
+     'Ces dates dans le calendrier de votre téléphone ? <a href="/settings#calendar">Ajouter le calendrier</a>.',
+     'Diese Termine im Kalender Ihres Telefons? <a href="/settings#calendar">Kalender hinzufügen</a>.'),
+]
+
+_TRANSLATE = [
+    ('← back to CV</a>', '← retour au CV</a>', '← zurück zum Lebenslauf</a>'),
+    ('Saved: {{ saved }} of {{ total }} texts translated. CVs and letters for jobs posted in this language now use them.',
+     'Enregistré : {{ saved }} textes traduits sur {{ total }}. Les CV et lettres pour les offres publiées dans cette langue les utilisent désormais.',
+     'Gespeichert: {{ saved }} von {{ total }} Texten übersetzt. Lebensläufe und Briefe für Stellen in dieser Sprache verwenden sie ab jetzt.'),
+    ('My profile {{ ("in " ~ names[lang]) | tr }}</h2>', 'Mon profil {{ ("in " ~ names[lang]) | tr }}</h2>', 'Mein Profil {{ ("in " ~ names[lang]) | tr }}</h2>'),
+    ('Your own text is on the left; write the translation on the right. Nothing is translated by a machine and nothing is sent anywhere: '
+     'what you write here is what goes on your CV. A box left empty keeps the original text. Names, dates of birth and contact details stay as they are.',
+     "Votre texte est à gauche ; écrivez la traduction à droite. Rien n'est traduit par une machine et rien n'est envoyé ailleurs : "
+     "ce que vous écrivez ici est ce qui figure sur votre CV. Une case laissée vide garde le texte d'origine. Les noms et les coordonnées restent tels quels.",
+     'Links steht Ihr eigener Text; schreiben Sie rechts die Übersetzung. Nichts wird maschinell übersetzt und nichts wird irgendwohin gesendet: '
+     'Was Sie hier schreiben, steht auf Ihrem Lebenslauf. Ein leeres Feld behält den Originaltext. Namen und Kontaktangaben bleiben unverändert.'),
+    ('Save the translation</button>', 'Enregistrer la traduction</button>', 'Übersetzung speichern</button>'),
+]
+
 TEMPLATES = {
     "base.html": _BASE, "_apply_prompt.html": _APPLY_PROMPT, "_chip.html": _CHIP, "dashboard.html": _DASHBOARD,
     "detail.html": _DETAIL, "add.html": _ADD, "report.html": _REPORT, "stats.html": _STATS, "cv.html": _CV,
     "settings.html": _SETTINGS, "_settings_form.html": _SETTINGS_FORM, "onboarding.html": _ONBOARDING,
+    "week.html": _WEEK, "translate.html": _TRANSLATE,
 }
 
-STRINGS = {   # English -> (French, German)
+STRINGS = {   # English -> (French, German); Italian is added below
+    # documents to send (docs.py)
+    "CV": ("CV", "Lebenslauf"), "Cover letter": ("Lettre de motivation", "Motivationsschreiben"),
+    "Work certificates": ("Certificats de travail", "Arbeitszeugnisse"),
+    "Diplomas and training certificates": ("Diplômes et attestations de formation", "Diplome und Ausbildungsnachweise"),
+    "References (names and phone numbers)": ("Références (noms et numéros de téléphone)", "Referenzen (Namen und Telefonnummern)"),
+    "Copy of residence or work permit": ("Copie du permis de séjour ou de travail", "Kopie der Aufenthalts- oder Arbeitsbewilligung"),
+    "Criminal-record extract": ("Extrait du casier judiciaire", "Strafregisterauszug"),
+    "Debt-register extract": ("Extrait de l'office des poursuites", "Betreibungsregisterauszug"),
+    "Salary expectations": ("Prétentions de salaire", "Lohnvorstellung"), "Photo": ("Photo", "Foto"),
+    # profile check (strength.py)
+    "Contact details complete": ("Coordonnées complètes", "Kontaktangaben vollständig"),
+    "E-mail, phone number and town: recruiters call, and they check how far you live.":
+        ("E-mail, téléphone et localité : les recruteurs appellent, et regardent à quelle distance vous habitez.",
+         "E-Mail, Telefonnummer und Wohnort: Personalverantwortliche rufen an und schauen, wie weit weg Sie wohnen."),
+    "A job title under your name": ("Un intitulé de poste sous votre nom", "Eine Berufsbezeichnung unter Ihrem Namen"),
+    "The title you are looking for, in the words job ads use.":
+        ("Le poste que vous cherchez, avec les mots des annonces.", "Die Stelle, die Sie suchen, in den Worten der Inserate."),
+    "A summary of 3 to 5 lines": ("Un résumé de 3 à 5 lignes", "Ein Kurzprofil von 3 bis 5 Zeilen"),
+    "Who you are, how many years in what, your strongest result. Shorter than 25 words says too little, longer than 110 isn't read.":
+        ("Qui vous êtes, combien d'années dans quel domaine, votre meilleur résultat. Moins de 25 mots, c'est trop peu ; plus de 110, on ne lit pas.",
+         "Wer Sie sind, wie viele Jahre in welchem Bereich, Ihr stärkstes Ergebnis. Unter 25 Wörtern sagt es zu wenig, über 110 wird es nicht gelesen."),
+    "At least 6 skills listed": ("Au moins 6 compétences listées", "Mindestens 6 Kompetenzen aufgeführt"),
+    "Skills are what the match score and recruiters' searches look for.":
+        ("Les compétences sont ce que cherchent le score de correspondance et les recruteurs.",
+         "Nach Kompetenzen suchen der Übereinstimmungs-Score und die Personalverantwortlichen."),
+    "Dates on every job": ("Des dates pour chaque emploi", "Daten bei jeder Stelle"),
+    "Month or year for each job; a job without dates raises questions.":
+        ("Mois ou année pour chaque emploi ; un emploi sans dates soulève des questions.",
+         "Monat oder Jahr bei jeder Stelle; eine Stelle ohne Daten wirft Fragen auf."),
+    "Your last jobs say what you did": ("Vos derniers emplois disent ce que vous avez fait", "Ihre letzten Stellen sagen, was Sie getan haben"),
+    "At least two points for each of your three most recent jobs.":
+        ("Au moins deux points pour chacun de vos trois derniers emplois.", "Mindestens zwei Punkte zu jeder Ihrer drei letzten Stellen."),
+    "Results with numbers": ("Des résultats chiffrés", "Ergebnisse mit Zahlen"),
+    "At least three points with a figure: how many people, clients, francs, percent, days. Numbers are what a reader remembers.":
+        ("Au moins trois points avec un chiffre : combien de personnes, de clients, de francs, de pour cent, de jours. Ce sont les chiffres que l'on retient.",
+         "Mindestens drei Punkte mit einer Zahl: wie viele Personen, Kunden, Franken, Prozent, Tage. Zahlen bleiben im Gedächtnis."),
+    "Education and training listed": ("Formation indiquée", "Aus- und Weiterbildung aufgeführt"),
+    "Diplomas, CFC, certificates, with the year. Foreign diplomas: add the Swiss equivalent if you have it.":
+        ("Diplômes, CFC, certificats, avec l'année. Diplômes étrangers : ajoutez l'équivalence suisse si vous l'avez.",
+         "Diplome, EFZ, Zertifikate, mit Jahr. Ausländische Diplome: Schweizer Gleichwertigkeit angeben, falls vorhanden."),
+    "Languages with their level": ("Les langues avec leur niveau", "Sprachen mit Niveau"),
+    "For example French (native), English (C1), German (A2). Almost every Swiss ad asks.":
+        ("Par exemple français (langue maternelle), anglais (C1), allemand (A2). Presque toutes les annonces suisses le demandent.",
+         "Zum Beispiel Französisch (Muttersprache), Englisch (C1), Deutsch (A2). Fast jedes Schweizer Inserat fragt danach."),
+    "CV ready in French": ("CV prêt en français", "Lebenslauf auf Französisch bereit"),
+    "CV ready in German": ("CV prêt en allemand", "Lebenslauf auf Deutsch bereit"),
+    "CV ready in Italian": ("CV prêt en italien", "Lebenslauf auf Italienisch bereit"),
+    "CV ready in English": ("CV prêt en anglais", "Lebenslauf auf Englisch bereit"),
+    "You search postings in this language: with a translated profile, the CV and letter for those jobs are written in it.":
+        ("Vous cherchez des annonces dans cette langue : avec un profil traduit, le CV et la lettre pour ces offres sont rédigés dans cette langue.",
+         "Sie suchen Inserate in dieser Sprache: Mit einem übersetzten Profil werden Lebenslauf und Brief für diese Stellen in ihr geschrieben."),
+    # translated profile (translate.html)
+    "in French": ("en français", "auf Französisch"), "in German": ("en allemand", "auf Deutsch"),
+    "in Italian": ("en italien", "auf Italienisch"), "in English": ("en anglais", "auf Englisch"),
+    "Job title": ("Intitulé de poste", "Berufsbezeichnung"), "Summary": ("Résumé", "Kurzprofil"), "Skill": ("Compétence", "Kompetenz"),
+    "Job": ("Emploi", "Stelle"), "Dates": ("Dates", "Daten"), "Point": ("Point", "Punkt"), "Education": ("Formation", "Ausbildung"),
+    "Heading of the last section": ("Titre de la dernière section", "Titel des letzten Abschnitts"), "Line": ("Ligne", "Zeile"),
+    # week summary and calendar feed (weekly.py, agenda.py)
+    "{n} new jobs this week": ("{n} nouvelles offres cette semaine", "{n} neue Stellen diese Woche"),
+    "Applications this month: {done} of {target}": ("Candidatures ce mois : {done} sur {target}", "Bewerbungen diesen Monat: {done} von {target}"),
+    "Assigned by the ORP, to apply: {n}": ("Assignations de l'ORP, à postuler : {n}", "Zuweisungen des RAV, noch zu bewerben: {n}"),
+    "Interviews in the next 7 days: {n}": ("Entretiens dans les 7 prochains jours : {n}", "Gespräche in den nächsten 7 Tagen: {n}"),
+    "Without an answer, to follow up: {n}": ("Sans réponse, à relancer : {n}", "Ohne Antwort, nachzufassen: {n}"),
+    "Interview: {title} — {company}": ("Entretien : {title} — {company}", "Gespräch: {title} — {company}"),
+    "ORP deadline: apply to {title} — {company}": ("Délai ORP : postuler à {title} — {company}", "RAV-Frist: bewerben auf {title} — {company}"),
+    "Follow up: {title} — {company}": ("Relancer : {title} — {company}", "Nachfassen: {title} — {company}"),
+    "Hand in the proofs of job search for {month}": ("Remettre les preuves de recherches de {month}", "Nachweise der Arbeitsbemühungen für {month} abgeben"),
+    "Job search, week {week}: {n} new jobs": ("Recherche d'emploi, semaine {week} : {n} nouvelles offres", "Stellensuche, Woche {week}: {n} neue Stellen"),
+    "Job search": ("Recherche d'emploi", "Stellensuche"),
     # statuses
     "new": ("nouvelles", "neu"), "shortlisted": ("à retenir", "gemerkt"), "applied": ("postulé", "beworben"),
     "interview": ("entretien", "Gespräch"), "offer": ("offre reçue", "Angebot"), "rejected": ("refus", "Absage"),
@@ -556,3 +758,10 @@ STRINGS = {   # English -> (French, German)
     "Senior / expert": ("Senior / expert", "Senior / Expertin, Experte"),
     "Lead / manager / head of": ("Responsable / cadre / direction", "Leitung / Führung"),
 }
+
+
+# ---- Italian: its own file, same English keys ------------------------------------------------
+from . import locales_it as _it  # noqa: E402
+
+TEMPLATES = {name: [e + (_it.TEMPLATES.get(name, {}).get(e[0], ""),) for e in entries] for name, entries in TEMPLATES.items()}
+STRINGS = {k: v + (_it.STRINGS.get(k, ""),) for k, v in STRINGS.items()}

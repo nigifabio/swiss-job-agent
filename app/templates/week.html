@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block body %}
+<h2 style="margin-top:0">My week <span class="muted">· week {{ w.week }}</span></h2>
+<div class="kpis">
+  <div class="kpi"><div class="v">{{ w.new }}</div><div class="l">new jobs in the last 7 days</div></div>
+  <div class="kpi"><div class="v">{{ w.applied | length }}</div><div class="l">applications this week</div></div>
+  <div class="kpi"><div class="v">{{ w.orp.done }} / {{ w.orp.target }}</div><div class="l">this month (ORP target)</div></div>
+  <div class="kpi"><div class="v">{{ w.orp.days_left }}</div><div class="l">days left in the month</div></div>
+</div>
+{% if w.interviews %}
+<div class="card"><strong>🎯 Interviews in the next 7 days</strong>
+  <table>{% for j in w.interviews %}<tr><td><a href="/job/{{ j.id }}">{{ j.title }}</a> — {{ j.company }}</td><td class="muted">{{ j.interview_at | replace("T", " ") }}</td></tr>{% endfor %}</table></div>
+{% endif %}
+{% if w.assigned %}
+<div class="card"><strong>📌 Assigned by the ORP, to apply</strong>
+  <table>{% for j in w.assigned %}<tr><td><a href="/job/{{ j.id }}">{{ j.title }}</a> — {{ j.company }}</td><td class="muted">{{ j.orp_deadline or "" }}</td></tr>{% endfor %}</table></div>
+{% endif %}
+<div class="card"><strong>★ The best new jobs of the week</strong>
+  {% if w.best %}<table>{% for j in w.best %}<tr><td><a href="/job/{{ j.id }}">{{ j.title }}</a> — {{ j.company }}{% if j.location %} · {{ j.location }}{% endif %}</td>
+    <td class="muted">{% if j.score is not none %}score {{ j.score }}{% endif %}</td></tr>{% endfor %}</table>
+  <p style="margin:10px 0 0"><a class="btn small" href="/jobs?status=new&amp;view=best">Open the best new jobs →</a></p>
+  {% else %}<p class="muted" style="margin-bottom:0">Nothing new this week. Widen the search in <a href="/settings">Settings</a>: more towns, more job titles.</p>{% endif %}
+</div>
+{% if w.waiting %}
+<div class="card"><strong>✉ No answer yet: time to follow up?</strong>
+  <table>{% for j in w.waiting[:8] %}<tr><td><a href="/job/{{ j.id }}#followup">{{ j.title }}</a> — {{ j.company }}</td><td class="muted">applied {{ j.days_waiting }} days ago</td></tr>{% endfor %}</table></div>
+{% endif %}
+{% if w.followups %}
+<div class="card"><strong>⏰ Follow-ups due this week</strong>
+  <table>{% for j in w.followups %}<tr><td><a href="/job/{{ j.id }}">{{ j.title }}</a> — {{ j.company }}</td><td class="muted">{{ j.followup_date }}</td></tr>{% endfor %}</table></div>
+{% endif %}
+<div class="card"><strong>✓ Applied this week</strong>
+  {% if w.applied %}<table>{% for j in w.applied %}<tr><td><a href="/job/{{ j.id }}">{{ j.title }}</a> — {{ j.company }}</td><td class="muted">{{ j.applied_date }}</td></tr>{% endfor %}</table>
+  {% else %}<p class="muted" style="margin-bottom:0">No application recorded this week yet.</p>{% endif %}
+  {% if w.orp.missing %}<p style="margin:10px 0 0">{{ w.orp.missing }} more application{{ 's' if w.orp.missing != 1 }} to reach this month's target.
+    <a href="/add?kind=spontaneous">+ spontaneous application</a></p>{% endif %}
+</div>
+<p class="muted">Want these dates in your phone's calendar? <a href="/settings#calendar">Add the calendar</a>.</p>
+{% endblock %}

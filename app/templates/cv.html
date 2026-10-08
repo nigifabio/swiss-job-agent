@@ -20,6 +20,32 @@
   </form>
 </div>
 
+{% if asked %}
+<div class="card" id="asked">
+  <h2 style="margin-top:0">Often asked in your jobs</h2>
+  <p class="muted">Skills that the {{ asked_of }} jobs found for you mention and that are not in your list. Do you have them?
+    Saying so re-ranks the list at once. Nothing is added to your CV unless your profile mentions it.</p>
+  {% for term, n in asked %}<span class="chip miss">{{ term }} <span class="muted">· {{ n }} job{{ 's' if n != 1 }}</span>
+    <form method="post" action="/skills" class="chip-actions"><input type="hidden" name="term" value="{{ term }}"><input type="hidden" name="next" value="/cv#asked">
+      <button name="action" value="have" title="I have this skill: count it from now on">+ I have it</button>
+      <button name="action" value="avoid" title="Push jobs that ask for this down the list">⛔ Avoid</button>
+      <button name="action" value="ignore" title="Stop suggesting this word">not relevant</button></form></span>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if check %}
+<div class="card" id="check">
+  <h2 style="margin-top:0">Profile check <span class="muted">· {{ check.done }} / {{ check.total }}</span></h2>
+  <div class="meter"><span style="width:{{ (100 * check.done / check.total) | round | int }}%"></span></div>
+  <ul class="checks">{% for r in check.rows %}
+    <li><span class="st">{{ "✓" if r.ok else "○" }}</span><span class="{{ 'muted' if r.ok }}">{{ r.label | tr }}</span>
+      {% if not r.ok %}<div class="muted" style="margin-left:22px">{{ r.hint | tr }}{% if r.link %} <a href="{{ r.link }}">Translate my profile →</a>{% endif %}</div>{% endif %}</li>{% endfor %}
+  </ul>
+  {% if check.done < check.total %}<form method="post" action="/onboarding/edit" style="margin-top:10px"><button class="ghost" type="submit">Edit my profile</button></form>{% endif %}
+</div>
+{% endif %}
+
 {% if versions %}
 <div class="card">
   <strong>CV languages</strong>
@@ -27,6 +53,8 @@
   {% for lang, state in versions | dictsort %}
     <span class="chip {{ 'have' if state.startswith('ok') else 'miss' }}">{{ lang | upper }} · {{ state }}</span>
   {% endfor %}
+  <p style="margin:8px 0 0"><span class="muted">Write your profile in another language, next to the original:</span>
+    {% for l in translatable %}<a class="btn small ghost" href="/profile/translate/{{ l }}">{{ l | upper }}</a> {% endfor %}</p>
 </div>
 {% endif %}
 

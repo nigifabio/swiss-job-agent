@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block body %}
+<p><a href="/cv">← back to CV</a></p>
+{% if saved >= 0 %}<div class="banner">Saved: {{ saved }} of {{ total }} texts translated. CVs and letters for jobs posted in this language now use them.</div>{% endif %}
+<div class="card">
+  {% set names = {"fr": "French", "de": "German", "it": "Italian", "en": "English"} %}
+  <h2 style="margin-top:0">My profile {{ ("in " ~ names[lang]) | tr }}</h2>
+  <p class="muted">Your own text is on the left; write the translation on the right. Nothing is translated by a machine and nothing is sent anywhere:
+    what you write here is what goes on your CV. A box left empty keeps the original text. Names, dates of birth and contact details stay as they are.</p>
+  <form method="post" action="/profile/translate/{{ lang }}">
+    {% for name, label, text, long in fields %}
+    <div class="pair">
+      <div><div class="k">{{ label | tr }}</div><div class="orig">{{ text }}</div></div>
+      <div>{% if long %}<textarea name="{{ name }}" rows="{{ [2, (text | length / 60) | round(0, 'ceil') | int] | max }}" aria-label="{{ label | tr }}">{{ done.get(name, "") }}</textarea>
+        {% else %}<input name="{{ name }}" value="{{ done.get(name, '') }}" aria-label="{{ label | tr }}">{% endif %}</div>
+    </div>
+    {% endfor %}
+    <p style="margin-top:14px"><button type="submit">Save the translation</button></p>
+  </form>
+</div>
+{% endblock %}

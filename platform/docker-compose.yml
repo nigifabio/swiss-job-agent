@@ -43,11 +43,14 @@ services:
     environment:
       GATEWAY_CONTAINER: jobplatform-gateway
       ARCHIVE_DIR: /archives
+      BACKUP_DIR: /backups
     # root inside the container only to use the Docker socket; no capabilities, not published
     user: "0:0"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - archives:/archives
+      # nightly backups of every workspace: a folder of the host (point it at a NAS mount to keep them off this machine)
+      - ${BACKUP_HOST_DIR:-./backups}:/backups
     networks: [platform]
     mem_limit: 256m
     healthcheck:

@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS requests (
   email TEXT PRIMARY KEY, name TEXT, note TEXT, status TEXT NOT NULL DEFAULT 'pending',
   created_at TEXT NOT NULL, decided_at TEXT, decided_by TEXT);
 CREATE TABLE IF NOT EXISTS audit (ts TEXT NOT NULL, actor TEXT, action TEXT, detail TEXT);
+CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT);
 """
 
 
@@ -45,6 +46,25 @@ def init():
             c.execute("ALTER TABLE invites ADD COLUMN max_uses INTEGER NOT NULL DEFAULT 1")
             c.execute("ALTER TABLE invites ADD COLUMN uses INTEGER NOT NULL DEFAULT 0")
             c.execute("UPDATE invites SET uses=1 WHERE used_at IS NOT NULL")
+        if "last_seen" not in {r["name"] for r in c.execute("PRAGMA table_info(tenants)").fetchall()}:
+            c.execute("ALTER TABLE tenants ADD COLUMN last_seen TEXT")
+
+
+def touch(slug):
+    """The owner just used their workspace (kept to the minute: the admin page shows who is still active)."""
+    with conn() as c:
+        c.execute("UPDATE tenants SET last_seen=? WHERE slug=?", (now(), slug))
+
+
+def get_kv(k, default=""):
+    with conn() as c:
+        r = c.execute("SELECT v FROM kv WHERE k=?", (k,)).fetchone()
+        return r["v"] if r else default
+
+
+def set_kv(k, v):
+    with conn() as c:
+        c.execute("INSERT INTO kv (k, v) VALUES (?, ?) ON CONFLICT(k) DO UPDATE SET v=excluded.v", (k, str(v)))
 
 
 def audit(actor, action, detail=""):

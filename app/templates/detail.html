@@ -103,6 +103,7 @@
     <div class="row">
       <div><label><input type="checkbox" name="orp_assigned" value="1" style="width:auto" {% if job.orp_assigned %}checked{% endif %}> Assigned by the ORP (assignation)</label></div>
       <div><label>ORP deadline to apply</label><input name="orp_deadline" type="date" value="{{ job.orp_deadline or '' }}"></div>
+      <div><label>Interview (date and time)</label><input name="interview_at" type="datetime-local" value="{{ job.interview_at or '' }}"></div>
     </div>
     <label>Notes</label>
     <textarea name="notes" rows="4">{{ job.notes or '' }}</textarea>
@@ -110,6 +111,19 @@
   </form>
 </div>
 
+{% if job.status not in ("discarded", "rejected") %}
+<div class="card" id="docs">
+  <strong>Documents to send</strong>
+  <span class="muted">· {{ docs | selectattr("done") | list | length }} ready · tick what is ready for this application</span>
+  <form method="post" action="/job/{{ job.id }}/docs">
+    <div class="doclist">{% for d in docs %}
+      <label><input type="checkbox" name="docs" value="{{ d.key }}" {{ 'checked' if d.done }}> {{ d.label | tr }}{% if d.asked and d.key not in ("cv", "letter") %} <span class="flag">asked in the posting</span>{% endif %}</label>{% endfor %}
+    </div>
+    <button class="ghost small" type="submit">Save the list</button>
+    <span class="muted">Swiss employers usually expect the full file: CV, letter, work certificates and diplomas, in one PDF if you can.</span>
+  </form>
+</div>
+{% endif %}
 {% if followup_text %}
 <div class="card" id="followup">
   <strong>Follow-up message</strong>

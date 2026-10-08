@@ -28,6 +28,25 @@
     Delete archives the data (kept 30 days on the host), then removes everything.</p>
 </div>
 <div class="card">
+  <h3 style="margin-top:0">Activity and scan health</h3>
+  {% if problems %}<ul class="bad" style="margin:0 0 10px;padding-left:18px">{% for p in problems %}<li>{{ p }}</li>{% endfor %}</ul>
+  {% else %}<p class="ok" style="margin:0 0 10px">Nothing needs a look.</p>{% endif %}
+  <table><tr><th>Workspace</th><th>Last used</th><th>Last scan (UTC)</th><th>New</th><th>Applied</th><th>All jobs</th><th>Sources at the last scan</th></tr>
+  {% for t in tenants %}<tr>
+    <td><code>{{ t.slug }}</code></td><td>{{ (t.last_seen or "never")[:16] | replace("T", " ") }}</td>
+    {% if t.ops %}<td>{{ (t.ops.last_scan_at or "none yet")[:16] | replace("T", " ") }}{% if t.ops.scanning %} · scanning{% endif %}{% if not t.ops.setup_done %}<br><span class="muted">setup not finished</span>{% endif %}</td>
+    <td>{{ t.ops.jobs.get("new", 0) }}</td><td>{{ t.applied }}</td><td>{{ t.total }}</td>
+    <td>{% for src, r in t.ops.sources | dictsort %}<span class="{{ 'bad' if r.errors else '' }}">{{ src }} {{ r.count }}{% if r.errors %} ⚠ {{ r.kind }}{% endif %}</span>{% if not loop.last %} · {% endif %}{% endfor %}</td>
+    {% else %}<td colspan="5" class="muted">{{ "paused" if t.status != "active" else "no totals (starting, or not upgraded yet)" }}</td>{% endif %}
+  </tr>{% endfor %}
+  </table>
+  <p class="muted">Totals only. Each workspace is asked how many jobs it holds, when it last scanned and which sources failed; no job title,
+    company, name or text leaves a workspace, and there is still no page to look inside one.
+    {% if backup is none %}Backup state unknown (provisioner unreachable).{% elif backup.hour is none %}Nightly backup is off (BACKUP_HOUR).
+    {% elif backup.at %}Last backup {{ backup.at[:16] | replace("T", " ") }} UTC: {{ backup.ok | length }} archive{{ "s" if backup.ok | length != 1 }}, {{ (backup.bytes / 1048576) | round(1) }} MB{% if backup.failed %}, <span class="bad">failed: {{ backup.failed | join(", ") }}</span>{% endif %}.
+    {% else %}No backup yet: the first one runs tonight at {{ backup.hour }}:00 UTC.{% endif %}</p>
+</div>
+<div class="card">
   <h3 style="margin-top:0">Account requests{% set waiting = requests | selectattr("status", "equalto", "pending") | list %}{% if waiting %} ({{ waiting | length }} waiting){% endif %}</h3>
   {% if not notify_on %}<p class="muted">No notification is configured (NOTIFY_WEBHOOK in platform/.env): new requests only show here.</p>{% endif %}
   {% if requests %}<table><tr><th>When</th><th>Who</th><th>Message</th><th>State</th><th></th></tr>

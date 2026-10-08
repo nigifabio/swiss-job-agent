@@ -169,6 +169,8 @@ def test_every_link_download_and_form_works(env, monkeypatch):
             p = urlparse(href)
             if p.scheme in ("http", "https"):
                 external.append((url, a))
+            elif p.scheme == "webcal":                                # "add to my calendar": the feed (test_more)
+                assert "/calendar/" in href and href.endswith(".ics"), href
             elif p.scheme:
                 pytest.fail(f"{url}: unsafe link {href}")          # javascript:, data:, ...
             elif not href.startswith("#"):

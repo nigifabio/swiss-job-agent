@@ -230,7 +230,9 @@ def cv_note():
     a, b = {"fr": ("Dans la langue de l'annonce quand votre profil existe dans cette langue",
                    " ; résumé et ordre des points choisis pour cette offre, à partir de votre propre profil."),
             "de": ("In der Sprache des Inserats, wenn Ihr Profil in dieser Sprache vorliegt",
-                   "; Kurzprofil und Reihenfolge der Punkte für diese Stelle gewählt, aus Ihrem eigenen Profil.")}.get(
+                   "; Kurzprofil und Reihenfolge der Punkte für diese Stelle gewählt, aus Ihrem eigenen Profil."),
+            "it": ("Nella lingua dell'annuncio quando il tuo profilo esiste in quella lingua",
+                   "; riassunto e ordine dei punti scelti per questa offerta, a partire dal tuo profilo.")}.get(
         i18n.current(), ("In the posting's language when your profile has a version in it",
                          "; summary and bullet order chosen for this job, from your own profile."))
     return a + where + b

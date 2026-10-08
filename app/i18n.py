@@ -1,4 +1,4 @@
-"""Interface languages: English (the templates), French and German.
+"""Interface languages: English (the templates), French, German and Italian.
 
 Templates are written in English. For another language, each template's source is rewritten when it is
 loaded: every fragment listed for that template in locales.TEMPLATES (English as it stands in the file,
@@ -14,7 +14,7 @@ import re
 
 from jinja2 import BaseLoader, Environment, FileSystemLoader, select_autoescape
 
-LANGS = ("en", "fr", "de")
+LANGS = ("en", "fr", "de", "it")
 _current = contextvars.ContextVar("ui_lang", default="en")
 
 
@@ -42,13 +42,14 @@ def _pattern(fragment):
 
 
 def translate_source(source, entries, lang):
-    """Template source in `lang`. entries: [(english, french, german)], longest English first."""
+    """Template source in `lang`. entries: [(english, french, german, italian)], longest English first."""
     if lang == "en":
         return source
     idx = LANGS.index(lang)
     for entry in sorted(entries, key=lambda e: -len(e[0])):
-        target = entry[idx]
-        source = _pattern(entry[0]).sub(lambda m, t=target: t, source)
+        target = entry[idx] if len(entry) > idx else ""
+        if target:                                  # no translation: the English stays
+            source = _pattern(entry[0]).sub(lambda m, t=target: t, source)
     return source
 
 
@@ -74,7 +75,8 @@ def tr(text, strings=None, lang=None):
     if strings is None:
         from .locales import STRINGS as strings
     hit = strings.get(text)
-    return hit[LANGS.index(lang) - 1] if hit else text
+    i = LANGS.index(lang) - 1
+    return (hit[i] if hit and len(hit) > i else "") or text
 
 
 def environments(directory, catalog, strings=None):

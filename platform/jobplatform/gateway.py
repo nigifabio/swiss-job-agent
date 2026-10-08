@@ -5,24 +5,29 @@ tenant you reach comes only from that verified email, so nobody can address some
 space. The tenant app checks the same JWT again (ALLOWED_EMAILS = its owner).
 
 /welcome            public home page (what this is, link to the source): the only page without a login
+/welcome/cal/...    a person's calendar feed: no login either (a calendar app can't), the long key in
+                    the address is checked by that person's own workspace
 /_platform/...      gateway pages: invite, account (export / delete my data), admin
 everything else     forwarded to the caller's own tenant container
 """
+import concurrent.futures
 import contextlib
 import hashlib
 import hmac
 import os
 import re
+import threading
+import time
 import urllib.parse
 
 import httpx
 import jwt
 from fastapi import FastAPI, Form, Request
-from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse, Response, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from starlette.background import BackgroundTask
 
-from . import db, i18n, locales, notify
+from . import db, health, i18n, locales, notify
 
 
 class Config:
@@ -39,6 +44,7 @@ class Config:
         self.max_body = int(e("MAX_BODY_MB", "30")) * 1024 * 1024
         self.project_url = e("PROJECT_URL", "https://github.com/nigifabio/swiss-job-agent")
         self.contact = e("CONTACT_EMAIL", "").strip()      # shown on the home page to ask for an invite
+        self.health_hours = float(e("HEALTH_CHECK_HOURS", "6") or 0)
 
 
 C = Config()
@@ -70,6 +76,8 @@ def _startup():
         prov("POST", "/sync")                  # re-join tenant networks after a gateway restart
     except Exception as e:  # noqa: BLE001
         print(f"[gateway] provisioner sync failed: {e}")
+    if C.health_hours > 0 and notify.configured():
+        threading.Thread(target=_watch, daemon=True).start()
 
 
 def user_email(request):
@@ -143,6 +151,9 @@ async def gate(request: Request, call_next):
         # the visitor reached Cloudflare over plain http: everything here is https only
         host = urllib.parse.urlsplit(C.public_url).netloc or request.headers.get("host", "")
         return RedirectResponse(f"https://{host}{path}" + (f"?{request.url.query}" if request.url.query else ""), status_code=308)
+    if path.startswith(PUBLIC_HOME + "/cal/") and request.method == "GET":
+        request.state.email = ""                 # a calendar app fetching a feed: no identity, the key is the access
+        return await call_next(request)
     if path == PUBLIC_HOME and request.method in ("GET", "HEAD"):
         # the one public page: static text, shows the visitor's email only if they are signed in
         request.state.email = identify(request) or ""
@@ -195,6 +206,7 @@ async def forward(request, email):
         return home(request, 403)
     if t["status"] != "active":
         return message(request, "Workspace paused", "Your workspace is paused. Contact the administrator.", 403)
+    _seen(t["slug"])
     if int(request.headers.get("content-length") or 0) > C.max_body:
         return PlainTextResponse("Upload too large", status_code=413)
     url = tenant_url(t["slug"]) + request.url.path + (f"?{request.url.query}" if request.url.query else "")
@@ -216,6 +228,53 @@ async def forward(request, email):
         if k.lower() not in HOP and k.lower() != "content-encoding":
             out.headers.append(k, v)
     return out
+
+
+_last_touch = {}
+
+
+def _seen(slug):
+    """Note that the owner is using their workspace, at most once every 10 minutes."""
+    if time.time() - _last_touch.get(slug, 0) > 600:
+        _last_touch[slug] = time.time()
+        db.touch(slug)
+
+
+# ---- calendar feeds ----------------------------------------------------------------------------
+CAL_SLUG = re.compile(r"^[a-z0-9][a-z0-9-]{1,30}[a-z0-9]$")
+CAL_NAME = re.compile(r"^[A-Za-z0-9_-]{20,80}\.ics$")
+_cal_misses = {}          # caller address -> times of wrong keys (guessing is hopeless, and cut short anyway)
+
+
+def _cal_blocked(who, miss=False):
+    now = time.time()
+    recent = [t for t in _cal_misses.get(who, []) if now - t < 600]
+    if miss:
+        recent.append(now)
+    _cal_misses[who] = recent
+    if len(_cal_misses) > 5000:
+        _cal_misses.clear()
+    return len(recent) > 20
+
+
+@app.get(PUBLIC_HOME + "/cal/{slug}/{name}")
+async def calendar_feed(request: Request, slug: str, name: str):
+    """Pass a calendar feed request to its workspace, which checks the key. Only this one address
+    of a workspace can be reached without signing in, and it only answers with dates."""
+    who = request.headers.get("cf-connecting-ip") or (request.client.host if request.client else "")
+    t = db.tenant(slug) if CAL_SLUG.match(slug) and CAL_NAME.match(name) else None
+    if not t or t["status"] != "active" or _cal_blocked(who):
+        _cal_blocked(who, miss=True)
+        return PlainTextResponse("Not found", status_code=404)
+    host = urllib.parse.urlsplit(C.public_url).netloc or request.headers.get("host", "")
+    try:
+        r = await http().get(tenant_url(slug) + f"/calendar/{name}", headers={"x-forwarded-host": host, "x-forwarded-proto": "https"})
+    except httpx.TransportError:
+        return PlainTextResponse("Try again later", status_code=503)
+    if r.status_code != 200:
+        _cal_blocked(who, miss=True)
+        return PlainTextResponse("Not found", status_code=404)
+    return Response(r.content, media_type="text/calendar; charset=utf-8", headers={"Cache-Control": "private, max-age=900"})
 
 
 @app.api_route(PUBLIC_HOME, methods=["GET", "HEAD"], response_class=HTMLResponse)   # HEAD: link previews, monitors
@@ -384,23 +443,76 @@ def require_admin(request):
         raise PermissionError("admins only")
 
 
-@app.get("/_platform/admin", response_class=HTMLResponse)
-def admin(request: Request, new: str = ""):
-    require_admin(request)
+def ops_token(slug):
+    """Same derivation as the provisioner's: what a workspace expects before it gives its totals."""
+    return hmac.new(C.token.encode(), f"ops:{slug}".encode(), hashlib.sha256).hexdigest()
+
+
+def tenant_summary(slug):
+    """A workspace's totals (how many postings per list, last scan, sources that failed), or {}.
+    Counts only: the workspace has no address that gives the operator a title or a name."""
+    try:
+        r = httpx.get(tenant_url(slug) + "/ops/summary", headers={"Authorization": f"Bearer {ops_token(slug)}"}, timeout=4)
+        return r.json() if r.status_code == 200 else {}
+    except Exception:  # noqa: BLE001  (not running, or still on a version without totals)
+        return {}
+
+
+def overview():
+    """(rows, orphans, error): every workspace with its containers' state and its totals."""
     try:
         live = {t["slug"]: t for t in prov("GET", "/tenants")}
         live_err = ""
     except Exception as e:  # noqa: BLE001
         live, live_err = {}, str(e)
+    tenants = db.tenants()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
+        ops = dict(zip([t["slug"] for t in tenants],
+                       pool.map(lambda t: tenant_summary(t["slug"]) if t["status"] == "active" else {}, tenants)))
     rows = []
-    for t in db.tenants():
-        rows.append(dict(t, aliases=db.aliases(t["slug"]),
+    for t in tenants:
+        o = ops.get(t["slug"]) or {}
+        jobs = o.get("jobs") or {}
+        rows.append(dict(t, aliases=db.aliases(t["slug"]), ops=o, total=sum(jobs.values()),
+                         applied=sum(jobs.get(k, 0) for k in ("applied", "interview", "offer", "rejected")),
                          **{k: live.get(t["slug"], {}).get(k, "?") for k in ("web", "sched", "image")}))
-    orphans = [s for s in live if not db.tenant(s)]
+    return rows, [s for s in live if not db.tenant(s)], live_err
+
+
+def backups():
+    try:
+        return prov("GET", "/backups")
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _watch():
+    """Every HEALTH_CHECK_HOURS: tell the operator (NOTIFY_WEBHOOK) when the list of problems changed."""
+    time.sleep(120)
+    while True:
+        try:
+            rows, _, err = overview()
+            lines = ([f"provisioner unreachable: {err[:80]}"] if err else []) + health.problems(rows, backups())
+            digest = "\n".join(lines)
+            if digest != db.get_kv("health_digest"):
+                db.set_kv("health_digest", digest)
+                if digest:
+                    notify.admins(prov, "🇨🇭 Job platform: needs a look", f"{digest}\n{C.public_url}/_platform/admin")
+        except Exception as e:  # noqa: BLE001
+            print(f"[health] check failed: {type(e).__name__}: {str(e)[:160]}")
+        time.sleep(max(600, C.health_hours * 3600))
+
+
+@app.get("/_platform/admin", response_class=HTMLResponse)
+def admin(request: Request, new: str = ""):
+    require_admin(request)
+    rows, orphans, live_err = overview()
+    bk = backups()
     link = f"{C.public_url or ''}/_platform/invite/{new}" if new else ""
     return page(request, "admin.html", {"tenants": rows, "orphans": orphans, "invites": db.invites(),
                                         "requests": db.requests(), "notify_on": notify.configured(),
                                         "audit": db.audit_log(30), "new_link": link, "live_err": live_err,
+                                        "backup": bk, "problems": health.problems(rows, bk),
                                         "max": C.max_tenants})
 
 
