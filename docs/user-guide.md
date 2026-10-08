@@ -142,6 +142,10 @@ those dates (job titles and companies, nothing else); **New address** makes the 
   **★ Save as default letter** makes it the one offered first. The company, the job title, the place and the date
   are stored as `{company}`, `{title}`, `{location}` and `{date}` and filled in for the next job. **My letters**
   (same tab as the CV versions) lists them; everyone gets one base letter written from their own profile to adapt.
+  **The page** is laid out as a Swiss letter: your address top left, the company below it on the right, the subject, the
+  text, and at the foot your name on the left with the place and date on the right. The type and spacing grow or shrink so
+  that the letter fills one page. This works by what each block looks like, so an edited letter still lays out.
+  The letter written for a job also names what you work with, your training and your languages when your profile lists them.
   The letter written for a job now has six short paragraphs: who you are and what you apply for, your background
   in your own words, what you bring for this posting, examples, why you want to join, and an invitation to meet.
 - **Photo** (CV page): upload a portrait once; it is placed at the top right of every CV made afterwards.

@@ -32,7 +32,7 @@ def test_letter_body_is_built_from_profile_facts(env):
     body = env.compose.letter_body(PROFILE, JOB, "en")
     paras = body.split("\n\n")
     assert paras[0] == "I am applying for the DevOps Engineer position at Acme SA."
-    assert paras[1] == "Cloud and infrastructure architect with 14 years of experience. Background in security governance and ISO 27001."   # own words
+    assert paras[1] == "Cloud and infrastructure architect with 14 years of experience. Background in security governance and ISO 27001. Works in English and Italian."   # own words
     assert paras[2] == "In my current role as Technical Manager at GTT, my experience covers the key points of your posting: AWS and Terraform."
     assert "– Automated DevOps infrastructure across AWS and Azure with Terraform." in paras[3]
     assert paras[4].startswith("I would now like to put this experience and my motivation to work at Acme SA")

@@ -573,3 +573,43 @@ def test_improve_page_says_what_the_postings_ask_for(env, monkeypatch):
     for lang, word in (("fr", "Les compétences qui vous manquent le plus"), ("de", "Kompetenzen, die Ihnen am häufigsten fehlen"), ("it", "Le competenze che ti mancano di più")):
         assert word in c.get("/improve", headers={"accept-language": lang}).text
     assert "Allemand" in c.get("/improve", headers={"accept-language": "fr"}).text
+
+
+def test_letter_is_fuller_and_laid_out_like_a_swiss_letter(env):
+    from pypdf import PdfReader
+    profile = dict(PROFILE, expertise=["ArchiCAD", "AutoCAD", "Revit", "Plans d'exécution"], education=["CFC de dessinatrice, Lausanne, 2016"],
+                   extras_title="Langues", extras=["Français (langue maternelle)", "Anglais (B2)"],
+                   contact={"email": "sam@example.org", "phone": "+41 79 000 00 00", "location": "Pully, Vaud"})
+    Path(env.config.PROFILE_PATH).write_text(json.dumps(profile))
+    job = {"id": 7, "title": "Dessinatrice en bâtiment", "company": "Atelier Dupont SA", "location": "Lausanne", "description": "Plans et détails."}
+    body = env.compose.letter_body(profile, job, "fr")
+    assert "Au quotidien, je travaille notamment avec ArchiCAD, AutoCAD, Revit et Plans d'exécution." in body
+    assert "Côté formation : CFC de dessinatrice, Lausanne, 2016. Je parle Français (langue maternelle) et Anglais (B2)." in body
+    assert len(body.split("\n\n")) >= 7
+    text, _ = env.letter.write(profile, job)
+    lay = env.letter.layout(text, profile["name"])
+    assert lay["sender"].startswith("Sam Test\nPully, Vaud") and lay["recipient"] == "Atelier Dupont SA\nLausanne"
+    assert "Dessinatrice en bâtiment" in lay["subject"] and lay["signature"] == "Sam Test" and lay["annex"]
+    assert lay["date"].startswith("Pully, ") and str(datetime.date.today().year) in lay["date"]
+    assert len(lay["body"]) >= 6 and not any(lay["date"] in b for b in lay["body"])
+    # an older letter (date third) and an edited one (extra paragraph, date gone) still lay out
+    old = "Sam Test\nPully\n\nAcme SA\nLausanne\n\nPully, le 8 octobre 2026\n\nObjet : Candidature\n\nMadame, Monsieur,\n\nTexte.\n\nSalutations.\n\nSam Test\n\nAnnexe : CV"
+    o = env.letter.layout(old, "Sam Test")
+    assert (o["recipient"], o["date"], o["subject"], o["signature"]) == ("Acme SA\nLausanne", "Pully, le 8 octobre 2026", "Objet : Candidature", "Sam Test")
+    assert o["body"] == ["Madame, Monsieur,", "Texte.", "Salutations."]
+    e = env.letter.layout("Objet : Candidature\n\nBonjour,\n\nUn seul paragraphe.", "Sam Test")
+    assert e["sender"] == "" and e["subject"] == "Objet : Candidature" and e["body"] == ["Bonjour,", "Un seul paragraphe."]
+    # on the page: the company on the right under the sender, the signature and the date on one line at the foot
+    out = env.letter.pdf(profile, job, text, str(Path(env.config.DB_PATH).parent / "l.pdf"))
+    pages = PdfReader(out).pages
+    assert len(pages) == 1
+    spots = []
+    pages[0].extract_text(visitor_text=lambda t, cm, tm, fd, fs: spots.append((t.strip(), round(cm[4] + tm[4]), round(cm[5] + tm[5]))) if t.strip() else None)
+    at = lambda start: [(x, y) for t, x, y in spots if t.startswith(start)]            # noqa: E731
+    sender, company, date = at("Sam Test")[0], at("Atelier Dupont SA")[0], at("Pully, ")[-1]
+    assert company[0] > sender[0] + 200 and company[1] < sender[1]                     # the company: right of, and below, the sender
+    sign = at("Sam Test")[-1]
+    assert sign[1] == date[1] and sign[0] == sender[0] and date[0] > 350               # one line at the foot: signature left, date right
+    assert date[1] < min(y for t, x, y in spots if t.startswith("Kind regards")) and date[1] < 260      # ... low on the page
+    # a long letter still fits one page (smaller type), a short one uses bigger type
+    assert len(PdfReader(env.letter.pdf(profile, job, text.replace("Plans", "Plans " + "et détails constructifs soignés " * 60), out)).pages) <= 2

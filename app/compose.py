@@ -38,6 +38,7 @@ WORDS = {
            "why": "I would now like to put this experience and my motivation to work {where}, in a team where I can contribute "
                   "from the start and keep developing my skills.",
            "where": "at {}", "where_none": "in your company",
+           "tools": "Day to day I work with {}.", "training": "My training: {}.", "languages": "I speak {}.",
            "close": "I would be glad to meet you and present my background and skills in more detail. "
                     "Thank you for considering my application."},
     "fr": {"strengths": "Atouts directement liés à ce poste : {}.", "and": "et",
@@ -49,6 +50,7 @@ WORDS = {
            "why": "Je souhaite aujourd'hui mettre cette expérience et ma motivation au service {where}, au sein d'une équipe où je "
                   "pourrai contribuer dès le départ tout en continuant à développer mes compétences.",
            "where": "de {}", "where_none": "de votre entreprise",
+           "tools": "Au quotidien, je travaille notamment avec {}.", "training": "Côté formation : {}.", "languages": "Je parle {}.",
            "close": "Je serais heureux·se de vous rencontrer afin de vous présenter plus en détail mon parcours et mes compétences. "
                     "Je vous remercie de l'attention portée à ma candidature."},
     "it": {"strengths": "Punti di forza per questo ruolo: {}.", "and": "e",
@@ -60,6 +62,7 @@ WORDS = {
            "why": "Desidero oggi mettere questa esperienza e la mia motivazione al servizio {where}, in un team in cui poter "
                   "contribuire fin da subito e continuare a sviluppare le mie competenze.",
            "where": "di {}", "where_none": "della vostra azienda",
+           "tools": "Nel lavoro quotidiano utilizzo in particolare {}.", "training": "La mia formazione: {}.", "languages": "Parlo {}.",
            "close": "Sarei lieto/a di incontrarvi per presentarvi più in dettaglio il mio percorso e le mie competenze. "
                     "Vi ringrazio per l'attenzione dedicata alla mia candidatura."},
     "de": {"strengths": "Für diese Stelle besonders relevant: {}.", "and": "und",
@@ -71,6 +74,7 @@ WORDS = {
            "why": "Diese Erfahrung und meine Motivation möchte ich nun {where} einbringen, in einem Team, in dem ich von Anfang an "
                   "mitwirken und meine Kompetenzen weiterentwickeln kann.",
            "where": "bei {}", "where_none": "in Ihrem Unternehmen",
+           "tools": "Im Arbeitsalltag arbeite ich insbesondere mit {}.", "training": "Meine Ausbildung: {}.", "languages": "Ich spreche {}.",
            "close": "Gerne stelle ich Ihnen meinen Werdegang und meine Kompetenzen in einem persönlichen Gespräch näher vor. "
                     "Ich danke Ihnen für die Prüfung meiner Bewerbung."},
 }
@@ -194,6 +198,26 @@ def summary(profile, job, lang):
     return " ".join(out)
 
 
+_LANG_LABEL = re.compile(r"langu|sprach|lingu", re.I)
+_LANG_ITEM = re.compile(r"^[^\W\d_]+(?:[ -][^\W\d_]+)?\s*\([^()]{1,30}\)$")          # "Français (C2)", "Anglais (langue maternelle)"
+
+
+def _languages(profile):
+    """The languages the profile lists with a level, wherever they are among its last lines:
+    one per line under a "Languages" heading, or on a line of their own ("Langues : Français (C2) • Anglais (C1)")."""
+    out, titled = [], bool(_LANG_LABEL.search(profile.get("extras_title") or ""))
+    for line in profile.get("extras") or []:
+        label, _, rest = line.partition(":")
+        if rest and len(label) <= 25:
+            if not _LANG_LABEL.search(label):
+                continue                      # "Logiciels : ...", "Permis : ..."
+            line = rest
+        elif not titled:
+            continue
+        out += [p.strip().rstrip(".") for p in re.split(r"[•·;|]|,(?![^()]*\))", line) if _LANG_ITEM.match(p.strip().rstrip("."))]
+    return out[:5]
+
+
 def letter_body(profile, job, lang):
     lang = lang if lang in WORDS else "en"
     w = WORDS[lang]
@@ -209,16 +233,30 @@ def letter_body(profile, job, lang):
              and headline.lower() not in title.lower() and title.lower() not in headline.lower())  # nor the job's own title again
     paras = [w["open_as"].format(headline=headline, title=title, at_company=at_company) if plain
              else w["open"].format(title=title, at_company=at_company)]
-    about = " ".join(_sentences(profile.get("summary"))[:2])          # who I am, in the person's own words
+    about = " ".join(_sentences(profile.get("summary"))[:3])          # who I am, in the person's own words
     if len(about.split()) >= 6:
         paras.append(about)
     if skills:
         paras.append(w["current"].format(role_at=role_at, skills=_join(skills, lang)))
     else:
         paras.append(w["current_noskill"].format(role_at=role_at))
-    top = [b for _, b, _ in rank_facts(profile, job)[:3]]
+    said = " ".join(skills).lower()
+    # what the person works with: only when the profile lists them as names (a tool, a method), not as whole sentences
+    tools = [e.strip() for e in (profile.get("expertise") or []) if e.strip() and len(e) <= 32 and len(e.split()) <= 4 and e.lower() not in said][:5]
+    if len(tools) >= 2:
+        paras.append(w["tools"].format(_join(tools, lang)))
+    top = [b for _, b, _ in rank_facts(profile, job)[:4]]
     if top:
         paras.append(w["examples"] + "\n" + "\n".join(f"– {b.rstrip('.')}." for b in top))
+    facts = []                                                         # training and languages, as the profile states them
+    edu = [e.strip().rstrip(".") for e in (profile.get("education") or []) if e.strip()][:2]
+    if edu:
+        facts.append(w["training"].format(" ; ".join(edu) if lang == "fr" else "; ".join(edu)))
+    spoken = _languages(profile)
+    if spoken:
+        facts.append(w["languages"].format(_join(spoken, lang)))
+    if facts:
+        paras.append(" ".join(facts))
     paras.append(w["why"].format(where=w["where"].format(company) if company else w["where_none"]))
     paras.append(w["close"])
     return "\n\n".join(paras)
