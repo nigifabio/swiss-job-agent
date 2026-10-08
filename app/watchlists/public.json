@@ -28,5 +28,60 @@
     "company": "SIG Genève",
     "ats": "successfactors",
     "slug": "jobs.sig-ge.ch"
+  },
+  {
+    "company": "CHUV",
+    "ats": "hireserve",
+    "slug": "recrutement.chuv.ch/5352/Lausanne"
+  },
+  {
+    "company": "Université de Genève",
+    "ats": "hireserve",
+    "slug": "jobs.unige.ch/1/Genève"
+  },
+  {
+    "company": "État de Genève",
+    "ats": "gech",
+    "slug": "www.ge.ch/offres-emploi-etat-geneve/liste-offres"
+  },
+  {
+    "company": "HUG",
+    "ats": "smartrecruiters",
+    "slug": "HUG"
+  },
+  {
+    "company": "imad (soins à domicile Genève)",
+    "ats": "smartrecruiters",
+    "slug": "imad"
+  },
+  {
+    "company": "Hospice général",
+    "ats": "smartrecruiters",
+    "slug": "Hospicegeneral"
+  },
+  {
+    "company": "État de Fribourg",
+    "ats": "successfactors",
+    "slug": "jobs.fr.ch"
+  },
+  {
+    "company": "Groupe E",
+    "ats": "successfactors",
+    "slug": "job.groupe-e.ch"
+  },
+  {
+    "company": "La Poste",
+    "ats": "successfactors",
+    "slug": "job.post.ch"
+  },
+  {
+    "company": "Suva",
+    "ats": "successfactors",
+    "slug": "jobs.suva.ch"
+  },
+  {
+    "company": "SICPA",
+    "ats": "successfactors",
+    "slug": "jobs.sicpa.com"
   }
 ]

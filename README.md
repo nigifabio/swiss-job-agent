@@ -49,7 +49,7 @@ see [docs/docker.md](docs/docker.md).
 
 | | |
 |---|---|
-| **Find** | jobs.ch / jobup.ch, Job-Room (work.swiss), 12 career-site systems (Workday, SmartRecruiters, SAP SuccessFactors, Oracle, Prospective...) including the État de Vaud, the Confederation, EPFL, BCV and Coop, remote boards, optional aggregators (Adzuna, Careerjet, Jooble) and your job-alert emails (LinkedIn, Indeed...). Duplicates across sources are merged. |
+| **Find** | jobs.ch / jobup.ch, Job-Room (work.swiss), 12 career-site systems (Workday, SmartRecruiters, SAP SuccessFactors, Oracle, Prospective...) including the cantons of Vaud, Geneva and Fribourg, the Confederation, CHUV, HUG, EPFL, UNIGE, BCV, La Poste and Coop, remote boards, optional aggregators (Adzuna, Careerjet, Jooble) and your job-alert emails (LinkedIn, Indeed...). Duplicates across sources are merged. |
 | **Rank** | 0-100 match score from your skills; mark skills you have or want to avoid straight from a posting. |
 | **Track** | new · shortlisted · applied · interview · offer · rejected, with contacts, notes, follow-up reminders and a status history. |
 | **Write** | tailored CV (PDF) and a Swiss-format cover letter per job, a CV for a type of role, or a CV from keywords. |

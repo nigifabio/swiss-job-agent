@@ -2,7 +2,8 @@
 Supported: Greenhouse, Lever, Ashby, SmartRecruiters, Workday, Personio, Recruitee,
 Teamtailor, Workable (all verified against live boards, 2026-09-24), and the systems of large
 Swiss employers and administrations: SAP SuccessFactors career sites (RSS), Prospective
-(JSON) and Oracle Recruiting Cloud (JSON), verified 2026-10-08.
+(JSON), Oracle Recruiting Cloud (JSON), Hireserve (JSON) and the État de Genève list (HTML),
+verified 2026-10-08.
 
 Boards crawled = the person's watchlist + app/watchlists/public.json (public-sector and other
 large Swiss employers everybody gets; PUBLIC_BOARDS=0 turns that off).
@@ -302,15 +303,67 @@ def _oracle(client, slug, company, out, known=frozenset()):
             break
 
 
+def _hireserve(client, slug, company, out, known=frozenset()):
+    """Hireserve recruiting portal (CHUV, Université de Genève); slug = "host/web_site_id[/Town]": the
+    town is used when a posting doesn't give one. The feed has no ad text (it is read when the job is
+    opened); department, category, contract and work rate make a short description.
+    Verified 2026-10-08: GET https://{host}/utf8/ic_job_feeds.feed_engine?p_web_site_id={id}&p_published_to=WWW
+      &p_language=DEFAULT&p_direct=Y&p_format=MOBILE&p_search= -> {total, jobs: [{title, status, weblink,
+      org{name}, locations[{city}], publication{internet{publish_date}}, classifications{k: {name, values[{class_val}]}}}]}"""
+    host, site, *rest = slug.split("/")
+    place = rest[0] if rest else ""
+    data = client.json(f"https://{host}/utf8/ic_job_feeds.feed_engine", params={
+        "p_web_site_id": site, "p_published_to": "WWW", "p_language": "DEFAULT", "p_direct": "Y",
+        "p_format": "MOBILE", "p_search": ""})
+    if "jobs" not in data:
+        raise ValueError("unexpected response shape (no 'jobs'); the portal may have changed")
+    for j in data["jobs"]:
+        if (j.get("status") or "open") != "open":
+            continue
+        cls = {}
+        for v in (j.get("classifications") or {}).values():
+            vals = ", ".join(str(x.get("class_val") or "").strip() for x in v.get("values") or [] if x.get("class_val"))
+            if vals:
+                cls[(v.get("name") or "").strip()] = vals
+        loc = next((l["city"] for l in j.get("locations") or [] if l.get("city")), "") or cls.get("Lieu") or place
+        unit = ((j.get("org") or {}).get("name") or "").strip()
+        desc = ". ".join(f"{k} : {v}" for k, v in cls.items() if k not in ("Lieu", "Code emploi", "Niveau", "Classe salariale"))
+        _emit(out, f"hireserve:{host}", f"{company} ({unit})" if unit else company, j.get("title", ""), loc, desc,
+              j.get("weblink", ""), ((j.get("publication") or {}).get("internet") or {}).get("publish_date", ""))
+
+
+def _gech(client, slug, company, out, known=frozenset()):
+    """État de Genève: the canton publishes its openings as one page of ge.ch, an <article> per offer
+    (title link, department, work-rate chip). slug = the page ("www.ge.ch/offres-emploi-etat-geneve/liste-offres").
+    Verified 2026-10-08. A page without any offer means the layout changed: reported as an error."""
+    page = client.get(f"https://{slug}").text
+    host = slug.split("/")[0]
+    n = 0
+    for art in re.findall(r"<article\b.*?</article>", page, flags=re.S):
+        m = re.search(r'href="(/offres-emploi-etat-geneve/liste-offres/\d+)"[^>]*>(.*?)</a>', art, flags=re.S)
+        if not m:
+            continue
+        n += 1
+        title = _strip(m.group(2))
+        dept = " · ".join(x for x in (_strip(p) for p in re.findall(r"<p>(.*?)</p>", art, flags=re.S)[:2]) if x)
+        rate = next((c for c in (_strip(c) for c in re.findall(r'<span class="chips[^"]*">(.*?)</span>', art, flags=re.S))
+                     if "%" in c), "")
+        _emit(out, "ge.ch", company, f"{title} ({rate})" if rate and "%" not in title else title, "Genève", dept,
+              f"https://{host}{m.group(1)}")
+    if not n:
+        raise ValueError("no offer found on the page; the layout may have changed")
+
+
 DISPATCH = {
     "successfactors": _successfactors, "prospective": _prospective, "oracle": _oracle,
+    "hireserve": _hireserve, "gech": _gech,
     "greenhouse": _greenhouse, "lever": _lever,
     "ashby": _ashby, "smartrecruiters": _smartrecruiters,
     "workday": _workday, "personio": _personio, "recruitee": _recruitee,
     "teamtailor": _teamtailor, "workable": _workable,
 }
 NEEDS_KNOWN = {_smartrecruiters, _workday, _workable, _personio, _recruitee, _teamtailor,
-               _successfactors, _prospective, _oracle}
+               _successfactors, _prospective, _oracle, _hireserve, _gech}
 PUBLIC_BOARDS = os.path.join(os.path.dirname(os.path.dirname(__file__)), "watchlists", "public.json")
 
 

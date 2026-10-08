@@ -4,10 +4,10 @@ Choose sources with `PROVIDERS` in `.env` or on the Settings page (`;`-separated
 
 | Provider | What | Needs |
 |---|---|---|
-| `ats` | company career sites listed in `data/watchlist.json`: Greenhouse, Lever, Ashby, SmartRecruiters, Workday, Personio, Recruitee, Teamtailor, Workable, SAP SuccessFactors, Prospective, Oracle Recruiting; plus the public boards everybody gets (below) | nothing for the public boards; a watchlist for more |
+| `ats` | company career sites listed in `data/watchlist.json`: Greenhouse, Lever, Ashby, SmartRecruiters, Workday, Personio, Recruitee, Teamtailor, Workable, SAP SuccessFactors, Prospective, Oracle Recruiting, Hireserve; plus the public boards everybody gets (below) | nothing for the public boards; a watchlist for more |
 | `jobup` | jobs.ch + jobup.ch (the sites' unofficial search backend) | – |
 | `jobroom` | Job-Room / work.swiss (SECO) public ads, by canton (`JOBROOM_CANTONS`, else from `WHERE`) | – |
-| `remote` | Remotive, Remote OK, Himalayas; only roles open to Switzerland / Europe / worldwide | – |
+| `remote` | Remotive, Remote OK, Himalayas, Jobicy; only roles open to Switzerland / Europe / worldwide | – |
 | `adzuna` | aggregator | `ADZUNA_APP_ID` + `ADZUNA_APP_KEY` ([developer.adzuna.com](https://developer.adzuna.com/)) |
 | `careerjet` | aggregator | `CAREERJET_API_KEY` |
 | `jooble` | aggregator | `JOOBLE_API_KEY` ([jooble.org/api/about](https://jooble.org/api/about)) |
@@ -48,11 +48,22 @@ on top of their own watchlist (the title, place and language filters still decid
 | Employer | System | What |
 |---|---|---|
 | État de Vaud | Oracle Recruiting | the canton's administration, courts, schools, social services |
-| Confédération suisse | Prospective | the federal administration (jobs.admin.ch) |
+| CHUV | Hireserve | the university hospital in Lausanne: care, administration, technical, research |
 | EPFL | SAP SuccessFactors | research, technical and administrative jobs in Lausanne |
 | BCV | SAP SuccessFactors | Banque Cantonale Vaudoise |
-| Coop | SAP SuccessFactors | shops, logistics, restaurants (jobs in your regions and for your search terms) |
+| SICPA | SAP SuccessFactors | Prilly head office (and sites abroad, filtered out by your towns) |
+| État de Genève | the canton's own list page | administration, police, schools, social services |
+| HUG | SmartRecruiters | Geneva university hospitals |
+| imad | SmartRecruiters | home care in Geneva |
+| Hospice général | SmartRecruiters | social services in Geneva |
+| Université de Genève | Hireserve | academic, technical and administrative jobs |
 | SIG Genève | SAP SuccessFactors | Services Industriels de Genève |
+| État de Fribourg | SAP SuccessFactors | the canton's administration |
+| Groupe E | SAP SuccessFactors | energy company (Fribourg, Vaud) |
+| Confédération suisse | Prospective | the federal administration (jobs.admin.ch) |
+| La Poste | SAP SuccessFactors | Swiss Post (jobs in your regions and for your search terms) |
+| Suva | SAP SuccessFactors | accident insurance, agencies across Switzerland |
+| Coop | SAP SuccessFactors | shops, logistics, restaurants (jobs in your regions and for your search terms) |
 
 `PUBLIC_BOARDS=0` in `.env` turns them off. To add an employer that uses one of these systems to your own
 watchlist, give its address in a seed file (`Company = https://...`):
@@ -61,6 +72,8 @@ watchlist, give its address in a seed file (`Company = https://...`):
   jobs plus 20 per search: one search per region and search term of yours);
 - **Prospective**: an address containing `/careercenter/<number>` (in the page source of the career page);
 - **Oracle Recruiting**: the career address `https://<host>.oraclecloud.com/hcmUI/CandidateExperience/fr/sites/<site>`.
+- **Hireserve**: add the entry by hand to `data/watchlist.json`: `{"company": "...", "ats": "hireserve", "slug": "<host>/<web_site_id>/<default town>"}`
+  (the number is the `p_web_site_id` in the portal's addresses).
 
 ## Company career sites (watchlist)
 

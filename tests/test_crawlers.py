@@ -348,9 +348,80 @@ def test_public_boards_join_the_watchlist_unless_switched_off(env, net, monkeypa
     env.providers.ats.fetch()
     public = json.loads(Path(env.providers.ats.PUBLIC_BOARDS).read_text())
     assert len(seen) == 2 + len(public) - 1 and seen.count(("successfactors", "careers.epfl.ch")) == 1   # no board twice
-    assert all(e["ats"] in ("successfactors", "prospective", "oracle") for e in public)
+    assert all(e["ats"] in env.providers.ats.DISPATCH for e in public) and len({(e["ats"], e["slug"]) for e in public}) == len(public)
     Path(env.config.WATCHLIST_PATH).unlink()
     seen.clear()
     env.scanlog.start()
     env.providers.ats.fetch()
     assert len(seen) == len(public)                                      # an empty watchlist is no longer an error
+
+
+def test_hireserve_feed_uses_place_classification_or_the_default_town(env, net, monkeypatch):
+    monkeypatch.setattr(env.config, "LANGUAGES", ["en", "fr"])          # the short descriptions are in French
+    env.scanlog.start()
+    _watchlist(env, [{"company": "Hospital", "ats": "hireserve", "slug": "jobs.hosp.test/5352/Lausanne"}])
+    asked = []
+
+    def feed(r):
+        asked.append(dict(r.url.params))
+        def job(i, title, place=None, status="open", city=""):
+            cls = {"c1": {"name": "Catégorie professionnelle", "values": [{"class_val": "Administration"}]},
+                   "c2": {"name": "Taux d'activité", "values": [{"class_val": "80 % - 100%"}]}, "c3": {"name": "Niveau", "values": [{"class_val": "05"}]}}
+            if place:
+                cls["c4"] = {"name": "Lieu", "values": [{"class_val": place}]}
+            return {"id": i, "title": title, "status": status, "weblink": f"https://jobs.hosp.test/v/{i}", "org": {"name": "IT Dept"},
+                    "locations": [{"city": city}], "publication": {"internet": {"publish_date": "2026-10-08 00:00:00"}}, "classifications": cls}
+        return jresp({"total": 5, "jobs": [job(1, "Cloud Architect", "Lausanne"), job(2, "DevOps Engineer"), job(3, "Cloud Architect", "Zurich"),
+                                           job(4, "Cloud Architect", "Lausanne", status="closed"), job(5, "Solutions Architect", city="Geneva")]})
+    net["https://jobs.hosp.test/utf8/ic_job_feeds.feed_engine"] = feed
+    jobs = {j["url"]: j for j in env.providers.ats.fetch()}
+    assert set(jobs) == {"https://jobs.hosp.test/v/1", "https://jobs.hosp.test/v/2", "https://jobs.hosp.test/v/5"}   # Zurich + closed dropped
+    j = jobs["https://jobs.hosp.test/v/2"]
+    assert (j["location"], j["company"], j["source"]) == ("Lausanne", "Hospital (IT Dept)", "hireserve:jobs.hosp.test")    # default town
+    assert "Administration" in j["description"] and "80 % - 100%" in j["description"] and "Niveau" not in j["description"]
+    assert jobs["https://jobs.hosp.test/v/5"]["location"] == "Geneva" and asked[0]["p_web_site_id"] == "5352"
+    net["https://jobs.hosp.test/utf8/ic_job_feeds.feed_engine"] = lambda r: jresp({"error": "x"})
+    env.scanlog.start()
+    assert env.providers.ats.fetch() == [] and env.scanlog.result()["ats"]["errors"]
+
+
+def test_state_of_geneva_list_page_and_layout_change(env, net, monkeypatch):
+    monkeypatch.setattr(env.config, "LANGUAGES", ["en", "fr"])
+    env.scanlog.start()
+    _watchlist(env, [{"company": "Canton", "ats": "gech", "slug": "www.ge.test/offres-emploi-etat-geneve/liste-offres"}])
+    art = lambda i, title, rate: f"""<article class="block"><div><a class="x" href="/offres-emploi-etat-geneve/liste-offres/{i}" rel="bookmark">
+        {title} </a></div><div><a href="https://www.ge.test/organisation/x"><p>Département des finances</p></a><p>Office du personnel</p></div>
+        <div><span class="chips-outlined"> {rate} </span><a class="chips" href="/doc"><span data-text> classe 16 </span></a></div></article>"""
+    page = "<html><body>" + art(10, "Cloud Architect", "80 à 100%") + art(11, "Greffier", "100%") + art(12, "DevOps Engineer &amp; SRE", "100%") + "</body></html>"
+    net["https://www.ge.test/offres-emploi-etat-geneve/liste-offres"] = lambda r: httpx.Response(200, text=page)
+    jobs = {j["url"]: j for j in env.providers.ats.fetch()}
+    assert set(jobs) == {"https://www.ge.test/offres-emploi-etat-geneve/liste-offres/10", "https://www.ge.test/offres-emploi-etat-geneve/liste-offres/12"}
+    j = jobs["https://www.ge.test/offres-emploi-etat-geneve/liste-offres/10"]
+    assert (j["title"], j["location"], j["description"]) == ("Cloud Architect (80 à 100%)", "Genève", "Département des finances · Office du personnel")
+    assert env.filters.stated_rate(j["title"]) == (80, 100)                    # the work-rate setting applies to it
+    assert jobs["https://www.ge.test/offres-emploi-etat-geneve/liste-offres/12"]["title"] == "DevOps Engineer & SRE (100%)"
+    net["https://www.ge.test/offres-emploi-etat-geneve/liste-offres"] = lambda r: httpx.Response(200, text="<html><body>redesigned</body></html>")
+    env.scanlog.start()
+    assert env.providers.ats.fetch() == [] and "layout" in env.scanlog.result()["ats"]["errors"][0]
+
+
+def test_jobicy_remote_jobs_open_to_switzerland_or_europe(env, net, monkeypatch):
+    monkeypatch.setattr(env.config, "ALLOW_REMOTE", True)
+    asked = []
+
+    def api(r):
+        asked.append(r.url.params["geo"])
+        return jresp({"jobs": [
+            {"jobTitle": "Cloud Architect", "companyName": "Acme", "jobGeo": "Switzerland", "url": "https://jobicy.test/1",
+             "jobDescription": "<p>You will design our AWS platform and work with the team every day.</p>", "pubDate": "2026-10-08"},
+            {"jobTitle": "Cloud Architect", "companyName": "Usco", "jobGeo": "USA", "url": "https://jobicy.test/2", "jobDescription": "<p>US only role for our platform team.</p>"},
+            {"jobTitle": "Sales Lead", "companyName": "Acme", "jobGeo": "Europe", "url": "https://jobicy.test/3", "jobDescription": "<p>Sell things to our customers.</p>"}]})
+    net["https://jobicy.com/api/v2/remote-jobs"] = api
+    out, seen = [], set()
+    with env.http.Http() as c:
+        assert env.providers.remote._jobicy(c, out, seen) == 1
+    assert asked == ["switzerland", "europe"] and out[0]["source"] == "jobicy" and out[0]["url"] == "https://jobicy.test/1"
+    assert out[0]["location"] == "Remote - Switzerland" and "jobicy" in env.providers.remote.BOARDS
+    net["https://jobicy.com/api/v2/remote-jobs"] = lambda r: jresp({"oops": 1})
+    with env.http.Http() as c, pytest.raises(ValueError):
+        env.providers.remote._jobicy(c, [], set())

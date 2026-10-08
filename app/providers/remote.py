@@ -1,7 +1,7 @@
-"""Remote-job boards: Remotive, Remote OK, Himalayas. Public APIs, no key.
+"""Remote-job boards: Remotive, Remote OK, Himalayas, Jobicy. Public APIs, no key.
 
 Terms of use (checked 2026-09-24): link back to the posting on their site and name them as
-the source. Every card shows its source ("remotive", "remoteok", "himalayas") and "Open & apply"
+the source. Every card shows its source ("remotive", "remoteok", "himalayas", "jobicy") and "Open & apply"
 goes to their posting URL. A role counts only if it's open to Switzerland/Europe/worldwide
 (filters.location_ok on "Remote - <regions>"); "USA only" and similar are dropped.
 
@@ -11,6 +11,8 @@ Verified fields 2026-09-24:
   remoteok  GET remoteok.com/api -> [legal, {position, company, location, description, url, date}...]
   himalayas GET himalayas.app/jobs/api?limit=&cursor= -> {jobs[{title, companyName,
             locationRestrictions[], description, guid, applicationLink, pubDate}], nextCursor}
+  jobicy    GET jobicy.com/api/v2/remote-jobs?count=50&geo=switzerland (verified 2026-10-08; they ask to be
+            credited with a link to the posting) -> {jobs[{jobTitle, companyName, jobGeo, jobDescription, url, pubDate}]}
 """
 import os
 
@@ -90,7 +92,19 @@ def _himalayas(client, out, seen):
     return len(out) - n0
 
 
-BOARDS = {"remotive": _remotive, "remoteok": _remoteok, "himalayas": _himalayas}
+def _jobicy(client, out, seen):
+    n0 = len(out)
+    for geo in ("switzerland", "europe"):               # roles open to people in Switzerland, then all of Europe
+        data = client.json("https://jobicy.com/api/v2/remote-jobs", params={"count": 50, "geo": geo})
+        if "jobs" not in data:
+            raise ValueError("unexpected response shape (no 'jobs'); the API may have changed")
+        for j in data["jobs"]:
+            _job(out, seen, "jobicy", j.get("jobTitle", ""), j.get("companyName", ""), j.get("jobGeo", ""),
+                 j.get("jobDescription", ""), j.get("url", ""), j.get("pubDate", ""))
+    return len(out) - n0
+
+
+BOARDS = {"remotive": _remotive, "remoteok": _remoteok, "himalayas": _himalayas, "jobicy": _jobicy}
 
 
 def fetch():
