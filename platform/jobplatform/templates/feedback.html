@@ -1,0 +1,19 @@
+{% extends "base.html" %}{% block body %}
+<p><a href="{{ from_page or '/' }}">← back to my job search</a></p>
+{% if sent == "1" %}<div class="card" style="border-color:var(--ok)"><b>Sent, thank you.</b> The person who runs this service got your message and will look at it.</div>
+{% elif sent == "0" %}<div class="card bad">Write a few words about what happened or what you would like.</div>
+{% elif sent == "2" %}<div class="card bad">You sent several messages today already. Please try again tomorrow.</div>{% endif %}
+<div class="card">
+  <h2 style="margin-top:0">Report a problem or ask for something</h2>
+  <p class="muted">Something doesn't work, a text is wrong, or you miss a feature? Say it here: it goes straight to the person who runs this service.</p>
+  <form method="post" action="/_platform/feedback"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="page" value="{{ from_page }}">
+    <p><label><input type="radio" name="kind" value="bug" checked> 🐞 Something doesn't work</label>
+      &nbsp; <label><input type="radio" name="kind" value="idea"> 💡 I would like…</label></p>
+    <textarea name="text" rows="7" maxlength="2000" required style="width:100%;padding:8px;background:#0f1419;border:1px solid var(--border);border-radius:6px;color:var(--fg);font:inherit"
+      placeholder="What did you do, what did you expect, what happened instead?"></textarea>
+    <p><button type="submit">Send →</button></p>
+  </form>
+  <p class="muted">Sent with your address ({{ email }}) so you can be answered{% if from_page %}, and the page you came from ({{ from_page }}){% endif %}.
+    Nothing from your workspace is attached: no job, no CV.</p>
+</div>
+{% endblock %}

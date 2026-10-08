@@ -23,6 +23,8 @@ CREATE TABLE IF NOT EXISTS requests (
   created_at TEXT NOT NULL, decided_at TEXT, decided_by TEXT);
 CREATE TABLE IF NOT EXISTS audit (ts TEXT NOT NULL, actor TEXT, action TEXT, detail TEXT);
 CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT);
+CREATE TABLE IF NOT EXISTS feedback (id INTEGER PRIMARY KEY AUTOINCREMENT, ts TEXT NOT NULL, email TEXT NOT NULL,
+  kind TEXT NOT NULL, page TEXT, text TEXT NOT NULL, done INTEGER NOT NULL DEFAULT 0);
 """
 
 
@@ -50,6 +52,26 @@ def init():
             c.execute("ALTER TABLE tenants ADD COLUMN last_seen TEXT")
         if "league_name" not in {r["name"] for r in c.execute("PRAGMA table_info(tenants)").fetchall()}:
             c.execute("ALTER TABLE tenants ADD COLUMN league_name TEXT")
+
+
+# ---- bug reports and feature requests ---------------------------------------------------------
+def add_feedback(email, kind, page, text, per_day=8):
+    """Keep one message. Returns its id, or None when this person already sent many today."""
+    with conn() as c:
+        since = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=1)).replace(microsecond=0).isoformat()
+        if c.execute("SELECT COUNT(*) FROM feedback WHERE email=? AND ts >= ?", (email, since)).fetchone()[0] >= per_day:
+            return None
+        return c.execute("INSERT INTO feedback (ts, email, kind, page, text) VALUES (?,?,?,?,?)", (now(), email, kind, page, text)).lastrowid
+
+
+def feedback(limit=50):
+    with conn() as c:
+        return [dict(r) for r in c.execute("SELECT * FROM feedback ORDER BY done, id DESC LIMIT ?", (limit,)).fetchall()]
+
+
+def close_feedback(fid, done=1):
+    with conn() as c:
+        c.execute("UPDATE feedback SET done=? WHERE id=?", (done, fid))
 
 
 # ---- the league: people who chose to compare their points, under a nickname ---------------------

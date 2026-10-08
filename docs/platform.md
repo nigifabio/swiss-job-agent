@@ -110,6 +110,12 @@ Above the table, **what needs a look**: an app that is not healthy, a workspace 
 a source failing and for how many workspaces, a backup that didn't run. Every `HEALTH_CHECK_HOURS`
 (default 6) the same list is checked and, when it changed, sent through `NOTIFY_WEBHOOK`.
 
+### Bug reports and feature requests
+
+The 💬 link of the top bar opens `/_platform/feedback`: a signed-in person writes what doesn't work or what they would
+like. The message is kept (admin page, with Done / Reopen), and sent through `NOTIFY_WEBHOOK` with the sender's address
+and the page they came from. At most eight a day per person; nothing from the workspace is attached.
+
 ### The league
 
 `/_platform/league`: people join by choice with a nickname. The gateway asks only the members' workspaces for their score

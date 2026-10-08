@@ -46,6 +46,15 @@
     {% elif backup.at %}Last backup {{ backup.at[:16] | replace("T", " ") }} UTC: {{ backup.ok | length }} archive{{ "s" if backup.ok | length != 1 }}, {{ (backup.bytes / 1048576) | round(1) }} MB{% if backup.failed %}, <span class="bad">failed: {{ backup.failed | join(", ") }}</span>{% endif %}.
     {% else %}No backup yet: the first one runs tonight at {{ backup.hour }}:00 UTC.{% endif %}</p>
 </div>
+<div class="card" id="feedback">
+  <h3 style="margin-top:0">Bug reports and requests{% set open = feedback | rejectattr("done") | list %}{% if open %} ({{ open | length }} open){% endif %}</h3>
+  {% if feedback %}<table><tr><th>When</th><th>Who</th><th>Kind</th><th>Message</th><th></th></tr>
+  {% for f in feedback %}<tr class="{{ 'muted' if f.done }}"><td class="muted">{{ f.ts[:16] | replace("T", " ") }}</td><td>{{ f.email }}</td><td>{{ "🐞" if f.kind == "bug" else "💡" }}</td>
+    <td style="white-space:pre-wrap">{{ f.text }}{% if f.page %}<br><span class="muted">{{ f.page }}</span>{% endif %}</td>
+    <td><form class="inline" method="post" action="/_platform/admin/feedback/{{ f.id }}"><input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="hidden" name="done" value="{{ 0 if f.done else 1 }}"><button class="ghost small">{{ "Reopen" if f.done else "Done" }}</button></form></td></tr>{% endfor %}
+  </table>{% else %}<p class="muted">None yet. People send them from the 💬 link of the top bar.</p>{% endif %}
+</div>
 <div class="card">
   <h3 style="margin-top:0">Account requests{% set waiting = requests | selectattr("status", "equalto", "pending") | list %}{% if waiting %} ({{ waiting | length }} waiting){% endif %}</h3>
   {% if not notify_on %}<p class="muted">No notification is configured (NOTIFY_WEBHOOK in platform/.env): new requests only show here.</p>{% endif %}

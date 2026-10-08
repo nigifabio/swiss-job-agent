@@ -125,6 +125,9 @@ def page(request, name, ctx, status=200):
     return templates[lang].TemplateResponse(request, name, ctx, status_code=status)
 
 
+render_page = page          # (for routes that have a parameter called "page")
+
+
 PUBLIC_HOME = "/welcome"
 
 
@@ -449,6 +452,46 @@ def me_delete(request: Request, csrf: str = Form(""), confirm: str = Form("")):
                                        "administrator for 30 days, then removed.")
 
 
+# ---- report a problem, ask for something ------------------------------------------------------
+FEEDBACK_KINDS = {"bug": "🐞 Bug", "idea": "💡 Idea"}
+
+
+@app.get("/_platform/feedback", response_class=HTMLResponse)
+def feedback_form(request: Request, sent: str = "", page: str = ""):
+    if not db.tenant_for(request.state.email):
+        return RedirectResponse("/", status_code=303)
+    page = page if re.fullmatch(r"/[A-Za-z0-9_/.?=&%-]{0,120}", page or "") else ""
+    return render_page(request, "feedback.html", {"sent": sent, "from_page": page})
+
+
+@app.post("/_platform/feedback")
+def feedback_send(request: Request, csrf: str = Form(""), kind: str = Form("bug"), text: str = Form(""), page: str = Form("")):
+    """Kept for the admin page and passed to the operator's chat (NOTIFY_WEBHOOK), with the sender's address so they can be answered."""
+    email = request.state.email
+    check_csrf(request, email, csrf)
+    t = db.tenant_for(email)
+    if not t:
+        return RedirectResponse("/", status_code=303)
+    text = "\n".join(" ".join(line.split()) for line in text.replace("\r", "").split("\n")).strip()[:2000]
+    kind = kind if kind in FEEDBACK_KINDS else "bug"
+    page = page if re.fullmatch(r"/[A-Za-z0-9_/.?=&%-]{0,120}", page or "") else ""
+    if len(text) < 5:
+        return RedirectResponse("/_platform/feedback?sent=0", status_code=303)
+    if not db.add_feedback(email, kind, page, text):
+        return RedirectResponse("/_platform/feedback?sent=2", status_code=303)
+    db.audit(email, "feedback." + kind, t["slug"])
+    notify.admins(prov, f"🇨🇭 Job platform: {FEEDBACK_KINDS[kind]} from {email}", (f"page {page}\n" if page else "") + text)
+    return RedirectResponse("/_platform/feedback?sent=1", status_code=303)
+
+
+@app.post("/_platform/admin/feedback/{fid}")
+def admin_feedback(request: Request, fid: int, csrf: str = Form(""), done: str = Form("1")):
+    require_admin(request)
+    check_csrf(request, request.state.email, csrf)
+    db.close_feedback(fid, 1 if done == "1" else 0)
+    return RedirectResponse("/_platform/admin#feedback", status_code=303)
+
+
 # ---- the league --------------------------------------------------------------------------------
 @app.get("/_platform/league", response_class=HTMLResponse)
 def league_page(request: Request, bad: str = ""):
@@ -564,7 +607,7 @@ def admin(request: Request, new: str = ""):
     return page(request, "admin.html", {"tenants": rows, "orphans": orphans, "invites": db.invites(),
                                         "requests": db.requests(), "notify_on": notify.configured(),
                                         "audit": db.audit_log(30), "new_link": link, "live_err": live_err,
-                                        "backup": bk, "problems": health.problems(rows, bk),
+                                        "backup": bk, "problems": health.problems(rows, bk), "feedback": db.feedback(),
                                         "max": C.max_tenants})
 
 

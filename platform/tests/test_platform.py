@@ -690,3 +690,33 @@ def test_nothing_personal_is_cacheable(gw):
     gw.db.add_tenant("marie", "marie@example.org")
     for url in ("/job/1/letter.pdf", "/report.csv", "/jobs", "/_platform/me"):
         assert gw.get(url, headers=as_("marie@example.org")).headers["cache-control"] == "no-store, private", url
+
+
+def test_bug_reports_and_requests_reach_the_operator(gw, monkeypatch):
+    monkeypatch.setenv("NOTIFY_WEBHOOK", "http://bridge.example/alert")
+    sent = []
+    monkeypatch.setattr(gw.g.notify, "admins", lambda prov, subject, body: sent.append((subject, body)))
+    gw.db.add_tenant("marie", "marie@example.org")
+    marie, admin = as_("marie@example.org"), as_("admin@example.org")
+    page = gw.get("/_platform/feedback?page=/job/12", headers=marie).text
+    assert "Report a problem or ask for something" in page and 'name="page" value="/job/12"' in page and "marie@example.org" in page
+    assert 'value=""' in gw.get("/_platform/feedback?page=https://evil.example", headers=marie).text          # only a local page is kept
+    assert gw.post("/_platform/feedback", headers=marie, data={"csrf": "x", "text": "hello there"}).status_code == 403
+    r = gw.post("/_platform/feedback", headers=marie, data={"csrf": csrf(gw, "marie@example.org"), "kind": "bug", "text": " ok "}, follow_redirects=False)
+    assert r.headers["location"].endswith("sent=0") and not sent
+    r = gw.post("/_platform/feedback", headers=marie, follow_redirects=False,
+                data={"csrf": csrf(gw, "marie@example.org"), "kind": "idea", "page": "/job/12", "text": "Le bouton PDF   ne marche pas.\r\n<b>Merci</b>"})
+    assert r.headers["location"].endswith("sent=1") and "Sent, thank you" in gw.get(r.headers["location"], headers=marie).text
+    assert sent == [("🇨🇭 Job platform: 💡 Idea from marie@example.org", "page /job/12\nLe bouton PDF ne marche pas.\n<b>Merci</b>")]
+    admin_page = gw.get("/_platform/admin", headers=admin).text
+    assert "Bug reports and requests (1 open)" in admin_page and "&lt;b&gt;Merci&lt;/b&gt;" in admin_page and "<b>Merci</b>" not in admin_page
+    fid = gw.db.feedback()[0]["id"]
+    assert gw.post(f"/_platform/admin/feedback/{fid}", headers=marie, data={"csrf": csrf(gw, "marie@example.org")}).status_code == 403
+    gw.post(f"/_platform/admin/feedback/{fid}", headers=admin, data={"csrf": csrf(gw, "admin@example.org"), "done": "1"})
+    assert gw.db.feedback()[0]["done"] == 1 and "(1 open)" not in gw.get("/_platform/admin", headers=admin).text
+    for i in range(7):                                                                 # eight a day, then no more
+        gw.post("/_platform/feedback", headers=marie, data={"csrf": csrf(gw, "marie@example.org"), "text": f"message number {i}"})
+    r = gw.post("/_platform/feedback", headers=marie, data={"csrf": csrf(gw, "marie@example.org"), "text": "one too many"}, follow_redirects=False)
+    assert r.headers["location"].endswith("sent=2") and len(sent) == 8
+    assert gw.get("/_platform/feedback", headers=as_("stranger@example.org"), follow_redirects=False).status_code == 303
+    assert "Signaler un problème" in gw.get("/_platform/feedback", headers=dict(marie, **{"accept-language": "fr"})).text

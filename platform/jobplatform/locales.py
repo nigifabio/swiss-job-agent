@@ -164,8 +164,22 @@ _LEAGUE = [
     ('<button class="ghost small">Leave the league</button>', '<button class="ghost small">Quitter la ligue</button>', '<button class="ghost small">Liga verlassen</button>'),
 ]
 
+_FEEDBACK = [
+    ('← back to my job search</a>', "← retour à ma recherche d'emploi</a>", '← zurück zu meiner Stellensuche</a>'),
+    ('<b>Sent, thank you.</b> The person who runs this service got your message and will look at it.', '<b>Envoyé, merci.</b> La personne qui gère ce service a reçu votre message et va le regarder.', '<b>Gesendet, danke.</b> Die Person, die diesen Dienst betreibt, hat Ihre Nachricht erhalten und schaut sie sich an.'),
+    ('Write a few words about what happened or what you would like.', "Écrivez quelques mots sur ce qui s'est passé ou sur ce que vous souhaitez.", 'Schreiben Sie ein paar Worte dazu, was passiert ist oder was Sie sich wünschen.'),
+    ('You sent several messages today already. Please try again tomorrow.', "Vous avez déjà envoyé plusieurs messages aujourd'hui. Merci de réessayer demain.", 'Sie haben heute schon mehrere Nachrichten gesendet. Bitte versuchen Sie es morgen wieder.'),
+    ('Report a problem or ask for something</h2>', 'Signaler un problème ou demander quelque chose</h2>', 'Ein Problem melden oder etwas wünschen</h2>'),
+    ("Something doesn't work, a text is wrong, or you miss a feature? Say it here: it goes straight to the person who runs this service.", 'Quelque chose ne marche pas, un texte est faux, ou il vous manque une fonction ? Dites-le ici : cela arrive directement à la personne qui gère ce service.', 'Etwas funktioniert nicht, ein Text stimmt nicht, oder Ihnen fehlt eine Funktion? Sagen Sie es hier: Es geht direkt an die Person, die diesen Dienst betreibt.'),
+    ("> 🐞 Something doesn't work</label>", '> 🐞 Quelque chose ne marche pas</label>', '> 🐞 Etwas funktioniert nicht</label>'),
+    ('> 💡 I would like…</label>', "> 💡 J'aimerais…</label>", '> 💡 Ich wünsche mir…</label>'),
+    ('placeholder="What did you do, what did you expect, what happened instead?"', 'placeholder="Qu\'avez-vous fait, qu\'attendiez-vous, que s\'est-il passé à la place ?"', 'placeholder="Was haben Sie getan, was haben Sie erwartet, was ist stattdessen passiert?"'),
+    ('<button type="submit">Send →</button>', '<button type="submit">Envoyer →</button>', '<button type="submit">Senden →</button>'),
+    ('Sent with your address ({{ email }}) so you can be answered{% if from_page %}, and the page you came from ({{ from_page }}){% endif %}. Nothing from your workspace is attached: no job, no CV.', "Envoyé avec votre adresse ({{ email }}) pour pouvoir vous répondre{% if from_page %}, et la page d'où vous venez ({{ from_page }}){% endif %}. Rien de votre espace n'est joint : ni offre, ni CV.", 'Gesendet mit Ihrer Adresse ({{ email }}), damit man Ihnen antworten kann{% if from_page %}, und der Seite, von der Sie kommen ({{ from_page }}){% endif %}. Aus Ihrem Bereich wird nichts angehängt: keine Stelle, kein Lebenslauf.'),
+]
+
 TEMPLATES = {"base.html": _BASE, "welcome.html": _WELCOME, "request.html": _REQUEST, "invite.html": _INVITE, "me.html": _ME,
-             "starting.html": _STARTING, "message.html": _MESSAGE, "league.html": _LEAGUE}
+             "starting.html": _STARTING, "message.html": _MESSAGE, "league.html": _LEAGUE, "feedback.html": _FEEDBACK}
 
 STRINGS = {
     'Warming up': ("À l'échauffement", 'Beim Aufwärmen'),

@@ -605,7 +605,67 @@ TEMPLATES = {'base.html': {'<html lang="en">': '<html lang="it">', '>admin</a>':
                  'The others see only your nickname (<b>{{ t.league_name }}</b>), points, streak and badges.': 'Gli altri vedono solo il tuo soprannome (<b>{{ '
                                                                                                                't.league_name }}</b>), i punti, la serie e i badge.',
                  '<button class="ghost small">Change my nickname</button>': '<button class="ghost small">Cambia soprannome</button>',
-                 '<button class="ghost small">Leave the league</button>': '<button class="ghost small">Esci dalla lega</button>'}}
+                 '<button class="ghost small">Leave the league</button>': '<button class="ghost small">Esci dalla lega</button>'},
+ 'feedback.html': {'← back to my job search</a>': '← torna alla mia ricerca di lavoro</a>',
+                   '<b>Sent, thank you.</b> The person who runs this service got your message and will look at it.': '<b>Inviato, grazie.</b> La persona che gestisce '
+                                                                                                                     'questo servizio ha ricevuto il tuo messaggio e lo '
+                                                                                                                     'guarderà.',
+                   'Write a few words about what happened or what you would like.': 'Scrivi qualche parola su cosa è successo o su cosa vorresti.',
+                   'You sent several messages today already. Please try again tomorrow.': 'Hai già inviato diversi messaggi oggi. Riprova domani.',
+                   'Report a problem or ask for something</h2>': 'Segnala un problema o chiedi qualcosa</h2>',
+                   "Something doesn't work, a text is wrong, or you miss a feature? Say it here: it goes straight to the person who runs this service.": 'Qualcosa non '
+                                                                                                                                                         'funziona, un '
+                                                                                                                                                         'testo è '
+                                                                                                                                                         'sbagliato, o '
+                                                                                                                                                         'ti manca una '
+                                                                                                                                                         'funzione? '
+                                                                                                                                                         'Dillo qui: '
+                                                                                                                                                         'arriva '
+                                                                                                                                                         'direttamente '
+                                                                                                                                                         'alla persona '
+                                                                                                                                                         'che gestisce '
+                                                                                                                                                         'questo '
+                                                                                                                                                         'servizio.',
+                   "> 🐞 Something doesn't work</label>": '> 🐞 Qualcosa non funziona</label>',
+                   '> 💡 I would like…</label>': '> 💡 Mi piacerebbe…</label>',
+                   'placeholder="What did you do, what did you expect, what happened instead?"': 'placeholder="Cosa hai fatto, cosa ti aspettavi, cosa è successo '
+                                                                                                 'invece?"',
+                   '<button type="submit">Send →</button>': '<button type="submit">Invia →</button>',
+                   'Sent with your address ({{ email }}) so you can be answered{% if from_page %}, and the page you came from ({{ from_page }}){% endif %}. Nothing from your workspace is attached: no job, no CV.': 'Inviato '
+                                                                                                                                                                                                                      'con '
+                                                                                                                                                                                                                      'il '
+                                                                                                                                                                                                                      'tuo '
+                                                                                                                                                                                                                      'indirizzo '
+                                                                                                                                                                                                                      '({{ '
+                                                                                                                                                                                                                      'email '
+                                                                                                                                                                                                                      '}}) '
+                                                                                                                                                                                                                      'per '
+                                                                                                                                                                                                                      'poterti '
+                                                                                                                                                                                                                      'rispondere{% '
+                                                                                                                                                                                                                      'if '
+                                                                                                                                                                                                                      'from_page '
+                                                                                                                                                                                                                      '%}, '
+                                                                                                                                                                                                                      'e '
+                                                                                                                                                                                                                      'la '
+                                                                                                                                                                                                                      'pagina '
+                                                                                                                                                                                                                      'da '
+                                                                                                                                                                                                                      'cui '
+                                                                                                                                                                                                                      'arrivi '
+                                                                                                                                                                                                                      '({{ '
+                                                                                                                                                                                                                      'from_page '
+                                                                                                                                                                                                                      '}}){% '
+                                                                                                                                                                                                                      'endif '
+                                                                                                                                                                                                                      '%}. '
+                                                                                                                                                                                                                      'Niente '
+                                                                                                                                                                                                                      'del '
+                                                                                                                                                                                                                      'tuo '
+                                                                                                                                                                                                                      'spazio '
+                                                                                                                                                                                                                      'è '
+                                                                                                                                                                                                                      'allegato: '
+                                                                                                                                                                                                                      'né '
+                                                                                                                                                                                                                      'offerte, '
+                                                                                                                                                                                                                      'né '
+                                                                                                                                                                                                                      'CV.'}}
 
 STRINGS = {'Back': 'Indietro',
  'Workspace paused': 'Spazio in pausa',
