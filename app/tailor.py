@@ -270,117 +270,157 @@ def _bullet_first(bullets, hits):
     return sorted(bullets, key=lambda b: 0 if any(h in b.lower() for h in hits) else 1)
 
 
+CONTACT_LABELS = {   # e-mail, phone, where the person lives, LinkedIn
+    "en": ("E-mail", "Phone", "Location", "LinkedIn"), "fr": ("E-mail", "Téléphone", "Domicile", "LinkedIn"),
+    "de": ("E-Mail", "Telefon", "Wohnort", "LinkedIn"), "it": ("E-mail", "Telefono", "Domicilio", "LinkedIn"),
+}
+
+
+def _sections_lang(sections, fallback):
+    """The language of a written-out CV, from its section titles (they are the standard headings unless renamed)."""
+    titles = {(s.get("title") or "").strip().upper() for s in sections or []}
+    best = max(HEADINGS, key=lambda l: len(titles & set(HEADINGS[l])))
+    return best if titles & set(HEADINGS[best]) else fallback
+
+
 def render(profile, hits, out, company="", key_skills=None, summary=None, lang="en", job=None, sections=None):
-    """sections (from parse_text): the body exactly as the person wrote it, instead of the profile's."""
+    """The CV as a PDF. sections (from parse_text): the body exactly as the person wrote it, instead of
+    the profile's. The page is balanced: the type and the spacing grow until the last page is full, and
+    a CV that would spill a few lines onto a new page is tightened to end on the page before."""
+    import io
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.lib.units import mm
-    from reportlab.platypus import (SimpleDocTemplate, Paragraph, HRFlowable,
+    from reportlab.platypus import (SimpleDocTemplate, Paragraph, HRFlowable, Spacer,
                                     ListFlowable, ListItem, Image, Table, TableStyle)
     from xml.sax.saxutils import escape as esc
 
-    H = HEADINGS.get(lang, HEADINGS["en"])
-    blue, grey = colors.HexColor("#1F4E78"), colors.HexColor("#555555")
-    base = getSampleStyleSheet()["Normal"]
-    st = {
-        "name": ParagraphStyle("name", parent=base, fontSize=20, leading=24, textColor=blue),
-        "headline": ParagraphStyle("hl", parent=base, fontSize=11, leading=14, textColor=blue),
-        "contact": ParagraphStyle("ct", parent=base, fontSize=8.5, textColor=grey, spaceAfter=6),
-        "head": ParagraphStyle("hd", parent=base, fontSize=11, leading=14, textColor=blue,
-                               spaceBefore=8, spaceAfter=3),
-        "role": ParagraphStyle("rl", parent=base, fontSize=10.5, leading=13),
-        "sub": ParagraphStyle("sb", parent=base, fontSize=8.5, textColor=grey, spaceAfter=2),
-        "body": ParagraphStyle("bd", parent=base, fontSize=9, leading=12.5, spaceAfter=2),
-        "bullet": ParagraphStyle("bl", parent=base, fontSize=8.7, leading=11.5),
-    }
-    c = profile.get("contact", {})
-    contact = " &nbsp;|&nbsp; ".join(esc(v) for v in
-                                     (c.get("email"), c.get("phone"), c.get("linkedin"), c.get("location")) if v)
-    head = [Paragraph(esc(profile["name"]), st["name"])]
-    if profile.get("headline"):
-        head.append(Paragraph(esc(profile["headline"]), st["headline"]))
-    head.append(Paragraph(contact, st["contact"]))
-    flow = head
-    if os.path.exists(PHOTO):                        # portrait at the top right, as Swiss CVs have it
-        try:
-            from reportlab.lib.utils import ImageReader
-            w, h = ImageReader(PHOTO).getSize()
-            pw = 26 * mm
-            flow = [Table([[head, Image(PHOTO, width=pw, height=pw * h / w)]], colWidths=[None, pw + 2 * mm],
-                          style=TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"), ("LEFTPADDING", (0, 0), (-1, -1), 0),
-                                            ("RIGHTPADDING", (0, 0), (-1, -1), 0), ("TOPPADDING", (0, 0), (-1, -1), 0),
-                                            ("BOTTOMPADDING", (0, 0), (-1, -1), 2)]))]
-        except Exception:  # noqa: BLE001  (unreadable picture: the CV is made without it)
-            flow = head
-    flow.append(HRFlowable(width="100%", thickness=1, color=blue, spaceAfter=6))
-
-    def bullets_of(items):
-        return ListFlowable([ListItem(Paragraph(esc(b), st["bullet"]), leftIndent=8) for b in items],
-                            bulletType="bullet", start="•", leftIndent=10, spaceAfter=4)
-    for sec in sections or []:
-        if sec["title"]:
-            flow.append(Paragraph(esc(sec["title"]), st["head"]))
-        pending = []
-
-        def flush():
-            if pending:        # a list of short words reads as one line (skills); longer lines stay lines
-                short = len(pending) >= 4 and sum(map(len, pending)) / len(pending) <= 35
-                flow.extend([Paragraph(" &nbsp;•&nbsp; ".join(esc(x) for x in pending), st["body"])] if short
-                            else [Paragraph(esc(x), st["body"]) for x in pending])
-                pending.clear()
-        for it in sec["items"]:
-            if isinstance(it, dict):
-                flush()
-                flow.append(Paragraph(f'<b>{esc(it["role"])}</b>', st["role"]))
-                if it["dates"]:
-                    flow.append(Paragraph(esc(it["dates"]), st["sub"]))
-                if it["bullets"]:
-                    flow.append(bullets_of(it["bullets"]))
-            elif it[0] == "li":
-                pending.append(it[1])
-            else:
-                flush()
-                flow.append(Paragraph(esc(it[1]), st["body"]))
-        flush()
     if sections is not None:
-        return _write_pdf(flow, out, profile, company)
-    flow += [Paragraph(H[0], st["head"]),
-             Paragraph(esc(summary if summary is not None else profile.get("summary", "")), st["body"])]
-    if profile.get("expertise"):
-        flow += [Paragraph(H[1], st["head"]),
-                 Paragraph(" &nbsp;•&nbsp; ".join(esc(e) for e in _ordered_expertise(profile, hits)), st["body"])]
-    if key_skills:
-        flow += [Paragraph(H[2], st["head"]),
-                 Paragraph(" &nbsp;•&nbsp; ".join(esc(k) for k in key_skills), st["body"])]
-    flow.append(Paragraph(H[3], st["head"]))
-    for e in profile.get("experience", []):
-        where = ", ".join(x for x in (e.get("org", ""), e.get("loc", "")) if x)      # either may be missing
-        flow.append(Paragraph(f'<b>{esc(e["title"])}</b>' + (f" — {esc(where)}" if where else ""), st["role"]))
-        flow.append(Paragraph(esc(e.get("dates", "")), st["sub"]))
-        bullets = (_by_relevance(e.get("bullets", []), job) if job else _bullet_first(e.get("bullets", []), hits))
-        if bullets:                                    # a job listed without details: no (empty) list
-            flow.append(ListFlowable([ListItem(Paragraph(esc(b), st["bullet"]), leftIndent=8) for b in bullets],
-                                     bulletType="bullet", start="•", leftIndent=10, spaceAfter=4))
-    if profile.get("education"):
-        flow.append(Paragraph(H[4], st["head"]))
-        flow += [Paragraph(esc(ed), st["body"]) for ed in profile["education"]]
-    if profile.get("extras"):
-        flow.append(Paragraph(esc(profile.get("extras_title", "ADDITIONAL")), st["head"]))
-        flow += [Paragraph(esc(x), st["body"]) for x in profile["extras"]]
+        lang = _sections_lang(sections, _profile_lang(profile))
+    H = HEADINGS.get(lang, HEADINGS["en"])
+    labels = CONTACT_LABELS.get(lang, CONTACT_LABELS["en"])
+    blue, grey, soft, band = colors.HexColor("#1F4E78"), colors.HexColor("#555555"), colors.HexColor("#C9D6E3"), colors.HexColor("#EEF3F8")
+    base = getSampleStyleSheet()["Normal"]
+    width = A4[0] - 32 * mm - 12                     # the text column (the frame pads 6 pt each side)
 
-    return _write_pdf(flow, out, profile, company)
+    def flow_for(f, g):
+        """Everything on the page for a type scale f and a spacing scale g."""
+        st = {
+            "name": ParagraphStyle("name", parent=base, fontName="Helvetica-Bold", fontSize=23 * f, leading=27 * f, textColor=blue),
+            "headline": ParagraphStyle("hl", parent=base, fontSize=12 * f, leading=16 * f, textColor=grey),
+            "label": ParagraphStyle("lb", parent=base, fontSize=6.6 * f, leading=9 * f, textColor=grey),
+            "value": ParagraphStyle("vl", parent=base, fontSize=9 * f, leading=11.5 * f),
+            "head": ParagraphStyle("hd", parent=base, fontName="Helvetica-Bold", fontSize=10.5 * f, leading=13 * f, textColor=blue,
+                                   spaceBefore=9 * g, spaceAfter=1.5),
+            "role": ParagraphStyle("rl", parent=base, fontSize=10.5 * f, leading=13.5 * f, spaceBefore=2.5 * g),
+            "sub": ParagraphStyle("sb", parent=base, fontSize=8.6 * f, leading=11 * f, textColor=grey, spaceAfter=2 * g),
+            "body": ParagraphStyle("bd", parent=base, fontSize=9.4 * f, leading=13.2 * f, spaceAfter=2.2 * g),
+            "bullet": ParagraphStyle("bl", parent=base, fontSize=9.1 * f, leading=12.4 * f, spaceAfter=0.8 * g),
+        }
+        tight = [("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                 ("TOPPADDING", (0, 0), (-1, -1), 0), ("BOTTOMPADDING", (0, 0), (-1, -1), 0), ("VALIGN", (0, 0), (-1, -1), "TOP")]
+        # ---- the head of the page: name and title, the portrait on the right, then the contact details in a band
+        who = [Paragraph(esc(profile["name"]), st["name"])]
+        if profile.get("headline"):
+            who.append(Paragraph(esc(profile["headline"]), st["headline"]))
+        flow = who
+        if os.path.exists(PHOTO):                    # portrait at the top right, as Swiss CVs have it
+            try:
+                from reportlab.lib.utils import ImageReader
+                w, h = ImageReader(PHOTO).getSize()
+                pw = 27 * mm
+                flow = [Table([[who, Image(PHOTO, width=pw, height=pw * h / w)]], colWidths=[width - pw - 3 * mm, pw + 3 * mm],
+                              style=TableStyle(tight + [("ALIGN", (1, 0), (1, 0), "RIGHT"), ("VALIGN", (0, 0), (0, 0), "MIDDLE")]))]
+            except Exception:  # noqa: BLE001  (unreadable picture: the CV is made without it)
+                flow = who
+        c = profile.get("contact", {})
+        cells = [[Paragraph(esc(lab.upper()), st["label"]), Paragraph(esc(val), st["value"])]
+                 for lab, val in zip(labels, (c.get("email"), c.get("phone"), c.get("location"), c.get("linkedin"))) if val]
+        flow.append(Spacer(1, 5 * g))
+        if cells:
+            flow.append(Table([cells], colWidths=[width / len(cells)] * len(cells),
+                              style=TableStyle([("BACKGROUND", (0, 0), (-1, -1), band), ("ROUNDEDCORNERS", [5, 5, 5, 5]),
+                                                ("LEFTPADDING", (0, 0), (-1, -1), 8), ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+                                                ("TOPPADDING", (0, 0), (-1, -1), 5), ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                                                ("VALIGN", (0, 0), (-1, -1), "TOP")])))
+        flow.append(Spacer(1, 3 * g))
 
+        def heading(title):
+            return [Paragraph(esc(title), st["head"]), HRFlowable(width="100%", thickness=0.7, color=soft, spaceAfter=3.5 * g)]
 
-def _write_pdf(flow, out, profile, company):
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib.units import mm
-    from reportlab.platypus import SimpleDocTemplate
+        def bullets_of(items):
+            return ListFlowable([ListItem(Paragraph(esc(b), st["bullet"]), leftIndent=8) for b in items],
+                                bulletType="bullet", start="•", leftIndent=10, spaceAfter=4 * g)
+        if sections is not None:
+            for sec in sections:
+                if sec["title"]:
+                    flow += heading(sec["title"])
+                pending = []
+
+                def flush():
+                    if pending:        # a list of short words reads as one line (skills); longer lines stay lines
+                        short = len(pending) >= 4 and sum(map(len, pending)) / len(pending) <= 35
+                        flow.extend([Paragraph(" &nbsp;•&nbsp; ".join(esc(x) for x in pending), st["body"])] if short
+                                    else [Paragraph(esc(x), st["body"]) for x in pending])
+                        pending.clear()
+                for it in sec["items"]:
+                    if isinstance(it, dict):
+                        flush()
+                        flow.append(Paragraph(f'<b>{esc(it["role"])}</b>', st["role"]))
+                        if it["dates"]:
+                            flow.append(Paragraph(esc(it["dates"]), st["sub"]))
+                        if it["bullets"]:
+                            flow.append(bullets_of(it["bullets"]))
+                    elif it[0] == "li":
+                        pending.append(it[1])
+                    else:
+                        flush()
+                        flow.append(Paragraph(esc(it[1]), st["body"]))
+                flush()
+            return flow
+        flow += heading(H[0]) + [Paragraph(esc(summary if summary is not None else profile.get("summary", "")), st["body"])]
+        if profile.get("expertise"):
+            flow += heading(H[1]) + [Paragraph(" &nbsp;•&nbsp; ".join(esc(e) for e in _ordered_expertise(profile, hits)), st["body"])]
+        if key_skills:
+            flow += heading(H[2]) + [Paragraph(" &nbsp;•&nbsp; ".join(esc(k) for k in key_skills), st["body"])]
+        flow += heading(H[3])
+        for e in profile.get("experience", []):
+            where = ", ".join(x for x in (e.get("org", ""), e.get("loc", "")) if x)      # either may be missing
+            flow.append(Paragraph(f'<b>{esc(e["title"])}</b>' + (f" — {esc(where)}" if where else ""), st["role"]))
+            flow.append(Paragraph(esc(e.get("dates", "")), st["sub"]))
+            bullets = (_by_relevance(e.get("bullets", []), job) if job else _bullet_first(e.get("bullets", []), hits))
+            if bullets:                                    # a job listed without details: no (empty) list
+                flow.append(bullets_of(bullets))
+        if profile.get("education"):
+            flow += heading(H[4]) + [Paragraph(esc(ed), st["body"]) for ed in profile["education"]]
+        if profile.get("extras"):
+            flow += heading(profile.get("extras_title", "ADDITIONAL")) + [Paragraph(esc(x), st["body"]) for x in profile["extras"]]
+        return flow
+
+    def build(f, g, target):
+        doc = SimpleDocTemplate(target, pagesize=A4, leftMargin=16 * mm, rightMargin=16 * mm, topMargin=15 * mm, bottomMargin=15 * mm,
+                                title=f"{profile['name']} — CV" + (f" — {company}" if company else ""), author=profile["name"])
+        doc.build(flow_for(f, g))
+        return doc.page
+
+    def pages(f, g):
+        return build(f, g, io.BytesIO())
+    f, g, goal = 1.0, 1.0, pages(1.0, 1.0)
+    if goal > 1:                                     # a few lines alone on a last page: tighten to end on the page before
+        for smaller in (0.96, 0.92, 0.88):
+            if pages(smaller, 0.85) == goal - 1:
+                f, g, goal = smaller, 0.85, goal - 1
+                break
+    if f == 1.0:                                     # room left on the last page: larger type first ...
+        for larger in (1.06, 1.12, 1.18, 1.24, 1.3):
+            if pages(larger, g) != goal:
+                break
+            f = larger
+    while g < 6.5 and pages(f, g * 1.1) == goal:     # ... then more air between the blocks, down to the foot of the page
+        g *= 1.1
     os.makedirs(CV_DIR, exist_ok=True)
-    SimpleDocTemplate(out, pagesize=A4, leftMargin=16 * mm, rightMargin=16 * mm,
-                      topMargin=14 * mm, bottomMargin=14 * mm,
-                      title=f"{profile['name']} — CV" + (f" — {company}" if company else ""),
-                      author=profile["name"]).build(flow)
+    build(f, g, out)
     return out
 
 

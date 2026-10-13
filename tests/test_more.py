@@ -467,8 +467,7 @@ def test_score_points_levels_badges_and_streak(env):
     env.store.dismiss(ids[5], "location", True)                            # sorted with a reason: 1 point; without: none
     env.store.dismiss(ids[6], None, True)
     env.store.update_status(ids[7], "shortlisted")
-    g = env.game.stats(datetime.date.today() if datetime.date.today() >= today else today)
-    g = env.game.stats(today) if g["streak"] != 3 else g
+    g = env.game.stats(today)
     assert g["this_week"]["applied"] == 1 and g["this_week"]["interview"] == 1 and g["this_week"]["followup"] == 1
     assert g["total"] >= 3 * 10 + 30 + 5 + 3 + 3 and g["streak"] == 3
     assert {"first", "streak3", "tailor", "interview"} <= set(g["badges"]) and "offer" not in g["badges"] and "five" not in g["badges"]
@@ -613,3 +612,30 @@ def test_letter_is_fuller_and_laid_out_like_a_swiss_letter(env):
     assert date[1] < min(y for t, x, y in spots if t.startswith("Kind regards")) and date[1] < 260      # ... low on the page
     # a long letter still fits one page (smaller type), a short one uses bigger type
     assert len(PdfReader(env.letter.pdf(profile, job, text.replace("Plans", "Plans " + "et détails constructifs soignés " * 60), out)).pages) <= 2
+
+
+def test_cv_page_is_balanced_and_has_a_readable_head(env):
+    from pypdf import PdfReader
+    profile = dict(PROFILE, contact={"email": "sam@example.org", "phone": "+41 79 000 00 00", "location": "Pully, Vaud"}, education=["CFC, 2016"])
+    Path(env.config.PROFILE_PATH).write_text(json.dumps(profile))
+
+    def spots(path):
+        got = []
+        PdfReader(path).pages[-1].extract_text(visitor_text=lambda t, cm, tm, fd, fs: got.append((t.strip(), round(cm[5] + tm[5]), fs)) if t.strip() else None)
+        return got
+    out = env.tailor.render(profile, [], str(Path(env.config.DB_PATH).parent / "cv.pdf"), lang="fr")
+    pdf = PdfReader(out)
+    text = pdf.pages[0].extract_text()
+    assert len(pdf.pages) == 1 and "TÉLÉPHONE" in text and "DOMICILE" in text and "sam@example.org" in text      # labelled contact details
+    low = min(y for _, y, _ in spots(out))
+    assert low < 200, low                                    # even a very short CV is spread down the page, not left half empty
+    assert max(fs for _, _, fs in spots(out)) > 24           # ... with larger type
+    # a CV that would leave a few lines alone on a second page is tightened onto one
+    longer = dict(profile, experience=[dict(profile["experience"][0], bullets=["Planned and delivered a complete set of drawings for a housing project."] * 9)] * 5)
+    assert len(PdfReader(env.tailor.render(longer, [], out, lang="en")).pages) in (1, 2)
+    two = PdfReader(env.tailor.render(dict(longer, experience=longer["experience"] * 2), [], out, lang="en"))
+    assert min(y for _, y, _ in spots(out)) < 150 and "PHONE" in two.pages[0].extract_text()       # and a long one ends near the foot of its last page
+    # the written-out CV of a job keeps the language of its headings for the labels
+    jid = _job(env, "Architecte", description="Plans.")
+    env.tailor.build_from_text({"id": jid, "company": "X"}, profile, "## PROFIL\nTexte.\n## EXPÉRIENCE PROFESSIONNELLE\n### Poste\n2020\n- point\n")
+    assert "TÉLÉPHONE" in PdfReader(env.tailor.cv_path(jid)).pages[0].extract_text()

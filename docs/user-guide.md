@@ -148,6 +148,9 @@ those dates (job titles and companies, nothing else); **New address** makes the 
   The letter written for a job also names what you work with, your training and your languages when your profile lists them.
   The letter written for a job now has six short paragraphs: who you are and what you apply for, your background
   in your own words, what you bring for this posting, examples, why you want to join, and an invitation to meet.
+- **The CV page is balanced.** Name and title at the top, contact details in a labelled band, your photo on the right.
+  The type and the spacing grow until the last page is full, and a CV that would leave a few lines alone on a new page
+  is tightened to end on the page before.
 - **Photo** (CV page): upload a portrait once; it is placed at the top right of every CV made afterwards.
 
 ## A stronger profile
