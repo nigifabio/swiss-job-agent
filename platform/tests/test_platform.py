@@ -827,3 +827,9 @@ def test_admin_page_shows_the_shared_crawler(gw, monkeypatch):
     page = gw.get("/_platform/admin", headers=admin).text
     assert "1234 postings held (ats 234, job-room 1000)" in page and "31 search terms registered, 2 not crawled yet" in page
     assert "last round 2026-10-13 06:00 UTC (+57)" in page and "ats: 3 error(s)" in page
+
+
+def test_home_page_with_a_trailing_slash_is_the_same_public_page(gw):
+    r = gw.get("/welcome/", follow_redirects=False)
+    assert r.status_code == 308 and r.headers["location"] == "/welcome" and gw.get("/welcome/").status_code == 200
+    assert gw.post("/welcome/").status_code == 403

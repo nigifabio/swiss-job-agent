@@ -160,6 +160,8 @@ async def gate(request: Request, call_next):
     if path.startswith(PUBLIC_HOME + "/cal/") and request.method == "GET":
         request.state.email = ""                 # a calendar app fetching a feed: no identity, the key is the access
         return await call_next(request)
+    if path == PUBLIC_HOME + "/" and request.method in ("GET", "HEAD"):
+        return RedirectResponse(PUBLIC_HOME, status_code=308)        # typed with a trailing slash: same public page
     if path == PUBLIC_HOME and request.method in ("GET", "HEAD"):
         # the one public page: static text, shows the visitor's email only if they are signed in
         request.state.email = identify(request) or ""
