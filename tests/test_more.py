@@ -639,3 +639,87 @@ def test_cv_page_is_balanced_and_has_a_readable_head(env):
     jid = _job(env, "Architecte", description="Plans.")
     env.tailor.build_from_text({"id": jid, "company": "X"}, profile, "## PROFIL\nTexte.\n## EXPÉRIENCE PROFESSIONNELLE\n### Poste\n2020\n- point\n")
     assert "TÉLÉPHONE" in PdfReader(env.tailor.cv_path(jid)).pages[0].extract_text()
+
+
+def test_shared_collector_crawls_once_and_workspaces_pull_from_it(env, monkeypatch, tmp_path):
+    """One crawl for everybody: a workspace registers what it searches, falls back to its own crawl until the
+    collector has crawled that, then takes its postings from the pool and no longer queries the shared sources."""
+    col, pool, fetch = env.collector, env.providers.pool, env.fetch
+    monkeypatch.setenv("POOL_TOKEN", "pool-secret")
+    calls = {"jobroom": 0, "jobup": 0}
+
+    def jobroom():
+        calls["jobroom"] += 1
+        return [{"content_hash": f"jr-{t}", "source": "job-room", "title": t, "company": "Acme SA", "location": loc, "description": "AWS in the cloud.", "url": "https://x.example/" + t}
+                for t, loc in (("Cloud Architect", "Lausanne (VD)"), ("Junior Architect", "Lausanne"), ("Cook", "Lausanne"), ("DevOps Engineer", "Zürich"))
+                if env.filters.title_ok(t)]            # like the real source: the title rule of whoever crawls
+
+    def jobup():
+        calls["jobup"] += 1
+        return [{"content_hash": "ju-1", "source": "jobup.ch", "title": "DevOps Lead", "company": "Globex", "location": "Genève", "description": "", "url": ""}]
+    monkeypatch.setattr(fetch.MODULES["jobroom"], "fetch", jobroom)
+    monkeypatch.setattr(fetch.MODULES["jobup"], "fetch", jobup)
+    monkeypatch.setattr(col, "PROVIDERS", ["jobroom"])
+    monkeypatch.setattr(env.config, "PROVIDERS", ["jobroom", "jobup"])
+    monkeypatch.setattr(env.config, "SEARCH_TERMS", ["architect"])
+    workspace_db, pool_db = env.config.DB_PATH, str(tmp_path / "pool.db")
+
+    class At:                                   # the collector and the workspace are two processes with two databases
+        def __init__(self, path):
+            self.path = path
+
+        def __enter__(self):
+            self.old = env.store.DB_PATH
+            env.store.DB_PATH = self.path
+
+        def __exit__(self, *a):
+            env.store.DB_PATH = self.old
+    with At(pool_db):
+        col.init()
+    api = TestClient(col.app)                   # (not entered as a context: no background loop in the test)
+    saved = {k: getattr(env.config, k) for k in ("SEARCH_TERMS", "TITLE_KEYWORDS", "TITLE_EXCLUDE", "LOCATION_KEYWORDS", "LANGUAGES", "WHERE", "JOBROOM_CANTONS", "ALLOW_REMOTE", "COMPANY_EXCLUDE")}
+
+    def post(payload, token="pool-secret"):
+        mine = {k: getattr(env.config, k) for k in saved}
+        with At(pool_db):
+            r = api.post("/pull", json=payload, headers={"authorization": f"Bearer {token}"})
+        for k, v in mine.items():
+            setattr(env.config, k, v)
+        r.raise_for_status()
+        return r.json()
+    assert api.post("/pull", json={}).status_code == 404 and api.get("/status").status_code == 404        # the token, or nothing
+    monkeypatch.setattr(pool, "URL", "http://collector:8092")
+    monkeypatch.setattr(pool, "TOKEN", "pool-secret")
+    monkeypatch.setattr(pool, "_post", post)
+    # first scan: the collector has never crawled this search, so the workspace crawls everything itself
+    assert fetch._run() == 3 and calls == {"jobroom": 1, "jobup": 1}
+    assert sorted(j["title"] for j in env.store.list_jobs("new")) == ["Cloud Architect", "DevOps Engineer", "DevOps Lead"]
+    with At(pool_db):
+        assert col.plan()["terms"] == ["architect"] and "lausanne" in col.plan()["places"]
+        new = col.crawl()                                                             # the collector's round, for the union of searches
+        for k, v in saved.items():
+            setattr(env.config, k, v)
+        assert new == 4 and calls["jobroom"] == 2                                     # every title is kept in the pool, even "Cook"
+        st = api.get("/status", headers={"authorization": "Bearer pool-secret"}).json()
+    assert st["postings"] == 4 and st["demand"]["terms"] == 1 and st["waiting"] == 0 and st["by_source"] == {"job-room": 4}
+    # second scan: Job-Room comes from the pool (not queried from here), jobup is still this workspace's own
+    assert fetch._run() == 0 and calls == {"jobroom": 2, "jobup": 2}
+    assert env.store.get_meta()["pool_since"] and len(env.store.list_jobs("new")) == 3          # same postings: nothing doubled
+    # what is delivered is filtered here: the pool's "Cook", "Junior Architect" and the Zürich job never reach the list
+    data = post({"since": "", "spec": pool.spec()})
+    assert data["ready"] and data["covers"] == ["jobroom"] and sorted(j["title"] for j in data["jobs"]) == ["Cloud Architect", "Cook", "Junior Architect"]
+    assert all("score" not in j and "status" not in j for j in data["jobs"])
+    # another person, another search: registered, not ready, crawled next round; nothing says who asked
+    other = {"terms": ["cook"], "where": [], "cantons": ["VD"], "places": ["lausanne"], "langs": ["fr"], "remote": False}
+    assert post({"since": "", "spec": other})["ready"] is False
+    with At(pool_db):
+        with env.store.conn() as c:
+            rows = [dict(r) for r in c.execute("SELECT * FROM demand").fetchall()]
+    assert {"kind", "value", "first_asked", "last_asked", "crawled_at"} == set(rows[0]) and ("terms", "cook") in {(r["kind"], r["value"]) for r in rows}
+    # a changed search starts again from the whole pool; the collector going away just means crawling here again
+    monkeypatch.setattr(env.config, "TITLE_KEYWORDS", ["architect", "devops", "cook"])
+    assert fetch._run() == 1 and "Cook" in [j["title"] for j in env.store.list_jobs("new")]
+    monkeypatch.setattr(pool, "_post", lambda payload: (_ for _ in ()).throw(RuntimeError("down")))
+    before = dict(calls)
+    fetch._run()
+    assert calls["jobroom"] == before["jobroom"] + 1 and calls["jobup"] == before["jobup"] + 1 and env.store.DB_PATH == workspace_db

@@ -116,6 +116,25 @@ The 💬 link of the top bar opens `/_platform/feedback`: a signed-in person wri
 like. The message is kept (admin page, with Done / Reopen), and sent through `NOTIFY_WEBHOOK` with the sender's address
 and the page they came from. At most eight a day per person; nothing from the workspace is attached.
 
+### The shared collector
+
+One container (`jobplatform-collector`, the app image running `python -m app.collector`) crawls the shared sources once
+for everybody: Job-Room, the public employers' career sites, remote boards and the keyed aggregators. It keeps the postings
+in its own SQLite database (volume `jobplatform_pool`; public data only, rebuilt by crawling, so it is not backed up).
+
+- A workspace sends **what it searches** (terms, regions, places, languages), never who its owner is, and gets the postings
+  found since its last pull. It then applies its own title, place, language, company and work-rate rules, ranks and tracks
+  as before. Nothing personal goes to the collector.
+- The collector crawls the union of what was asked in the last 21 days, every `COLLECT_HOURS` (6), and within a minute
+  when a search arrives that nobody had asked for.
+- **Fallback:** until the collector has crawled a workspace's search, and whenever it doesn't answer, the workspace crawls
+  those sources itself exactly as before.
+- **Always per workspace:** jobs.ch / jobup.ch, e-mail alerts, and a person's own list of company career sites.
+- The admin page shows the postings held, the searches registered and the last round. `COLLECTOR_CONTAINER=` (empty) in
+  `platform/.env` turns the pool off.
+
+Workspaces reach the collector on their own network, like the gateway; it is the only other service they can talk to.
+
 ### The forum
 
 `/_platform/forum` (link "Forum" in the top bar): topics about the job search in six subjects (CV and letters, interviews,

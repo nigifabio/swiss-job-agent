@@ -58,9 +58,35 @@ services:
       interval: 30s
       timeout: 5s
 
+  # One crawler for everybody: the shared sources are queried once, into one database of postings
+  # (public data only); each workspace takes what matches its owner. Runs the app image.
+  collector:
+    <<: *hardening
+    image: ${TENANT_IMAGE:-swiss-job-agent:latest}
+    container_name: jobplatform-collector
+    command: ["python", "-m", "app.collector"]
+    env_file: .env
+    environment:
+      DB_PATH: /data/pool.db
+      WATCHLIST_PATH: /data/watchlist.json
+      HOME: /tmp
+      PYTHONDONTWRITEBYTECODE: "1"
+      CF_TEAM_DOMAIN: ""
+      CF_ACCESS_AUD: ""
+    # root inside the container only to own its data volume; no capabilities, not published
+    user: "0:0"
+    volumes: [pool:/data]
+    networks: [platform]
+    mem_limit: 768m
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8092/healthz', timeout=4)"]
+      interval: 30s
+      timeout: 5s
+
 volumes:
   state: {}
   archives: {}
+  pool: {}
 
 networks:
   platform: {}

@@ -666,6 +666,17 @@ def overview():
     return rows, [s for s in live if not db.tenant(s)], live_err
 
 
+def collector_status():
+    """Counts from the shared crawler (postings held, searches registered, last round), or None."""
+    try:
+        token = hmac.new(C.token.encode(), b"pool", hashlib.sha256).hexdigest()
+        r = httpx.get(os.environ.get("COLLECTOR_URL", "http://jobplatform-collector:8092") + "/status",
+                      headers={"Authorization": f"Bearer {token}"}, timeout=4)
+        return r.json() if r.status_code == 200 else None
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def backups():
     try:
         return prov("GET", "/backups")
@@ -699,7 +710,7 @@ def admin(request: Request, new: str = ""):
     return page(request, "admin.html", {"tenants": rows, "orphans": orphans, "invites": db.invites(),
                                         "requests": db.requests(), "notify_on": notify.configured(),
                                         "audit": db.audit_log(30), "new_link": link, "live_err": live_err,
-                                        "backup": bk, "problems": health.problems(rows, bk), "feedback": db.feedback(),
+                                        "backup": bk, "problems": health.problems(rows, bk), "feedback": db.feedback(), "pool": collector_status(),
                                         "max": C.max_tenants})
 
 

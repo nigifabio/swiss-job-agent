@@ -35,6 +35,7 @@ def gw(tmp_path, monkeypatch):
         return {}
     monkeypatch.setattr(g, "prov", prov)
     monkeypatch.setattr(g, "tenant_summary", lambda slug: {})          # no workspace to ask in these tests
+    monkeypatch.setattr(g, "collector_status", lambda: None)             # ... and no collector
     # stands in for the verified Cloudflare Access email (tests only; the gateway has no such header)
     monkeypatch.setattr(g, "identify", lambda request: (request.headers.get("x-test-user") or "").lower() or None)
     seen = []
@@ -775,3 +776,54 @@ def test_forum_topics_replies_and_moderation_under_the_nickname(gw, monkeypatch)
     for _ in range(40):
         gw.db.forum_reply("paul", gw.db.forum_topics()[0]["id"], "again")
     assert len(gw.db.forum_topic(gw.db.forum_topics()[0]["id"])[1]) == 30               # thirty messages a day per person
+
+
+def test_workspaces_are_given_the_shared_collector_and_can_reach_only_it_and_the_gateway(prov, monkeypatch):
+    e = prov.spec("marie", "marie@example.org", "web", "img")["environment"]
+    assert e["POOL_URL"] == "http://jobplatform-collector:8092" and e["POOL_TOKEN"] == prov.pool_token() and len(e["POOL_TOKEN"]) == 64
+    assert "tok" not in e["POOL_TOKEN"] and e["POOL_TOKEN"] != e["OPS_TOKEN"]
+    joined = []
+
+    class Net:
+        attrs = {"Containers": {}}
+
+        def reload(self):
+            pass
+
+        def connect(self, c):
+            joined.append(c.id)
+
+    class C:
+        def __init__(self, name):
+            self.id = name
+
+    class Coll:
+        def __init__(self, make, known):
+            self.make, self.known = make, known
+
+        def get(self, name):
+            if name not in self.known:
+                import docker.errors
+                raise docker.errors.NotFound(name)
+            return self.make(name)
+
+    class D:
+        networks = Coll(lambda n: Net(), {"jat-marie"})
+        containers = Coll(C, {"jobplatform-gateway", "jobplatform-collector"})
+    assert prov.attach_gateway(D(), "marie") is True and sorted(joined) == ["jobplatform-collector", "jobplatform-gateway"]
+    D.containers = Coll(C, {"jobplatform-gateway"})                      # no collector running: the gateway is still attached
+    joined.clear()
+    assert prov.attach_gateway(D(), "marie") is True and joined == ["jobplatform-gateway"]
+    monkeypatch.setattr(prov.S, "collector", "")                         # turned off: workspaces are told nothing about a pool
+    assert "POOL_URL" not in prov.spec("marie", "marie@example.org", "web", "img")["environment"]
+
+
+def test_admin_page_shows_the_shared_crawler(gw, monkeypatch):
+    admin = as_("admin@example.org")
+    assert "Shared crawler: not answering" in gw.get("/_platform/admin", headers=admin).text
+    monkeypatch.setattr(gw.g, "collector_status", lambda: {"postings": 1234, "by_source": {"job-room": 1000, "ats": 234}, "demand": {"terms": 31},
+                                                           "waiting": 2, "last_round_at": "2026-10-13T06:00:00", "last_round_new": 57,
+                                                           "sources": {"jobroom": {"count": 900, "errors": 0}, "ats": {"count": 0, "errors": 3}}})
+    page = gw.get("/_platform/admin", headers=admin).text
+    assert "1234 postings held (ats 234, job-room 1000)" in page and "31 search terms registered, 2 not crawled yet" in page
+    assert "last round 2026-10-13 06:00 UTC (+57)" in page and "ats: 3 error(s)" in page

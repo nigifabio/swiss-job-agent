@@ -6,7 +6,7 @@ import json
 
 from .store import init_db, upsert_jobs, rescore, set_meta, get_meta, now
 from . import config, filters, prefs, scanlog
-from .providers import adzuna, ats, careerjet, jobroom, jobup, jooble, mailalerts, remote
+from .providers import adzuna, ats, careerjet, jobroom, jobup, jooble, mailalerts, pool, remote
 
 # name in PROVIDERS -> module. Keyed/mailbox ones stay silent until configured.
 MODULES = {"ats": ats, "jobup": jobup, "jobroom": jobroom, "remote": remote, "adzuna": adzuna,
@@ -94,22 +94,45 @@ def _closed():
     closed.check()
 
 
+def _keep(jobs):
+    """The postings this person may see, scored: company and work-rate rules apply to every source."""
+    jobs = [j for j in jobs if filters.company_ok(j.get("company")) and filters.rate_ok(j.get("title"))]
+    for job in jobs:
+        job["title"] = " ".join((job.get("title") or "").split())
+        job["score"], job["score_rationale"] = score_job(job)
+    return jobs
+
+
 def _run():
     total = new = 0
+    pooled = set()                 # sources the platform's collector answered for: not queried again from here
+    if pool.enabled():
+        try:
+            jobs, pooled, mark = pool.pull()
+            jobs = _keep(jobs)
+            total += len(jobs)
+            new += upsert_jobs(jobs)
+            if mark:
+                set_meta(**mark)
+        except Exception as e:  # noqa: BLE001  (collector down or busy: this scan crawls everything itself, as before)
+            pooled = set()
+            print(f"[fetch] collector not available ({type(e).__name__}: {str(e)[:120]}); crawling from here")
     for name in config.PROVIDERS:
         mod = MODULES.get(name)
         if not mod:
             print(f"[fetch] unknown provider '{name}' — skipping")
             continue
+        if name in pooled and name != "ats":
+            continue
+        ats.PUBLIC = "ats" not in pooled         # own company boards stay here; the public employers came from the collector
         try:
             jobs = mod.fetch()
         except Exception as e:  # noqa: BLE001
             scanlog.error(name, f"provider crashed: {type(e).__name__}: {str(e)[:150]}")
             continue
-        jobs = [j for j in jobs if filters.company_ok(j.get("company")) and filters.rate_ok(j.get("title"))]
-        for job in jobs:
-            job["title"] = " ".join((job.get("title") or "").split())
-            job["score"], job["score_rationale"] = score_job(job)
+        finally:
+            ats.PUBLIC = True
+        jobs = _keep(jobs)
         total += len(jobs)
         new += upsert_jobs(jobs)
     print(f"[fetch] processed {total} postings, {new} new")

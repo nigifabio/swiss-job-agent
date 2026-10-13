@@ -367,9 +367,12 @@ NEEDS_KNOWN = {_smartrecruiters, _workday, _workable, _personio, _recruitee, _te
 PUBLIC_BOARDS = os.path.join(os.path.dirname(os.path.dirname(__file__)), "watchlists", "public.json")
 
 
+PUBLIC = True          # fetch.py turns this off for a scan whose public boards came from the platform's collector
+
+
 def _public_boards():
     """Large Swiss employers and administrations everybody gets, on top of their own watchlist."""
-    if os.environ.get("PUBLIC_BOARDS", "1") == "0":
+    if os.environ.get("PUBLIC_BOARDS", "1") == "0" or not PUBLIC:
         return []
     try:
         with open(PUBLIC_BOARDS) as f:
@@ -395,7 +398,8 @@ def fetch():
     have = {(e.get("ats"), e.get("slug")) for e in wl}
     wl = wl + [e for e in _public_boards() if (e.get("ats"), e.get("slug")) not in have]
     if not wl:
-        scanlog.error("ats", "watchlist empty; run: docker compose run --rm scheduler python -m app.discover")
+        if PUBLIC:           # (with the public boards taken from the collector, an empty own list is normal)
+            scanlog.error("ats", "watchlist empty; run: docker compose run --rm scheduler python -m app.discover")
         return []
     out, known = [], store.known_hashes()
     _seen.clear()

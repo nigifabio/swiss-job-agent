@@ -54,6 +54,7 @@ class Settings:
         self.image = env("TENANT_IMAGE", "swiss-job-agent:latest")
         self.token = env("PROVISIONER_TOKEN")
         self.gateway = env("GATEWAY_CONTAINER", "jobplatform-gateway")
+        self.collector = env("COLLECTOR_CONTAINER", "jobplatform-collector")      # shared crawler; "" = every workspace crawls alone
         self.subnet_pool = ipaddress.ip_network(env("TENANT_SUBNET_POOL", "172.31.0.0/16"))
         self.web_mem = env("TENANT_WEB_MEMORY", "512m")
         self.sched_mem = env("TENANT_SCHED_MEMORY", "512m")
@@ -85,6 +86,11 @@ def ops_token(slug, secret=None):
     """What the gateway shows to a workspace to read its totals (/ops/summary): derived from the
     platform token, different for every workspace, never the platform token itself."""
     return hmac.new((secret if secret is not None else S.token).encode(), f"ops:{slug}".encode(), hashlib.sha256).hexdigest()
+
+
+def pool_token(secret=None):
+    """What workspaces show the collector: derived from the platform token, never the token itself."""
+    return hmac.new((secret if secret is not None else S.token).encode(), b"pool", hashlib.sha256).hexdigest()
 
 
 def names(slug):
@@ -147,6 +153,8 @@ def spec(slug, email, role, image, extra=()):
     environment = dict(S.passthrough, DB_PATH="/data/jobs.db", ONBOARDING="1", PLATFORM_TENANT="1",
                        ALLOWED_EMAILS=",".join([email] + extra), TENANT_SLUG=slug, OPS_TOKEN=ops_token(slug),
                        HOME="/tmp", PYTHONDONTWRITEBYTECODE="1", PROVIDERS="")
+    if S.collector:
+        environment.update(POOL_URL=f"http://{S.collector}:8092", POOL_TOKEN=pool_token())
     common = dict(
         image=image, detach=True, environment=environment, user="1000:1000",
         volumes={n["vol"]: {"bind": "/data", "mode": "rw"}}, network=n["net"],
@@ -168,19 +176,26 @@ def _remove(d, name):
         c.remove(force=True)
 
 
-def attach_gateway(d, slug):
+def _attach(d, slug, container):
     net = _get(d.networks, names(slug)["net"])
-    gw = _get(d.containers, S.gateway)
-    if not net or not gw:
+    c = _get(d.containers, container) if container else None
+    if not net or not c:
         return False
     net.reload()
-    if gw.id not in (net.attrs.get("Containers") or {}):
+    if c.id not in (net.attrs.get("Containers") or {}):
         try:
-            net.connect(gw)
+            net.connect(c)
         except Exception as e:  # noqa: BLE001  (already connected)
             if "already exists" not in str(e):
                 raise
     return True
+
+
+def attach_gateway(d, slug):
+    """Put the gateway (and the shared collector, when there is one) on the workspace's own network:
+    the only two services a workspace can talk to."""
+    _attach(d, slug, S.collector)
+    return _attach(d, slug, S.gateway)
 
 
 def healthy(d, name, timeout=90):
@@ -291,12 +306,13 @@ def delete(d, slug):
         _remove(d, n[role])
     net = _get(d.networks, n["net"])
     if net:
-        gw = _get(d.containers, S.gateway)
-        if gw:
-            try:
-                net.disconnect(gw, force=True)
-            except Exception:  # noqa: BLE001
-                pass
+        for name in (S.gateway, S.collector):
+            other = _get(d.containers, name) if name else None
+            if other:
+                try:
+                    net.disconnect(other, force=True)
+                except Exception:  # noqa: BLE001
+                    pass
         net.remove()
     vol = _get(d.volumes, n["vol"])
     if vol:

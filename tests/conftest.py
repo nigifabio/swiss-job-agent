@@ -6,7 +6,7 @@ import pytest
 
 MODULES = ["config", "normalize", "http", "scanlog", "filters", "store", "prefs", "skills", "enrich", "compose", "tailor", "letter",
            "commute", "requirements", "closed", "tune", "prep", "locales_it", "locales", "i18n", "report", "twins", "listfilter", "suggest", "docs", "strength", "weekly", "agenda", "game", "improve", "providers.adzuna", "providers.ats", "providers.jobup", "providers.jobroom",
-           "providers.remote", "providers.careerjet", "providers.jooble", "providers.mailalerts", "fetch", "auth",
+           "providers.remote", "providers.careerjet", "providers.jooble", "providers.mailalerts", "providers.pool", "fetch", "collector", "auth",
            "scheduler", "roles", "places", "importers.extract", "importers.cvparse", "importers.linkedin", "onboard",
            "web"]
 
@@ -27,7 +27,7 @@ def env(tmp_path, monkeypatch):
     monkeypatch.setenv("SCORE_KEYWORDS", "aws,azure,terraform,api")
     monkeypatch.setenv("LANGUAGES", "en")
     monkeypatch.setenv("PUBLIC_BOARDS", "0")          # the boards everybody gets are tested on their own
-    for var in ("CF_TEAM_DOMAIN", "CF_ACCESS_AUD", "ALLOWED_EMAILS", "CAREERJET_API_KEY", "JOOBLE_API_KEY",
+    for var in ("POOL_URL", "POOL_TOKEN", "PROVISIONER_TOKEN", "CF_TEAM_DOMAIN", "CF_ACCESS_AUD", "ALLOWED_EMAILS", "CAREERJET_API_KEY", "JOOBLE_API_KEY",
                 "IMAP_HOST", "JOBROOM_CANTONS", "ONBOARDING", "PLATFORM_TENANT", "SETTINGS_PATH", "PROFILE_PATH"):
         monkeypatch.delenv(var, raising=False)
     import app  # noqa: F401
@@ -42,7 +42,7 @@ def env(tmp_path, monkeypatch):
     # "Scan now" runs inline in tests instead of leaking a background thread
     monkeypatch.setattr(mods["web"], "_start_background", lambda fn: fn())
     import app as pkg
-    for name in ("adzuna", "ats", "jobup", "jobroom", "remote", "careerjet", "jooble", "mailalerts"):
+    for name in ("adzuna", "ats", "jobup", "jobroom", "remote", "careerjet", "jooble", "mailalerts", "pool"):
         setattr(pkg.providers, name, mods[f"providers.{name}"])
     return pkg
 
