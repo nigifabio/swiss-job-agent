@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% from "_chip.html" import chip %}
+{% macro fix(f, label, back) -%}
+<form method="post" action="/tune" style="display:inline">
+  <input type="hidden" name="action" value="{{ f[0] }}"><input type="hidden" name="name" value="{{ f[1] }}">
+  <input type="hidden" name="value" value="{{ f[2] }}"><input type="hidden" name="next" value="{{ back }}">
+  <button class="ghost small" type="submit">{{ label }}</button>
+</form>
+{%- endmacro %}
+{% block body %}
+{% if review %}
+<p><a href="/add#posting">← back</a></p>
+<div class="card">
+  <h2 style="margin-top:0">Check the posting</h2>
+  <p class="muted">This is what was read. Correct what is wrong, then add it to your jobs.</p>
+  <form method="post" action="/add/posting/save">
+    <label>Title *</label>
+    <input name="title" required maxlength="200" value="{{ job.title }}">
+    <div class="row">
+      <div><label>Company</label><input name="company" maxlength="120" value="{{ job.company }}"></div>
+      <div><label>Location</label><input name="location" maxlength="120" value="{{ job.location }}"></div>
+    </div>
+    <label>URL</label>
+    <input name="url" value="{{ job.url }}">
+    <input type="hidden" name="source" value="{{ source }}">
+    <label>Status</label>
+    <select name="status">
+      {% for s in statuses %}<option value="{{ s }}" {% if s == 'shortlisted' %}selected{% endif %}>{{ s | tr }}</option>{% endfor %}
+    </select>
+    <label>Description</label>
+    <textarea name="description" rows="12" maxlength="30000">{{ job.description }}</textarea>
+    <p><button type="submit">Add this job and check my search</button></p>
+  </form>
+</div>
+{% else %}
+<p><a href="/job/{{ job.id }}">← back to the job</a></p>
+<div class="card">
+  <h2 style="margin-top:0">Does my search find postings like this one?</h2>
+  <p><strong>{{ job.title }}</strong>{% if job.company %} · {{ job.company }}{% endif %}{% if job.location %} · {{ job.location }}{% endif %}
+    {% if job.score is not none %}<span class="muted">· score {{ job.score }}</span>{% endif %}</p>
+  {% if scan %}<p class="muted">A scan is running to look for similar postings. They show up in your list when it ends.</p>{% endif %}
+  {% if advice.found %}<p>Yes: with your current settings, a scan would find a posting like this one.</p>
+  {% else %}<p class="muted">With your current settings, a scan would miss a posting like this one. What stops it, and what you can change:</p>{% endif %}
+  {% for p in advice.problems %}
+  <div class="card">
+    {% if p.kind == "title_word" %}
+    <p style="margin-top:0">None of your title words is in this title, so postings like it are skipped.
+      {% if p.fixes %}Search for one of these words too:{% endif %}</p>
+    {% for f in p.fixes %}{{ fix(f, "+ " ~ f[2], back) }} {% endfor %}
+    {% elif p.kind == "title_exclude" %}
+    <p style="margin-top:0">The title has a word you skip, so postings like it are hidden:</p>
+    {% for f in p.fixes %}{{ fix(f, "Stop skipping “%s”" % f[2], back) }} {% endfor %}
+    {% elif p.kind == "company" %}
+    <p style="margin-top:0">This company is on your list of companies you never want to see:</p>
+    {% for f in p.fixes %}{{ fix(f, "Show “%s” again" % f[2], back) }} {% endfor %}
+    {% elif p.kind == "search_term" %}
+    <p style="margin-top:0">None of your search terms is in this title, so the job sites may not offer postings like it.
+      {% if p.fixes %}Search for it too:{% endif %}</p>
+    {% for f in p.fixes %}{{ fix(f, "+ " ~ f[2], back) }} {% endfor %}
+    {% elif p.kind == "location" %}
+    <p style="margin-top:0">{% if p.town %}This place is not in your towns, so postings there are skipped:{% else %}No town could be read from this location, and it is not in your towns.{% endif %}</p>
+    {% for f in p.fixes %}{% if f[1] == "LOCATION_KEYWORDS" %}{{ fix(f, "+ Search in %s" % f[2], back) }}{% else %}{{ fix(f, "+ Also search the canton %s" % f[2], back) }}{% endif %} {% endfor %}
+    {% elif p.kind == "language" %}
+    <p style="margin-top:0">This posting is not in one of your languages, so postings like it are skipped.
+      {% if p.fixes %}It looks like it is written in {{ p.code | upper }}:{% endif %}</p>
+    {% for f in p.fixes %}{{ fix(f, "+ Accept postings in %s" % (f[2] | upper), back) }} {% endfor %}
+    {% elif p.kind == "rate" %}
+    <p style="margin:0">The title states a work rate of {{ p.low }}–{{ p.high }}%, outside the {{ p.wanted_low }}–{{ p.wanted_high }}% you want. Change it in <a href="/settings">Settings</a> if you would take it.</p>
+    {% endif %}
+  </div>
+  {% endfor %}
+  {% if advice.skills %}
+  <div class="skills">
+    <p><span class="muted">Skills this posting asks for that are not in your skills:</span></p>
+    {% for k in advice.skills %}{{ chip(k, "miss", back) }}{% endfor %}
+  </div>
+  {% endif %}
+  <p class="muted">A change that widens your search starts a scan, so similar postings come in. <a href="/settings">All settings</a></p>
+</div>
+{% endif %}
+{% endblock %}

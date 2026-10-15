@@ -33,6 +33,7 @@
       <input type="hidden" name="value" value="{{ job.company }}"><input type="hidden" name="next" value="/jobs?status={{ job.status }}">
       <button class="ghost" type="submit" title="Hide this company or agency from now on (undo in Settings)">🚫 Never show this company</button>
     </form>{% endif %}
+    <a class="btn ghost" href="/job/{{ job.id }}/search" title="Would your search find postings like this one? What to change if not">🔎 Does my search find jobs like this?</a>
     {% if job.status in ("applied", "interview") and can_tailor %}<a class="btn ghost" href="/job/{{ job.id }}/prep.pdf" target="_blank">🎯 Interview preparation sheet</a>{% endif %}
     {% if job.status == "discarded" and job.discard_reason %}<span class="muted">Discarded: {{ reasons.get(job.discard_reason, job.discard_reason) }}</span>{% endif %}
   </div>

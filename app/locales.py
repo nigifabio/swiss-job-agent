@@ -776,9 +776,64 @@ _IMPROVE = [
     ('<li>Complete your profile: <a href="/cv#check">Profile check</a>. See why you discard jobs: <a href="/stats">Stats</a>.</li>', '<li>Complétez votre profil : <a href="/cv#check">Contrôle du profil</a>. Voyez pourquoi vous écartez des offres : <a href="/stats">Statistiques</a>.</li>', '<li>Vervollständigen Sie Ihr Profil: <a href="/cv#check">Profil-Check</a>. Sehen Sie, warum Sie Stellen verwerfen: <a href="/stats">Statistik</a>.</li>'),
 ]
 
+_ADD += [
+    ('+ Add a job posting</h2>', "+ Ajouter une offre d'emploi</h2>", '+ Stelleninserat hinzufügen</h2>'),
+    ('Paste the link of a posting you found, or its text. You check what was read, then see what your search is missing to find postings like it.', "Collez le lien d'une annonce trouvée, ou son texte. Vous vérifiez ce qui a été lu, puis vous voyez ce qui manque à votre recherche pour trouver des annonces comme celle-ci.", 'Fügen Sie den Link eines gefundenen Inserats oder seinen Text ein. Sie prüfen, was gelesen wurde, und sehen dann, was Ihrer Suche fehlt, um solche Inserate zu finden.'),
+    ("This link can't be opened from here (it points to a private or unusual address). Paste the text of the posting instead.", "Ce lien ne peut pas être ouvert d'ici (il pointe vers une adresse privée ou inhabituelle). Collez plutôt le texte de l'annonce.", 'Dieser Link kann von hier aus nicht geöffnet werden (er zeigt auf eine private oder ungewöhnliche Adresse). Fügen Sie stattdessen den Text des Inserats ein.'),
+    ("The page could not be opened (some sites, LinkedIn for example, don't allow it). Paste the text of the posting instead.", "La page n'a pas pu être ouverte (certains sites, LinkedIn par exemple, ne le permettent pas). Collez plutôt le texte de l'annonce.", 'Die Seite konnte nicht geöffnet werden (manche Websites, zum Beispiel LinkedIn, erlauben das nicht). Fügen Sie stattdessen den Text des Inserats ein.'),
+    ('No posting was found there. Paste the text of the posting instead.', "Aucune annonce n'a été trouvée à cet endroit. Collez plutôt le texte de l'annonce.", 'Dort wurde kein Inserat gefunden. Fügen Sie stattdessen den Text des Inserats ein.'),
+    ('<label for="posting-in">Link or text of the posting</label>', '<label for="posting-in">Lien ou texte de l\'annonce</label>', '<label for="posting-in">Link oder Text des Inserats</label>'),
+    ('placeholder="https://… or the title on the first line, then the description"', 'placeholder="https://… ou le titre sur la première ligne, puis la description"', 'placeholder="https://… oder der Titel in der ersten Zeile, dann die Beschreibung"'),
+    ('>Read the posting</button>', ">Lire l'annonce</button>", '>Inserat lesen</button>'),
+]
+
+_BASE += [
+    ('+ Add a job posting</a>', '+ Ajouter une offre</a>', '+ Inserat hinzufügen</a>'),
+]
+
+_DETAIL += [
+    ('title="Would your search find postings like this one? What to change if not">🔎 Does my search find jobs like this?</a>', 'title="Votre recherche trouverait-elle des annonces comme celle-ci ? Que changer sinon">🔎 Ma recherche trouve-t-elle des offres comme celle-ci ?</a>', 'title="Würde Ihre Suche solche Inserate finden? Was sonst zu ändern ist">🔎 Findet meine Suche solche Stellen?</a>'),
+]
+
+_POSTING = [
+    ('← back</a>', '← retour</a>', '← zurück</a>'),
+    ('Check the posting</h2>', "Vérifier l'annonce</h2>", 'Inserat prüfen</h2>'),
+    ('This is what was read. Correct what is wrong, then add it to your jobs.', 'Voici ce qui a été lu. Corrigez ce qui est faux, puis ajoutez-la à vos offres.', 'Das wurde gelesen. Korrigieren Sie, was nicht stimmt, und fügen Sie es dann Ihren Stellen hinzu.'),
+    ('<label>Title *</label>', '<label>Titre du poste *</label>', '<label>Stellentitel *</label>'),
+    ('<label>Company</label>', '<label>Entreprise</label>', '<label>Unternehmen</label>'),
+    ('<label>Location</label>', '<label>Lieu</label>', '<label>Ort</label>'),
+    ('<label>Status</label>', '<label>Statut</label>', '<label>Status</label>'),
+    ('<label>Description</label>', '<label>Description</label>', '<label>Beschreibung</label>'),
+    ('>Add this job and check my search</button>', '>Ajouter cette offre et vérifier ma recherche</button>', '>Diese Stelle hinzufügen und meine Suche prüfen</button>'),
+    ('← back to the job</a>', "← retour à l'offre</a>", '← zurück zur Stelle</a>'),
+    ('Does my search find postings like this one?</h2>', 'Ma recherche trouve-t-elle des annonces comme celle-ci ?</h2>', 'Findet meine Suche solche Inserate?</h2>'),
+    ('<span class="muted">· score {{ job.score }}</span>', '<span class="muted">· score {{ job.score }}</span>', '<span class="muted">· Score {{ job.score }}</span>'),
+    ('A scan is running to look for similar postings. They show up in your list when it ends.', 'Une recherche est en cours pour trouver des annonces similaires. Elles apparaîtront dans votre liste à la fin.', 'Eine Suche läuft, um ähnliche Inserate zu finden. Sie erscheinen in Ihrer Liste, sobald sie fertig ist.'),
+    ('Yes: with your current settings, a scan would find a posting like this one.', 'Oui : avec vos réglages actuels, une recherche trouverait une annonce comme celle-ci.', 'Ja: Mit Ihren aktuellen Einstellungen würde eine Suche ein solches Inserat finden.'),
+    ('With your current settings, a scan would miss a posting like this one. What stops it, and what you can change:', "Avec vos réglages actuels, une recherche manquerait une annonce comme celle-ci. Ce qui l'en empêche, et ce que vous pouvez changer :", 'Mit Ihren aktuellen Einstellungen würde eine Suche ein solches Inserat verpassen. Was das verhindert und was Sie ändern können:'),
+    ('None of your title words is in this title, so postings like it are skipped.', "Aucun de vos mots de titre n'est dans ce titre : les annonces comme celle-ci sont donc ignorées.", 'Keines Ihrer Titelwörter kommt in diesem Titel vor, deshalb werden solche Inserate übersprungen.'),
+    ('Search for one of these words too:', "Cherchez aussi l'un de ces mots :", 'Suchen Sie auch nach einem dieser Wörter:'),
+    ('The title has a word you skip, so postings like it are hidden:', 'Le titre contient un mot que vous ignorez : les annonces comme celle-ci sont donc masquées :', 'Der Titel enthält ein Wort, das Sie überspringen, deshalb werden solche Inserate ausgeblendet:'),
+    ('"Stop skipping “%s”"', '"Ne plus ignorer « %s »"', '"„%s“ nicht mehr überspringen"'),
+    ('This company is on your list of companies you never want to see:', "Cette entreprise figure dans votre liste d'entreprises à ne jamais afficher :", 'Dieses Unternehmen steht auf Ihrer Liste der Unternehmen, die Sie nie sehen wollen:'),
+    ('"Show “%s” again"', '"Afficher à nouveau « %s »"', '"„%s“ wieder anzeigen"'),
+    ('None of your search terms is in this title, so the job sites may not offer postings like it.', "Aucun de vos termes de recherche n'est dans ce titre : les sites d'emploi ne proposent donc peut-être pas d'annonces comme celle-ci.", 'Keiner Ihrer Suchbegriffe kommt in diesem Titel vor, deshalb zeigen die Jobbörsen solche Inserate vielleicht nicht an.'),
+    ('Search for it too:', 'Cherchez-la aussi :', 'Suchen Sie auch danach:'),
+    ('This place is not in your towns, so postings there are skipped:', "Ce lieu n'est pas dans vos localités : les annonces de cet endroit sont donc ignorées :", 'Dieser Ort gehört nicht zu Ihren Orten, deshalb werden Inserate von dort übersprungen:'),
+    ('No town could be read from this location, and it is not in your towns.', "Aucune localité n'a pu être lue dans ce lieu, et il n'est pas dans vos localités.", 'Aus diesem Ort konnte keine Ortschaft gelesen werden, und er gehört nicht zu Ihren Orten.'),
+    ('"+ Search in %s"', '"+ Chercher à %s"', '"+ In %s suchen"'),
+    ('"+ Also search the canton %s"', '"+ Chercher aussi dans le canton %s"', '"+ Auch im Kanton %s suchen"'),
+    ('This posting is not in one of your languages, so postings like it are skipped.', "Cette annonce n'est pas dans l'une de vos langues : les annonces comme celle-ci sont donc ignorées.", 'Dieses Inserat ist in keiner Ihrer Sprachen, deshalb werden solche Inserate übersprungen.'),
+    ('It looks like it is written in {{ p.code | upper }}:', 'Il semble être rédigé en {{ p.code | upper }} :', 'Es scheint auf {{ p.code | upper }} verfasst zu sein:'),
+    ('"+ Accept postings in %s"', '"+ Accepter les annonces en %s"', '"+ Inserate auf %s akzeptieren"'),
+    ('The title states a work rate of {{ p.low }}–{{ p.high }}%, outside the {{ p.wanted_low }}–{{ p.wanted_high }}% you want. Change it in <a href="/settings">Settings</a> if you would take it.', 'Le titre indique un taux d\'activité de {{ p.low }}–{{ p.high }}%, hors des {{ p.wanted_low }}–{{ p.wanted_high }}% que vous voulez. Changez-le dans <a href="/settings">Réglages</a> si vous l\'accepteriez.', 'Der Titel nennt einen Beschäftigungsgrad von {{ p.low }}–{{ p.high }}%, ausserhalb der von Ihnen gewünschten {{ p.wanted_low }}–{{ p.wanted_high }}%. Ändern Sie das unter <a href="/settings">Einstellungen</a>, wenn Sie es annehmen würden.'),
+    ('Skills this posting asks for that are not in your skills:', 'Compétences demandées par cette annonce qui ne sont pas dans vos compétences :', 'Kompetenzen, die dieses Inserat verlangt und die nicht in Ihren Kompetenzen stehen:'),
+    ('A change that widens your search starts a scan, so similar postings come in. <a href="/settings">All settings</a>', 'Un changement qui élargit votre recherche lance une recherche, pour que des annonces similaires arrivent. <a href="/settings">Tous les réglages</a>', 'Eine Änderung, die Ihre Suche erweitert, startet eine Suche, damit ähnliche Inserate hereinkommen. <a href="/settings">Alle Einstellungen</a>'),
+]
+
 TEMPLATES = {
     "base.html": _BASE, "_apply_prompt.html": _APPLY_PROMPT, "_chip.html": _CHIP, "dashboard.html": _DASHBOARD,
-    "detail.html": _DETAIL, "add.html": _ADD, "report.html": _REPORT, "stats.html": _STATS, "cv.html": _CV,
+    "detail.html": _DETAIL, "add.html": _ADD, "posting.html": _POSTING, "report.html": _REPORT, "stats.html": _STATS, "cv.html": _CV,
     "settings.html": _SETTINGS, "_settings_form.html": _SETTINGS_FORM, "onboarding.html": _ONBOARDING,
     "week.html": _WEEK, "translate.html": _TRANSLATE, "versions.html": _VERSIONS, "improve.html": _IMPROVE,
 }

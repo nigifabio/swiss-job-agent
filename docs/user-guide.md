@@ -44,6 +44,25 @@
   the fields the ORP report needs (employment rate, how you applied, assigned by the ORP, reason for a
   refusal). Follow-ups due in the next 14 days show on the homepage.
 - **+ Add application** records jobs found elsewhere (LinkedIn, a recruiter, a referral).
+- **+ Add a job posting** (top bar, or the top of the Add page) takes the link of a posting you found, or its
+  text. The app reads the title, company, place and description (from the page's structured data when it has
+  some), you check them in a form, and it adds the job, scored like the others. Sites that don't let
+  the app open their pages (LinkedIn usually): paste the text instead; the first line is taken as the title.
+
+## Does my search find postings like this one?
+
+After adding a posting (and from the **🔎** button of any job page) the app compares it with your settings and
+says what would make a scan miss it, with a button for each fix:
+
+- no title word of yours is in its title: add one (words from the title);
+- its title has a word you skip, or its company is on your never-show list: stop skipping it / show it again;
+- none of your search terms is in the title: search for the title too;
+- its town isn't in your towns: add the town (and its canton to the job-room source);
+- it's written in a language you don't search: add the language;
+- the title states a work rate outside the one you want (change it in Settings);
+- skills it asks for that aren't in yours: the usual red chips (**+ I have it** / **⛔ Avoid**).
+
+A fix that widens the search starts a scan right away, so similar postings come in.
 
 ## Reading a posting
 

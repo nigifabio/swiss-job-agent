@@ -7,7 +7,7 @@ import pytest
 MODULES = ["config", "normalize", "http", "scanlog", "filters", "store", "prefs", "skills", "enrich", "compose", "tailor", "letter",
            "commute", "requirements", "closed", "tune", "prep", "locales_it", "locales", "i18n", "report", "twins", "listfilter", "suggest", "docs", "strength", "weekly", "agenda", "game", "improve", "providers.adzuna", "providers.ats", "providers.jobup", "providers.jobroom",
            "providers.remote", "providers.careerjet", "providers.jooble", "providers.mailalerts", "providers.pool", "fetch", "collector", "auth",
-           "scheduler", "roles", "places", "importers.extract", "importers.cvparse", "importers.linkedin", "onboard",
+           "scheduler", "roles", "places", "importers.extract", "importers.cvparse", "importers.linkedin", "onboard", "posting",
            "web"]
 
 
@@ -36,6 +36,8 @@ def env(tmp_path, monkeypatch):
         mods[name] = importlib.reload(importlib.import_module(f"app.{name}"))
     mods["http"].TRANSPORT = httpx.MockTransport(_no_network)
     mods["http"].SLEEP = lambda s: None
+    mods["posting"].TRANSPORT = httpx.MockTransport(_no_network)
+    monkeypatch.setattr(mods["posting"], "_getaddrinfo", lambda host, port: _no_network(httpx.Request("GET", f"http://{host}")))
     monkeypatch.setattr(mods["enrich"].httpx, "get",
                         lambda url, **k: _no_network(httpx.Request("GET", url)))
 

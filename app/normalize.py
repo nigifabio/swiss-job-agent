@@ -38,3 +38,10 @@ def title_key(title, location):
     t = _plain(_RATE.sub(" ", _GENDER.sub(" ", title or "")))
     loc = _plain(location).split()
     return f"{t}|{loc[0] if loc else ''}"
+
+
+def clean_title(title):
+    """A title as a person would search for it: no gender marker (m/w/d), no work rate (80-100%)."""
+    t = _RATE.sub(" ", _GENDER.sub(" ", title or ""))
+    t = _re.sub(r"\(\s*\)|\[\s*\]", " ", t)
+    return " ".join(t.split()).strip(" -–—|,;:/")

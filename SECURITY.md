@@ -20,6 +20,11 @@ The app holds personal data (your CV, your applications, notes about employers),
   (`/calendar/<key>.ics`): a 192-bit random key in the address, read-only, dates with job titles and
   company names only; "New address" in Settings revokes it. The operator's totals (`/ops/summary`):
   only when `OPS_TOKEN` is set (the platform sets one per workspace), and it returns counts, never content.
+- **A link given to "Add a job posting" is fetched by the server, so it is guarded:** only `http(s)` on ports 80/443,
+  no credentials in the address, and the name must resolve only to public addresses (loopback, private, link-local,
+  multicast, reserved and unspecified ones are refused, IPv4 and IPv6). The connection goes to the address that was
+  checked, each redirect (at most 4) is checked the same way, and the response is limited in time (10 s), size (3 MB)
+  and type (text).
 - **Output is escaped** (Jinja autoescape); stored links are kept only if they are `http(s)`.
 - **Secrets stay out of git and logs:** `.env` (mode 600) and `data/` are git-ignored; API keys, the
   IMAP password and key-bearing URLs are never written into error messages. The alert mailbox is

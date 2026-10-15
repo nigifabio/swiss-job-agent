@@ -198,16 +198,23 @@ def add_manual(f):
     with conn() as c:
         cur = c.execute(
             """INSERT INTO jobs (content_hash, source, title, company, location,
-               description, url, status, origin, created_at)
-               VALUES (?,?,?,?,?,?,?,?,?,?)""",
+               description, url, status, origin, created_at, score, score_rationale, loose_key)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (ch, f.get("source", "manual"), f.get("title"), f.get("company"),
              f.get("location"), f.get("description"), f.get("url"), status,
-             f.get("origin", "manual"), now()),
+             f.get("origin", "manual"), now(), f.get("score"), f.get("score_rationale"), f.get("loose_key")),
         )
         jid = cur.lastrowid
         c.execute("INSERT INTO status_history (job_id, status, changed_at) VALUES (?,?,?)",
                   (jid, status, now()))
         return jid
+
+
+def find_loose(title, company, location):
+    """The job already stored under this fingerprint (the same posting from another source), or None."""
+    with conn() as c:
+        r = c.execute("SELECT id FROM jobs WHERE loose_key=? LIMIT 1", (loose_key(title, company, location),)).fetchone()
+        return r["id"] if r else None
 
 
 def list_jobs(status=None):

@@ -14,7 +14,8 @@ TEMPLATES = {'base.html': {'<html lang="en">': '<html lang="it">',
                '+ Add application</a>': '+ Aggiungi una candidatura</a>',
                '>Account</a>': '>Account</a>',
                '</b>My week</a>': '</b>La mia settimana</a>',
-               '>Improve</a>': '>Migliorare</a>'},
+               '>Improve</a>': '>Migliorare</a>',
+               '+ Add a job posting</a>': '+ Aggiungi un annuncio</a>'},
  '_apply_prompt.html': {'Did you apply to <b>{{ j.title }}</b>?': 'Ti sei candidato a <b>{{ j.title }}</b>?',
                         '✓ Yes, add to Applied': '✓ Sì, aggiungi alle candidature',
                         '>Not yet</button>': '>Non ancora</button>'},
@@ -393,7 +394,13 @@ TEMPLATES = {'base.html': {'<html lang="en">': '<html lang="it">',
                  'title="New letters start from this text">★ Save as default letter</button>': 'title="Le nuove lettere partono da questo testo">★ Salva come lettera '
                                                                                                'predefinita</button>',
                  'value="pdf" formtarget="_blank">Save and open the PDF ↗</button>': 'value="pdf" formtarget="_blank">Salva e apri il PDF ↗</button>',
-                 '>Save and download the PDF</button>': '>Salva e scarica il PDF</button>'},
+                 '>Save and download the PDF</button>': '>Salva e scarica il PDF</button>',
+                 'title="Would your search find postings like this one? What to change if not">🔎 Does my search find jobs like this?</a>': 'title="La tua ricerca '
+                                                                                                                                           'troverebbe annunci come '
+                                                                                                                                           'questo? Cosa cambiare '
+                                                                                                                                           'altrimenti">🔎 La mia ricerca '
+                                                                                                                                           'trova offerte come '
+                                                                                                                                           'questa?</a>'},
  'add.html': {'← back</a>': '← indietro</a>',
               '+ Spontaneous application</h2>': '+ Candidatura spontanea</h2>',
               'You wrote to a company that had no posting. It counts as a job search in your ORP report.': "Hai scritto a un'azienda che non aveva un annuncio. Conta "
@@ -420,7 +427,43 @@ TEMPLATES = {'base.html': {'<html lang="en">': '<html lang="it">',
               '<label>Status</label>': '<label>Stato</label>',
               "{% if s == 'shortlisted' %}selected{% endif %}>{{ s }}</option>": "{% if s == 'shortlisted' %}selected{% endif %}>{{ s | tr }}</option>",
               '<label>Notes / description</label>': '<label>Note / descrizione</label>',
-              '<p><button type="submit">Add</button></p>': '<p><button type="submit">Aggiungi</button></p>'},
+              '<p><button type="submit">Add</button></p>': '<p><button type="submit">Aggiungi</button></p>',
+              '+ Add a job posting</h2>': '+ Aggiungi un annuncio di lavoro</h2>',
+              'Paste the link of a posting you found, or its text. You check what was read, then see what your search is missing to find postings like it.': 'Incolla il '
+                                                                                                                                                             'link di un '
+                                                                                                                                                             'annuncio '
+                                                                                                                                                             'che hai '
+                                                                                                                                                             'trovato, o '
+                                                                                                                                                             'il suo '
+                                                                                                                                                             'testo. '
+                                                                                                                                                             'Controlli '
+                                                                                                                                                             'ciò che è '
+                                                                                                                                                             'stato '
+                                                                                                                                                             'letto, poi '
+                                                                                                                                                             'vedi cosa '
+                                                                                                                                                             'manca alla '
+                                                                                                                                                             'tua '
+                                                                                                                                                             'ricerca '
+                                                                                                                                                             'per '
+                                                                                                                                                             'trovare '
+                                                                                                                                                             'annunci '
+                                                                                                                                                             'come '
+                                                                                                                                                             'questo.',
+              "This link can't be opened from here (it points to a private or unusual address). Paste the text of the posting instead.": 'Questo link non può essere '
+                                                                                                                                         'aperto da qui (punta a un '
+                                                                                                                                         'indirizzo privato o insolito). '
+                                                                                                                                         'Incolla invece il testo '
+                                                                                                                                         "dell'annuncio.",
+              "The page could not be opened (some sites, LinkedIn for example, don't allow it). Paste the text of the posting instead.": 'La pagina non si è potuta '
+                                                                                                                                         'aprire (alcuni siti, come '
+                                                                                                                                         'LinkedIn, non lo permettono). '
+                                                                                                                                         'Incolla invece il testo '
+                                                                                                                                         "dell'annuncio.",
+              'No posting was found there. Paste the text of the posting instead.': "Lì non è stato trovato nessun annuncio. Incolla invece il testo dell'annuncio.",
+              '<label for="posting-in">Link or text of the posting</label>': '<label for="posting-in">Link o testo dell\'annuncio</label>',
+              'placeholder="https://… or the title on the first line, then the description"': 'placeholder="https://… oppure il titolo sulla prima riga, poi la '
+                                                                                              'descrizione"',
+              '>Read the posting</button>': ">Leggi l'annuncio</button>"},
  'report.html': {'← previous</a>': '← precedente</a>',
                  '>next →</a>': '>successivo →</a>',
                  '>this month</a>': '>questo mese</a>',
@@ -1641,7 +1684,84 @@ TEMPLATES = {'base.html': {'<html lang="en">': '<html lang="it">',
                                                                                                                                                   'del profilo</a>. '
                                                                                                                                                   'Guarda perché scarti '
                                                                                                                                                   'le offerte: <a '
-                                                                                                                                                  'href="/stats">Statistiche</a>.</li>'}}
+                                                                                                                                                  'href="/stats">Statistiche</a>.</li>'},
+ 'posting.html': {'← back</a>': '← indietro</a>',
+                  'Check the posting</h2>': "Controlla l'annuncio</h2>",
+                  'This is what was read. Correct what is wrong, then add it to your jobs.': 'Ecco ciò che è stato letto. Correggi ciò che è sbagliato, poi aggiungilo '
+                                                                                             'alle tue offerte.',
+                  '<label>Title *</label>': '<label>Titolo del posto *</label>',
+                  '<label>Company</label>': '<label>Azienda</label>',
+                  '<label>Location</label>': '<label>Luogo</label>',
+                  '<label>Status</label>': '<label>Stato</label>',
+                  '<label>Description</label>': '<label>Descrizione</label>',
+                  '>Add this job and check my search</button>': '>Aggiungi questa offerta e controlla la mia ricerca</button>',
+                  '← back to the job</a>': "← torna all'offerta</a>",
+                  'Does my search find postings like this one?</h2>': 'La mia ricerca trova annunci come questo?</h2>',
+                  '<span class="muted">· score {{ job.score }}</span>': '<span class="muted">· punteggio {{ job.score }}</span>',
+                  'A scan is running to look for similar postings. They show up in your list when it ends.': 'È in corso una ricerca di annunci simili. Appariranno '
+                                                                                                             'nella tua lista al termine.',
+                  'Yes: with your current settings, a scan would find a posting like this one.': 'Sì: con le tue impostazioni attuali, una ricerca troverebbe un '
+                                                                                                 'annuncio come questo.',
+                  'With your current settings, a scan would miss a posting like this one. What stops it, and what you can change:': 'Con le tue impostazioni attuali, '
+                                                                                                                                    'una ricerca perderebbe un annuncio '
+                                                                                                                                    'come questo. Cosa lo impedisce e '
+                                                                                                                                    'cosa puoi cambiare:',
+                  'None of your title words is in this title, so postings like it are skipped.': 'Nessuna delle tue parole del titolo è in questo titolo, quindi gli '
+                                                                                                 'annunci come questo vengono saltati.',
+                  'Search for one of these words too:': 'Cerca anche una di queste parole:',
+                  'The title has a word you skip, so postings like it are hidden:': 'Il titolo contiene una parola che salti, quindi gli annunci come questo sono '
+                                                                                    'nascosti:',
+                  '"Stop skipping “%s”"': '"Non saltare più «%s»"',
+                  'This company is on your list of companies you never want to see:': "Quest'azienda è nella tua lista di aziende da non mostrare mai:",
+                  '"Show “%s” again"': '"Mostra di nuovo «%s»"',
+                  'None of your search terms is in this title, so the job sites may not offer postings like it.': 'Nessuno dei tuoi termini di ricerca è in questo '
+                                                                                                                  'titolo, quindi i siti di lavoro potrebbero non '
+                                                                                                                  'proporre annunci come questo.',
+                  'Search for it too:': 'Cercalo anche:',
+                  'This place is not in your towns, so postings there are skipped:': 'Questo luogo non è tra le tue località, quindi gli annunci di lì vengono saltati:',
+                  'No town could be read from this location, and it is not in your towns.': 'Da questo luogo non si è potuta leggere nessuna località, e non è tra le '
+                                                                                            'tue località.',
+                  '"+ Search in %s"': '"+ Cerca a %s"',
+                  '"+ Also search the canton %s"': '"+ Cerca anche nel cantone %s"',
+                  'This posting is not in one of your languages, so postings like it are skipped.': 'Questo annuncio non è in una delle tue lingue, quindi gli annunci '
+                                                                                                    'come questo vengono saltati.',
+                  'It looks like it is written in {{ p.code | upper }}:': 'Sembra scritto in {{ p.code | upper }}:',
+                  '"+ Accept postings in %s"': '"+ Accetta annunci in %s"',
+                  'The title states a work rate of {{ p.low }}–{{ p.high }}%, outside the {{ p.wanted_low }}–{{ p.wanted_high }}% you want. Change it in <a href="/settings">Settings</a> if you would take it.': 'Il '
+                                                                                                                                                                                                                  'titolo '
+                                                                                                                                                                                                                  'indica '
+                                                                                                                                                                                                                  'un '
+                                                                                                                                                                                                                  'grado '
+                                                                                                                                                                                                                  'di '
+                                                                                                                                                                                                                  'occupazione '
+                                                                                                                                                                                                                  'del '
+                                                                                                                                                                                                                  '{{ '
+                                                                                                                                                                                                                  'p.low '
+                                                                                                                                                                                                                  '}}–{{ '
+                                                                                                                                                                                                                  'p.high '
+                                                                                                                                                                                                                  '}}%, '
+                                                                                                                                                                                                                  'fuori '
+                                                                                                                                                                                                                  'dal '
+                                                                                                                                                                                                                  '{{ '
+                                                                                                                                                                                                                  'p.wanted_low '
+                                                                                                                                                                                                                  '}}–{{ '
+                                                                                                                                                                                                                  'p.wanted_high '
+                                                                                                                                                                                                                  '}}% '
+                                                                                                                                                                                                                  'che '
+                                                                                                                                                                                                                  'vuoi. '
+                                                                                                                                                                                                                  'Cambialo '
+                                                                                                                                                                                                                  'in '
+                                                                                                                                                                                                                  '<a '
+                                                                                                                                                                                                                  'href="/settings">Impostazioni</a> '
+                                                                                                                                                                                                                  'se '
+                                                                                                                                                                                                                  'lo '
+                                                                                                                                                                                                                  'accetteresti.',
+                  'Skills this posting asks for that are not in your skills:': 'Competenze richieste da questo annuncio che non sono tra le tue competenze:',
+                  'A change that widens your search starts a scan, so similar postings come in. <a href="/settings">All settings</a>': 'Una modifica che amplia la '
+                                                                                                                                       'ricerca avvia una ricerca, così '
+                                                                                                                                       'arrivano annunci simili. <a '
+                                                                                                                                       'href="/settings">Tutte le '
+                                                                                                                                       'impostazioni</a>'}}
 
 STRINGS = {'CV': 'CV',
  'Cover letter': 'Lettera di motivazione',

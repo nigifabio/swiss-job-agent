@@ -27,6 +27,18 @@
   </form>
 </div>
 {% else %}
+<div class="card" id="posting">
+  <h2 style="margin-top:0">+ Add a job posting</h2>
+  <p class="muted">Paste the link of a posting you found, or its text. You check what was read, then see what your search is missing to find postings like it.</p>
+  {% if posting_error == "blocked" %}<p class="bad">This link can't be opened from here (it points to a private or unusual address). Paste the text of the posting instead.</p>
+  {% elif posting_error == "fetch" %}<p class="bad">The page could not be opened (some sites, LinkedIn for example, don't allow it). Paste the text of the posting instead.</p>
+  {% elif posting_error == "empty" %}<p class="bad">No posting was found there. Paste the text of the posting instead.</p>{% endif %}
+  <form method="post" action="/add/posting">
+    <label for="posting-in">Link or text of the posting</label>
+    <textarea id="posting-in" name="posting" rows="4" required maxlength="60000" placeholder="https://… or the title on the first line, then the description">{{ posting_input }}</textarea>
+    <p><button type="submit">Read the posting</button></p>
+  </form>
+</div>
 <div class="card">
   <h2 style="margin-top:0">+ Add application</h2>
   <p class="muted">For roles you found yourself — LinkedIn, a recruiter, a referral, or a direct posting.

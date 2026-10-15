@@ -11,7 +11,7 @@ from fastapi import FastAPI, Request, Form
 from fastapi.responses import RedirectResponse, HTMLResponse, PlainTextResponse, FileResponse, Response
 from fastapi.templating import Jinja2Templates
 
-from . import (agenda, auth, commute, compose, config, docs, enrich, fetch, filters, game, i18n, improve, listfilter, locales, letter, onboard, places, prefs,
+from . import (agenda, auth, commute, compose, config, docs, enrich, fetch, filters, game, i18n, improve, listfilter, locales, letter, normalize, onboard, places, posting, prefs,
                prep, report, requirements, roles, skills, store, strength, suggest, tailor, tune, twins, weekly)
 from .importers import cvparse, extract, linkedin
 
@@ -774,7 +774,10 @@ def prep_pdf(jid: int):
 @app.post("/tune")
 def tune_search(action: str = Form(...), name: str = Form(...), value: str = Form(...), next: str = Form("/stats")):
     """One click from Stats or a job page: skip a title word, stop searching a town, block a company."""
+    before = _searched()
     tune.change(action, name, value)
+    if tune.widens(action, name) and _searched() != before:        # it looks at more postings now: go and find them
+        _rescan()
     return RedirectResponse(_local(next, "/stats"), status_code=303)
 
 
@@ -793,6 +796,49 @@ def add_submit(
         "source": source, "status": status, "description": description, "origin": "manual",
     })
     return RedirectResponse(f"/job/{jid}", status_code=303)
+
+
+# ---- a posting the person found: read it, review it, then see what the search is missing for it ----
+@app.post("/add/posting", response_class=HTMLResponse)
+def posting_read(request: Request, text: str = Form("", alias="posting")):
+    text = text.strip()[:60000]
+    try:
+        job, link = posting.read(text)
+    except posting.PostingError as e:
+        return render(request, "add.html", {"statuses": store.STATUSES, "spontaneous": False, "today": store.today(), "methods": store.APPLY_METHODS,
+                                            "posting_error": e.code, "posting_input": text})
+    job["url"] = _safe_url(link)
+    return render(request, "posting.html", {"review": True, "job": job, "statuses": ("new", "shortlisted"), "source": urlparse(link).hostname or "pasted"})
+
+
+@app.post("/add/posting/save")
+def posting_save(title: str = Form(...), company: str = Form(""), location: str = Form(""), url: str = Form(""),
+                 description: str = Form(""), status: str = Form("shortlisted"), source: str = Form("")):
+    """The reviewed posting becomes a job, ranked like the others. Its origin stays "manual": it is the person's
+    own pick, so no scan, filter change or link check removes it or fetches its address."""
+    f = posting.clamp({"title": title, "company": company, "location": location, "description": description})
+    if not f["title"]:
+        return RedirectResponse("/add", status_code=303)
+    dup = store.find_loose(f["title"], f["company"], f["location"])
+    if dup:                                             # already in the list (found by a scan, say)
+        return RedirectResponse(f"/job/{dup}/search", status_code=303)
+    f.update({"url": _safe_url(url), "source": " ".join(source.split())[:40] or "posting", "origin": "manual",
+              "status": status if status in ("new", "shortlisted") else "shortlisted",
+              "loose_key": normalize.loose_key(f["title"], f["company"], f["location"])})
+    f["score"], f["score_rationale"] = fetch.score_job(f)
+    jid = store.add_manual(f)
+    return RedirectResponse(f"/job/{jid}/search", status_code=303)
+
+
+@app.get("/job/{jid}/search", response_class=HTMLResponse)
+def job_search(request: Request, jid: int):
+    """What the current search is missing to find postings like this one, with one-click fixes."""
+    job = store.get_job(jid)
+    if not job:
+        return RedirectResponse("/jobs?status=new")
+    job["url"] = _safe_url(job.get("url"))
+    return render(request, "posting.html", {"review": False, "job": job, "advice": posting.advice(job),
+                                            "back": f"/job/{jid}/search", "scan": fetch.is_running()})
 
 
 # ---- onboarding wizard --------------------------------------------------------------------
