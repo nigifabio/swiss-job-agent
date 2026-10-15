@@ -241,9 +241,16 @@ def title_candidates(title):
     out = []
     for c in cands:
         c = c.strip()
-        if c and c not in out and len(c) <= 60 and filters._hit(c, low) and tuneable(c):
-            out.append(c)
+        if c and c not in [v for v, _ in out] and len(c) <= 60 and filters._hit(c, low) and tuneable(c):
+            out.append((c, _as_written(c, title)))
     return out[:5]
+
+
+def _as_written(word, text):
+    """The word as the posting writes it ("Dessinatrice", not "dessinatrice"): what the button shows;
+    the setting itself stores words in small letters."""
+    m = re.search(r"(?<![\w])" + re.escape(word.rstrip("*")) + r"(?![\w])", text or "", re.IGNORECASE)
+    return m.group(0) if m else word
 
 
 def tuneable(value):
@@ -256,7 +263,7 @@ def search_term(title):
     t = normalize.clean_title(title)
     if len(t) > 60:
         t = t[:60].rsplit(" ", 1)[0]
-    return t.lower() if tuneable(t) else ""
+    return t if tuneable(t) else ""
 
 
 def advice(job):
@@ -269,33 +276,33 @@ def advice(job):
     problems = []
     gone = [k for k in config.TITLE_EXCLUDE if filters._hit(k, low)]
     if gone:
-        problems.append({"kind": "title_exclude", "words": gone, "fixes": [("remove", "TITLE_EXCLUDE", k) for k in gone]})
+        problems.append({"kind": "title_exclude", "words": gone, "fixes": [("remove", "TITLE_EXCLUDE", k, k) for k in gone]})
     if config.TITLE_KEYWORDS and not any(filters._hit(k, low) for k in config.TITLE_KEYWORDS):
-        problems.append({"kind": "title_word", "fixes": [("add", "TITLE_KEYWORDS", c) for c in title_candidates(title)]})
+        problems.append({"kind": "title_word", "fixes": [("add", "TITLE_KEYWORDS", c, label) for c, label in title_candidates(title)]})
     blocked = [k for k in config.COMPANY_EXCLUDE if filters._hit(k, company.lower())]
     if blocked:
-        problems.append({"kind": "company", "words": blocked, "fixes": [("remove", "COMPANY_EXCLUDE", k) for k in blocked]})
+        problems.append({"kind": "company", "words": blocked, "fixes": [("remove", "COMPANY_EXCLUDE", k, k) for k in blocked]})
     clean = normalize.clean_title(title)
     if config.SEARCH_TERMS and clean and not any(filters._hit(t.lower(), clean.lower()) for t in config.SEARCH_TERMS):
         term = search_term(title)
-        problems.append({"kind": "search_term", "term": term, "fixes": [("add", "SEARCH_TERMS", term)] if term else []})
+        problems.append({"kind": "search_term", "term": term, "fixes": [("add", "SEARCH_TERMS", term, term)] if term else []})
     if not filters.location_ok(location, desc):
         name = re.sub(r"\s+[A-Z]{2}$", "", town(location)).strip()
         fixes, canton = [], ""
         if name:
-            fixes.append(("add", "LOCATION_KEYWORDS", name.lower()))
+            fixes.append(("add", "LOCATION_KEYWORDS", name.lower(), name))
             place = places.find(name)
             if place:
                 from .providers import jobroom
                 canton = place[3]
                 effective = jobroom.cantons()          # (empty: all of Switzerland, which a single canton would narrow)
                 if effective and canton not in effective:
-                    fixes.append(("add", "JOBROOM_CANTONS", canton))
+                    fixes.append(("add", "JOBROOM_CANTONS", canton, canton))
         problems.append({"kind": "location", "town": name, "canton": canton, "fixes": fixes})
     if not filters.language_ok(title, desc):
         code = lang.detect_language(f"{title}. {desc}"[:600])
         problems.append({"kind": "language", "code": code,
-                         "fixes": [("add", "LANGUAGES", code)] if code in ("fr", "de", "it", "en") else []})
+                         "fixes": [("add", "LANGUAGES", code, code.upper())] if code in ("fr", "de", "it", "en") else []})
     if not filters.rate_ok(title):
         lo, hi = filters.stated_rate(title)
         problems.append({"kind": "rate", "low": lo, "high": hi, "wanted_low": config.WORK_RATE_MIN, "wanted_high": config.WORK_RATE_MAX,

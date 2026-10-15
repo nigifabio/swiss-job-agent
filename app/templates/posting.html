@@ -46,20 +46,20 @@
     {% if p.kind == "title_word" %}
     <p style="margin-top:0">None of your title words is in this title, so postings like it are skipped.
       {% if p.fixes %}Search for one of these words too:{% endif %}</p>
-    {% for f in p.fixes %}{{ fix(f, "+ " ~ f[2], back) }} {% endfor %}
+    {% for f in p.fixes %}{{ fix(f, "+ " ~ f[3], back) }} {% endfor %}
     {% elif p.kind == "title_exclude" %}
     <p style="margin-top:0">The title has a word you skip, so postings like it are hidden:</p>
-    {% for f in p.fixes %}{{ fix(f, "Stop skipping “%s”" % f[2], back) }} {% endfor %}
+    {% for f in p.fixes %}{{ fix(f, "Stop skipping “%s”" % f[3], back) }} {% endfor %}
     {% elif p.kind == "company" %}
     <p style="margin-top:0">This company is on your list of companies you never want to see:</p>
-    {% for f in p.fixes %}{{ fix(f, "Show “%s” again" % f[2], back) }} {% endfor %}
+    {% for f in p.fixes %}{{ fix(f, "Show “%s” again" % f[3], back) }} {% endfor %}
     {% elif p.kind == "search_term" %}
     <p style="margin-top:0">None of your search terms is in this title, so the job sites may not offer postings like it.
       {% if p.fixes %}Search for it too:{% endif %}</p>
-    {% for f in p.fixes %}{{ fix(f, "+ " ~ f[2], back) }} {% endfor %}
+    {% for f in p.fixes %}{{ fix(f, "+ " ~ f[3], back) }} {% endfor %}
     {% elif p.kind == "location" %}
     <p style="margin-top:0">{% if p.town %}This place is not in your towns, so postings there are skipped:{% else %}No town could be read from this location, and it is not in your towns.{% endif %}</p>
-    {% for f in p.fixes %}{% if f[1] == "LOCATION_KEYWORDS" %}{{ fix(f, "+ Search in %s" % f[2], back) }}{% else %}{{ fix(f, "+ Also search the canton %s" % f[2], back) }}{% endif %} {% endfor %}
+    {% for f in p.fixes %}{% if f[1] == "LOCATION_KEYWORDS" %}{{ fix(f, "+ Search in %s" % f[3], back) }}{% else %}{{ fix(f, "+ Also search the canton %s" % f[3], back) }}{% endif %} {% endfor %}
     {% elif p.kind == "language" %}
     <p style="margin-top:0">This posting is not in one of your languages, so postings like it are skipped.
       {% if p.fixes %}It looks like it is written in {{ p.code | upper }}:{% endif %}</p>

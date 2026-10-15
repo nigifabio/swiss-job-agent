@@ -24,7 +24,7 @@ def clean(name, value):
         return value.lower() if value.lower() in LANGUAGES else None
     if name == "JOBROOM_CANTONS":
         return value.upper() if re.fullmatch(r"[A-Za-z]{2}", value) else None
-    return value.lower()
+    return value if name == "SEARCH_TERMS" else value.lower()          # search terms are typed into job sites as written
 
 
 def widens(action, name):

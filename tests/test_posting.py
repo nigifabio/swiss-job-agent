@@ -268,20 +268,20 @@ def test_title_without_any_title_word_offers_words_that_match_it(env):
 
 def test_title_with_an_excluded_word_offers_to_stop_skipping_it(env):
     probs, _ = kinds(env, title="Junior Cloud Architect")
-    assert probs["title_exclude"]["words"] == ["junior"] and probs["title_exclude"]["fixes"] == [("remove", "TITLE_EXCLUDE", "junior")]
+    assert probs["title_exclude"]["words"] == ["junior"] and probs["title_exclude"]["fixes"] == [("remove", "TITLE_EXCLUDE", "junior", "junior")]
     assert "title_word" not in probs
 
 
 def test_an_excluded_company_offers_to_show_it_again(env, monkeypatch):
     monkeypatch.setattr(env.config, "COMPANY_EXCLUDE", ["adecco"])
     probs, _ = kinds(env, company="Adecco SA")
-    assert probs["company"]["fixes"] == [("remove", "COMPANY_EXCLUDE", "adecco")]
+    assert probs["company"]["fixes"] == [("remove", "COMPANY_EXCLUDE", "adecco", "adecco")]
 
 
 def test_a_title_none_of_the_search_terms_occur_in_offers_the_cleaned_title(env, monkeypatch):
     monkeypatch.setattr(env.config, "SEARCH_TERMS", ["devops engineer"])
     probs, _ = kinds(env, title="Cloud Architect (m/w/d) 80-100%")
-    assert probs["search_term"]["fixes"] == [("add", "SEARCH_TERMS", "cloud architect")]
+    assert probs["search_term"]["fixes"] == [("add", "SEARCH_TERMS", "Cloud Architect", "Cloud Architect")]          # typed into job sites as written
     probs, _ = kinds(env, title="Senior DevOps Engineer (f/m/d)")
     assert "search_term" not in probs
     monkeypatch.setattr(env.config, "SEARCH_TERMS", [])                    # no terms: the sources are not narrowed by terms
@@ -291,19 +291,19 @@ def test_a_title_none_of_the_search_terms_occur_in_offers_the_cleaned_title(env,
 def test_a_place_outside_the_towns_offers_the_town_and_its_canton(env, monkeypatch):
     probs, _ = kinds(env, location="Zürich, ZH, Schweiz")
     assert probs["location"]["town"] == "Zürich" and probs["location"]["canton"] == "ZH"
-    assert probs["location"]["fixes"] == [("add", "LOCATION_KEYWORDS", "zürich"), ("add", "JOBROOM_CANTONS", "ZH")]
+    assert probs["location"]["fixes"] == [("add", "LOCATION_KEYWORDS", "zürich", "Zürich"), ("add", "JOBROOM_CANTONS", "ZH", "ZH")]
     probs, _ = kinds(env, location="Renens VD")
-    assert probs["location"]["fixes"][0] == ("add", "LOCATION_KEYWORDS", "renens") and probs["location"]["canton"] == "VD"
+    assert probs["location"]["fixes"][0] == ("add", "LOCATION_KEYWORDS", "renens", "Renens") and probs["location"]["canton"] == "VD"
     assert len(probs["location"]["fixes"]) == 1                              # VD is already searched (derived from WHERE)
     probs, _ = kinds(env, location="Nowhereville")
-    assert probs["location"]["fixes"] == [("add", "LOCATION_KEYWORDS", "nowhereville")]
+    assert probs["location"]["fixes"] == [("add", "LOCATION_KEYWORDS", "nowhereville", "Nowhereville")]
     probs, _ = kinds(env, location="", description="Our office in Bern. " * 20)
     assert probs["location"]["fixes"] == []
 
 
 def test_a_language_outside_the_search_offers_to_add_it(env):
     probs, _ = kinds(env, title="Architecte cloud", description="Nous cherchons un architecte cloud pour concevoir des plateformes et accompagner les équipes de développement. " * 3)
-    assert probs["language"]["code"] == "fr" and probs["language"]["fixes"] == [("add", "LANGUAGES", "fr")]
+    assert probs["language"]["code"] == "fr" and probs["language"]["fixes"] == [("add", "LANGUAGES", "fr", "FR")]
 
 
 def test_a_work_rate_outside_the_wanted_range_is_reported(env, monkeypatch):
@@ -324,7 +324,7 @@ def test_the_advice_page_shows_buttons_for_each_fix_and_skill_chips(env, monkeyp
     jid = env.store.add_manual({"title": "Junior Consultant Kubernetes", "company": "Acme SA", "location": "Zürich",
                                 "description": "Kubernetes everywhere. " * 20, "status": "new"})
     html = c.get(f"/job/{jid}/search").text
-    for want in ("Does my search find postings like this one?", "Stop skipping “junior”", "+ consultant", "+ Search in zürich",
+    for want in ("Does my search find postings like this one?", "Stop skipping “junior”", "+ Consultant", "+ Search in Zürich",                 # shown as the posting writes it
                  "+ Also search the canton ZH", "Search for it too:", 'action="/skills"', "+ I have it", f'name="next" value="/job/{jid}/search"'):
         assert want in html, want
     assert c.get("/job/9999/search", follow_redirects=False).status_code in (302, 303, 307)
@@ -341,7 +341,7 @@ def test_a_fix_changes_that_one_setting_and_starts_a_scan(env, monkeypatch):
     c.post("/tune", data={"action": "add", "name": "SEARCH_TERMS", "value": "Cloud Architect"})
     c.post("/tune", data={"action": "add", "name": "LANGUAGES", "value": "FR"})
     c.post("/tune", data={"action": "add", "name": "JOBROOM_CANTONS", "value": "zh"})
-    assert env.config.SEARCH_TERMS == ["cloud architect"] and env.config.LANGUAGES == ["en", "fr"]
+    assert env.config.SEARCH_TERMS == ["Cloud Architect"] and env.config.LANGUAGES == ["en", "fr"]
     assert env.config.JOBROOM_CANTONS == ["VD", "ZH"]                          # the cantons derived from WHERE are kept
     env.store.set_meta(scan_started_at="2020-01-01T00:00:00")
     n = len(runs)
