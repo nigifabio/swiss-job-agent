@@ -58,6 +58,8 @@ def download_name(profile, job):
 
 
 def _ordered_expertise(profile, hits):
+    if profile.get("_fixed_expertise"):
+        return list(profile.get("expertise", []))          # the profile put its skills in the order it wants
     words = set(" ".join(hits).split())
     return sorted(profile.get("expertise", []),
                   key=lambda e: 0 if words & set(e.lower().replace("&", " ").split()) else 1)
@@ -113,6 +115,14 @@ def profile_versions():
 
 
 def localized(profile, job):
+    """(profile, lang) for a job, as the profile the job is tagged with shows it (see profiles.py; the
+    main profile shows everything). The translated profile has the same shape, so the choice applies to it too."""
+    from . import profiles
+    cv, lang = _translated(profile, job)
+    return profiles.apply_view(cv, job.get("profile")), lang
+
+
+def _translated(profile, job):
     """(profile, lang) for a job: the translated profile in the posting's language when one exists
     and matches profile.json item for item (name/contact always from profile.json); otherwise
     the profile as is, in its own language."""
@@ -152,7 +162,7 @@ def draft_text(job, profile):
     for e in cv.get("experience", []):
         where = ", ".join(x for x in (e.get("org", ""), e.get("loc", "")) if x)
         out += ["### " + e.get("title", "") + (f" — {where}" if where else ""), e.get("dates", "")]
-        out += ["- " + b for b in _by_relevance(e.get("bullets", []), job)] + [""]
+        out += ["- " + b for b in _by_relevance(e.get("bullets", []), job, e.get("_fixed"))] + [""]
     if cv.get("education"):
         out += ["## " + H[4]] + ["- " + x for x in cv["education"]] + [""]
     if cv.get("extras"):
@@ -261,7 +271,16 @@ def build_custom(profile, keywords):
                   lang=lang if lang in HEADINGS else "en"), sup, unsup
 
 
-def _by_relevance(bullets, job):
+def build_profile_view(profile, pid):
+    """The CV of an additional profile as it starts out: its headline, summary and choices, nothing tailored to a posting."""
+    from . import profiles
+    cv, lang = profiles.apply_view(profile, pid), _profile_lang(profile)
+    return render(cv, [], os.path.join(CV_DIR, f"profile-{int(pid)}.pdf"), summary=cv.get("summary", ""), lang=lang if lang in HEADINGS else "en")
+
+
+def _by_relevance(bullets, job, fixed=False):
+    if fixed:
+        return list(bullets)                               # the profile chose the order of these points
     terms, skills = compose.posting_terms(job), filters.matched(job)
     return [b for _, b in sorted(enumerate(bullets), key=lambda ib: (-compose._score(ib[1], terms, skills), ib[0]))]
 
@@ -389,7 +408,7 @@ def render(profile, hits, out, company="", key_skills=None, summary=None, lang="
             where = ", ".join(x for x in (e.get("org", ""), e.get("loc", "")) if x)      # either may be missing
             flow.append(Paragraph(f'<b>{esc(e["title"])}</b>' + (f" — {esc(where)}" if where else ""), st["role"]))
             flow.append(Paragraph(esc(e.get("dates", "")), st["sub"]))
-            bullets = (_by_relevance(e.get("bullets", []), job) if job else _bullet_first(e.get("bullets", []), hits))
+            bullets = (_by_relevance(e.get("bullets", []), job, e.get("_fixed")) if job else _bullet_first(e.get("bullets", []), hits))
             if bullets:                                    # a job listed without details: no (empty) list
                 flow.append(bullets_of(bullets))
         if profile.get("education"):

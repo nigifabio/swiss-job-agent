@@ -10,7 +10,7 @@ import os
 
 import httpx
 
-from .. import config, enrich, filters, scanlog
+from .. import config, enrich, filters, scanlog, profiles
 from ..http import Http
 from ..normalize import content_hash
 
@@ -21,7 +21,7 @@ def fetch():
         return []
     out, seen = [], set()
     with Http(timeout=30, min_gap=0.5) as client:
-        for term in config.SEARCH_TERMS or [""]:
+        for term in profiles.search_terms() or [""]:
             for where in config.WHERE:
                 try:
                     data = client.json(f"https://jooble.org/api/{key}", method="POST",

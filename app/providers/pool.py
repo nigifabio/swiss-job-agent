@@ -10,7 +10,7 @@ import os
 
 import httpx
 
-from .. import config, filters, scanlog, store
+from .. import config, filters, profiles, scanlog, store
 
 URL = os.environ.get("POOL_URL", "").rstrip("/")
 TOKEN = os.environ.get("POOL_TOKEN", "")
@@ -21,7 +21,8 @@ def enabled():
 
 
 def spec():
-    return {"terms": list(config.SEARCH_TERMS), "where": [w for w in config.WHERE if w], "cantons": list(config.JOBROOM_CANTONS),
+    return {"terms": profiles.search_terms(),     # every profile's terms: the pool is asked for the union
+            "where": [w for w in config.WHERE if w], "cantons": list(config.JOBROOM_CANTONS),
             "places": list(config.LOCATION_KEYWORDS), "langs": list(config.LANGUAGES), "remote": bool(config.ALLOW_REMOTE)}
 
 
@@ -38,6 +39,8 @@ def pull():
     # what decides which postings this person gets: when any of it changes, start again from the whole pool
     # (the title, company and work-rate rules stay here: they are part of the mark, not of what is sent)
     local = [config.TITLE_KEYWORDS, config.TITLE_EXCLUDE, config.COMPANY_EXCLUDE, config.WORK_RATE_MIN, config.WORK_RATE_MAX]
+    if profiles.extra_title_words():
+        local.append(profiles.extra_title_words())            # (nothing added without extra profiles: the mark of a search stays)
     digest = hashlib.sha256(json.dumps([s, local], sort_keys=True).encode()).hexdigest()[:16]
     meta = store.get_meta()
     since = meta.get("pool_since", "") if meta.get("pool_spec") == digest else ""     # a changed search starts from the whole pool

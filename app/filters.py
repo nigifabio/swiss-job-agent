@@ -26,7 +26,10 @@ def title_ok(title):
         return False
     if any(_hit(k, t) for k in config.TITLE_EXCLUDE):
         return False
-    return not config.TITLE_KEYWORDS or any(_hit(k, t) for k in config.TITLE_KEYWORDS)
+    if not config.TITLE_KEYWORDS or any(_hit(k, t) for k in config.TITLE_KEYWORDS):
+        return True
+    from . import profiles      # a title one of the additional profiles asks for passes too
+    return any(_hit(k, t) for k in profiles.extra_title_words())
 
 
 def location_ok(location, desc=""):
@@ -98,27 +101,31 @@ def _hit_skill(kw, text):
     return any(_hit(sp, text) for sp in roles.spellings_for(kw, config.LANGUAGES))
 
 
-def _skills():
-    from . import prefs          # runtime-refined list (profile keywords +/- user clicks)
-    return prefs.skills()
+def _skills(job=None):
+    """The skills a posting is judged by: those of the profile it is tagged with (the main profile's
+    runtime-refined list, profile keywords +/- the user's clicks, unless it is tagged with another)."""
+    from . import profiles
+    return profiles.skills_of((job or {}).get("profile"))
 
 
 def matched(job, kws=None):
-    kws = _skills() if kws is None else kws
+    kws = _skills(job) if kws is None else kws
     text = f"{job.get('title') or ''} {job.get('description') or ''}".lower()
     return [k.rstrip("*") for k in kws if _hit_skill(k, text)]
 
 
-def avoided_hits(job):
-    from . import prefs
+def avoided_hits(job, avoid=None):
+    from . import profiles
+    avoid = profiles.avoid_of((job or {}).get("profile")) if avoid is None else avoid
     text = f"{job.get('title') or ''} {job.get('description') or ''}".lower()
-    return [k.rstrip("*") for k in prefs.avoided() if _hit_skill(k, text)]
+    return [k.rstrip("*") for k in avoid if _hit_skill(k, text)]
 
 
-def score(job):
-    """0-100 keyword match of a posting against the CV skills (prefs.skills()).
-    Title hits weigh triple. Returns None when no keywords are configured."""
-    kws = _skills()
+def score(job, kws=None):
+    """0-100 keyword match of a posting against CV skills (default: those of the profile it is tagged
+    with, the main one's being prefs.skills()). Title hits weigh triple. Returns None when no keywords
+    are configured."""
+    kws = _skills(job) if kws is None else kws
     if not kws:
         return None
     title = (job.get("title") or "").lower()

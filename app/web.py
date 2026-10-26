@@ -5,14 +5,14 @@ import re
 import json
 import threading
 
-from urllib.parse import urlparse
+from urllib.parse import urlencode, urlparse
 
-from fastapi import FastAPI, Request, Form
+from fastapi import FastAPI, Query, Request, Form
 from fastapi.responses import RedirectResponse, HTMLResponse, PlainTextResponse, FileResponse, Response
 from fastapi.templating import Jinja2Templates
 
 from . import (agenda, auth, commute, compose, config, docs, enrich, fetch, filters, game, i18n, improve, listfilter, locales, letter, normalize, onboard, places, posting, prefs,
-               prep, report, requirements, roles, skills, store, strength, suggest, tailor, tune, twins, weekly)
+               prep, profiles, report, requirements, roles, skills, store, strength, suggest, tailor, tune, twins, weekly)
 from .importers import cvparse, extract, linkedin
 
 store.init_db()
@@ -84,6 +84,9 @@ def ui_lang(request):
 def render(request, name, ctx):
     ctx["user"] = getattr(request.state, "user", "")
     ctx["platform"] = config.PLATFORM_TENANT      # runs behind the platform gateway
+    ctx["multi_profiles"] = profiles.multiple()    # more than the main profile: tags and chips are shown
+    ctx["pnames"] = profiles.names()
+    ctx["ptags"] = lambda j: [(i, ctx["pnames"][i]) for i in profiles.tags(j)]      # a job's tags, the main one first
     lang = ui_lang(request)
     i18n.use(lang)
     return templates[lang].TemplateResponse(request, name, ctx)
@@ -126,7 +129,7 @@ BEST = 10        # how many postings "Best new" shows
 
 @app.get("/jobs", response_class=HTMLResponse)
 def jobs(request: Request, status: str = "new", view: str = "", done: int = -1, q: str = "", role: str = "",
-         days: str = "", km: str = "", sort: str = "best"):
+         days: str = "", km: str = "", sort: str = "best", profile: str = ""):
     if status not in store.STATUSES:
         status = "new"
     meta = store.get_meta()
@@ -141,7 +144,12 @@ def jobs(request: Request, status: str = "new", view: str = "", done: int = -1, 
     if best:
         rows = fresh[:BEST]
     num = lambda v: int(v) if str(v).isdigit() else 0  # noqa: E731
-    shown, flt = listfilter.apply(rows, q, role, num(days), num(km), sort, ui_lang(request))
+    shown, flt = listfilter.apply(rows, q, role, num(days), num(km), sort, ui_lang(request), profile)
+    keep = {k: v for k, v in {"q": flt["q"], "role": flt["role"], "days": flt["days"] or "", "km": flt["km"] or "",
+                              "sort": flt["sort"] if flt["sort"] != "best" else ""}.items() if v}
+    for c in flt["profiles"]:                              # the chips of the profiles keep the other filters of the bar
+        c["href"] = "/jobs?" + urlencode({"status": status, **keep, "profile": c["id"]})
+    flt["all_href"] = "/jobs?" + urlencode({"status": status, **keep})
     if not best:
         rows = shown                              # search and filters of the bar on top of the list
     return render(request, "dashboard.html", {
@@ -309,6 +317,115 @@ def cv_version_pdf(vid: int):
                         content_disposition_type="inline")
 
 
+# ---- additional profiles ("roles"): another CV on the same facts, and a wider search ------------
+PROFILE_ERRORS = {"limit": "You have reached the limit: {n} profiles in all, the main one included. Delete one to add another.",
+                  "name": "Give the profile a name.", "exists": "A profile with this name exists already."}
+
+
+def _profile_error(code):
+    return i18n.tr(PROFILE_ERRORS[code]).format(n=profiles.MAX_PROFILES) if code in PROFILE_ERRORS else ""
+
+
+def _items(text):
+    """Entries typed one per line (or separated by ;)."""
+    return [x.strip() for x in re.split(r"[\n;]", (text or "").replace("\r", "")) if x.strip()]
+
+
+def _search_mark():
+    return (profiles.search_terms(), profiles.extra_title_words())
+
+
+def _after_profile_change(before):
+    """Tags and scores follow the profiles; a wider search starts a scan, a narrower one removes the new jobs
+    that no profile asks for any more. Returns (jobs removed, scan started)."""
+    fetch.rescore_all()
+    after = _search_mark()
+    removed = tune.apply() if any(w not in after[i] for i in (0, 1) for w in before[i]) else 0
+    widened = any(w not in before[i] for i in (0, 1) for w in after[i])
+    return removed, bool(widened and _rescan())
+
+
+@app.get("/cv/profiles", response_class=HTMLResponse)
+def profiles_page(request: Request, err: str = "", saved: int = 0, removed: int = -1):
+    profile = tailor.load_profile()
+    open_jobs = store.open_jobs(100000)
+    count = {pid: sum(1 for j in open_jobs if (j.get("profile") or 0) == pid) for pid in profiles.ids()}
+    return render(request, "profiles.html", {"profile": profile, "extra": profiles.extras(), "count": count, "limit": profiles.MAX_PROFILES,
+                                             "can_add": profiles.can_add(), "err": _profile_error(err), "saved": saved, "removed": removed})
+
+
+@app.post("/cv/profiles")
+def profile_new(name: str = Form("")):
+    profile = tailor.load_profile()
+    if not profile:
+        return RedirectResponse("/cv", status_code=303)
+    try:
+        pid = profiles.create(name, profile)
+    except profiles.ProfileError as e:
+        return RedirectResponse(f"/cv/profiles?err={e.code}", status_code=303)
+    return RedirectResponse(f"/cv/profiles/{pid}?new=1", status_code=303)
+
+
+@app.post("/cv/profiles/{pid}/rename")
+def profile_rename(pid: int, name: str = Form("")):
+    try:
+        profiles.update(pid, name=name)
+    except profiles.ProfileError as e:
+        return RedirectResponse(f"/cv/profiles?err={e.code}", status_code=303)
+    return RedirectResponse("/cv/profiles?saved=1", status_code=303)
+
+
+@app.post("/cv/profiles/{pid}/delete")
+def profile_delete(pid: int):
+    before = _search_mark()
+    if profiles.delete(pid):               # the jobs tagged with it go back to the main profile, or to their next tag
+        removed, _ = _after_profile_change(before)
+        return RedirectResponse(f"/cv/profiles?removed={removed}", status_code=303)
+    return RedirectResponse("/cv/profiles", status_code=303)
+
+
+@app.get("/cv/profiles/{pid}.pdf")
+def profile_pdf(pid: int):
+    """The profile's CV as it starts out (its headline, summary and choices; nothing tailored to a posting)."""
+    profile = tailor.load_profile()
+    if not profile or not profiles.get(pid):
+        return PlainTextResponse("No such profile.", status_code=404)
+    path = tailor.build_profile_view(profile, pid)
+    return FileResponse(path, media_type="application/pdf", filename=tailor.download_name(profile, {"company": profiles.label(pid)}),
+                        content_disposition_type="inline")
+
+
+@app.get("/cv/profiles/{pid}", response_class=HTMLResponse)
+def profile_edit(request: Request, pid: int, saved: int = 0, new: int = 0, removed: int = -1, scan: int = 0, err: str = ""):
+    p, profile = profiles.get(pid), tailor.load_profile()
+    if not p or not profile:
+        return RedirectResponse("/cv/profiles", status_code=303)
+    return render(request, "profile_edit.html", {"p": p, "profile": profile, "ch": profiles.choices(profile, pid), "saved": saved, "new": new,
+                                                 "removed": removed, "scan": scan, "err": _profile_error(err),
+                                                 "translated": [l for l, v in tailor.profile_versions().items() if v == "ok"]})
+
+
+@app.post("/cv/profiles/{pid}")
+async def profile_save(request: Request, pid: int):
+    """The edit page: what the profile shows (in the order of the page), its words and its name. A press on an
+    arrow saves the page too and moves one item."""
+    p, profile = profiles.get(pid), tailor.load_profile()
+    if not p or not profile:
+        return RedirectResponse("/cv/profiles", status_code=303)
+    form = await request.form()
+    before = _search_mark()
+    try:
+        profiles.update(pid, name=str(form.get("name") or p["name"]), headline=str(form.get("headline") or ""),
+                        summary=str(form.get("summary") or ""), sel=profiles.selection_from_form(profile, form),
+                        terms=_items(form.get("terms")), titles=_items(form.get("titles")),
+                        skills=_items(form.get("skills")), avoid=_items(form.get("avoid")))
+    except profiles.ProfileError as e:
+        return RedirectResponse(f"/cv/profiles/{pid}?err={e.code}", status_code=303)
+    removed, scan = _after_profile_change(before)
+    where = f"/cv/profiles/{pid}?saved=1&removed={removed}&scan={int(scan)}"
+    return RedirectResponse(where + ("#" + str(form.get("move")).split(":")[0] if form.get("move") else ""), status_code=303)
+
+
 @app.get("/cv/photo.jpg")
 def cv_photo():
     if not os.path.exists(tailor.PHOTO):
@@ -369,6 +486,19 @@ def _quick(request, state, next, default):
     return RedirectResponse(_local(next, default), status_code=303)
 
 
+@app.post("/job/{jid}/profile")
+def set_job_profile(jid: int, profile: str = Form(""), auto: str = Form("")):
+    """The person's own choice of a job's main tag: the CV and the letter follow that profile, and the score
+    becomes that profile's. "auto" gives the choice back to the tags (highest score)."""
+    job = store.get_job(jid)
+    if job:
+        pid = int(profile) if profile.isdigit() and int(profile) in profiles.ids() and not auto else None
+        if pid is not None or auto:
+            t = fetch.tag_job(job, pid)
+            store.set_tag(jid, t["score"], t["why"], t["profile"], t["profiles"], t["locked"])
+    return RedirectResponse(f"/job/{jid}#profile", status_code=303)
+
+
 @app.post("/job/{jid}/dismiss")
 def dismiss(request: Request, jid: int, next: str = Form(""), reason: str = Form(""), now: str = Form(""),
             twins: str = Form("")):
@@ -421,11 +551,13 @@ def _start_background(fn):
 
 
 @app.post("/skills")
-def refine_skills(action: str = Form(...), term: str = Form(...), next: str = Form("/cv")):
-    """A click on a skill chip: refine the CV skills / avoided words, then rescore open jobs
-    so the queue re-orders now; the next scan uses the same lists."""
-    if prefs.apply(action, term):
-        store.rescore(fetch.score_job)
+def refine_skills(action: str = Form(...), term: str = Form(...), next: str = Form("/cv"), profile: str = Form("")):
+    """A click on a skill chip: refine the CV skills / avoided words (those of an additional profile when
+    one is named), then rescore open jobs so the queue re-orders now; the next scan uses the same lists."""
+    pid = int(profile) if profile.isdigit() else 0
+    own = pid and profiles.get(pid) and action in ("have", "remove", "avoid", "unavoid")
+    if (profiles.skill_action(pid, action, term) if own else prefs.apply(action, term)):
+        fetch.rescore_all()
     return RedirectResponse(_local(next, "/cv"), status_code=303)
 
 
@@ -615,15 +747,18 @@ def _base(request):
 
 
 @app.get("/improve", response_class=HTMLResponse)
-def improve_page(request: Request, kind: str = ""):
-    """What the person's postings ask for that they miss: what to study or prepare first."""
+def improve_page(request: Request, kind: str = "", which: str = Query("", alias="profile")):
+    """What the person's postings ask for that they miss: what to study or prepare first. With a profile
+    chosen: the jobs tagged with it, against its own skills."""
     profile = tailor.load_profile()
     check = strength.report(profile) if profile else None
     try:
         years = onboard.years_of_experience(profile or {})
     except Exception:  # noqa: BLE001  (dates written in a way the reader doesn't know)
         years = 0
-    return render(request, "improve.html", {"a": improve.analyse(kind[:80], ui_lang(request)), "my_years": years,
+    pid = int(which) if which.isdigit() and int(which) in profiles.ids() and profiles.multiple() else None
+    return render(request, "improve.html", {"a": improve.analyse(kind[:80], ui_lang(request), pid), "pid": pid,
+                                            "qs": ("?" + urlencode({**({"profile": pid} if pid is not None else {}), **({"kind": kind[:80]} if kind else {})})) if (pid is not None or kind) else "", "my_years": years,
                                             "profile_done": f"{check['done']} / {check['total']}" if check else "–"})
 
 
@@ -825,7 +960,8 @@ def posting_save(title: str = Form(...), company: str = Form(""), location: str 
     f.update({"url": _safe_url(url), "source": " ".join(source.split())[:40] or "posting", "origin": "manual",
               "status": status if status in ("new", "shortlisted") else "shortlisted",
               "loose_key": normalize.loose_key(f["title"], f["company"], f["location"])})
-    f["score"], f["score_rationale"] = fetch.score_job(f)
+    t = fetch.tag_job(f)
+    f.update(score=t["score"], score_rationale=t["why"], profile=t["profile"], profiles=t["profiles"])
     jid = store.add_manual(f)
     return RedirectResponse(f"/job/{jid}/search", status_code=303)
 
@@ -1105,7 +1241,7 @@ async def settings_save(request: Request):
         commute.reset()
     config.save_settings(new)
     prefs.invalidate()
-    store.rescore(fetch.score_job)
+    fetch.rescore_all()
     scan = _searched() != before and _rescan()         # what is searched changed: look for jobs now
     return RedirectResponse("/settings?saved=1" + ("&scan=1" if scan else ""), status_code=303)
 

@@ -48,6 +48,16 @@
   {% if flags %}<p style="margin:8px 0 0"><span class="muted">This posting mentions:</span>
     {% for kind, label in flags %}<span class="flag">{{ label }}</span>{% endfor %}</p>{% endif %}
   {% if can_tailor %}<p><a class="btn ghost small" href="#cv">📄 CV for this job ↓</a> <a class="btn ghost small" href="#letter">✉ Cover letter ↓</a></p>{% endif %}
+  {% if multi_profiles %}
+  <form method="post" action="/job/{{ job.id }}/profile" id="profile" class="actions" style="margin:6px 0 10px">
+    <span class="muted">Profiles:</span>
+    {% for id, name in ptags(job) %}<span class="ptag{% if loop.first %} main{% endif %}">{{ name }}</span>{% endfor %}
+    <select name="profile" aria-label="Main tag" style="width:auto;max-width:100%">{% for id, name in pnames.items() %}<option value="{{ id }}" {{ 'selected' if id == ptags(job)[0][0] }}>{{ name }}</option>{% endfor %}</select>
+    <button class="ghost small" type="submit">Change the main tag</button>
+    {% if job.profile_locked %}<button class="ghost small" type="submit" name="auto" value="1" title="Let the highest score decide again">Back to automatic</button>{% endif %}
+    <span class="muted">The CV and the letter of this job are written with the profile of its main tag.</span>
+  </form>
+  {% endif %}
   {% if job.score is not none %}<p><strong>Score {{ job.score }}</strong> — {{ job.score_rationale }}</p>{% endif %}
   {% if have or missing or avoided %}
   {% set back = "/job/" ~ job.id %}
@@ -129,6 +139,7 @@
 {% if can_tailor %}
 <div class="card" id="cv">
   <strong>CV for this job</strong> <span class="muted">{{ cv_note }}</span>
+  {% if multi_profiles %}<span class="muted">Written with the profile “{{ ptags(job)[0][1] }}”.</span>{% endif %}
   <form method="post" action="/job/{{ job.id }}/cv" style="margin:8px 0"{% if job.cv_text %} onsubmit="return confirm('Write the CV again from your profile? Your edits to this text will be lost.')"{% endif %}>
     {% if cv_versions %}<select name="source" aria-label="Start from" style="width:auto;max-width:100%">
       <option value="">From my profile, tailored to this job</option>
@@ -158,6 +169,7 @@
 {% endif %}
 <div class="card" id="letter">
   <strong>Cover letter</strong> <span class="muted">· {{ letter_engine }}</span>
+  {% if multi_profiles %}<span class="muted">Written with the profile “{{ ptags(job)[0][1] }}”.</span>{% endif %}
   {% if can_tailor %}
   <form method="post" action="/job/{{ job.id }}/letter" style="margin:8px 0"{% if job.letter %} onsubmit="return confirm('Write the letter again? Your edits to this text will be lost.')"{% endif %}>
     {% if letter_versions %}<select name="source" aria-label="Start the letter from" style="width:auto;max-width:100%">

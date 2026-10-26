@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% macro lines(kind, rows) %}
+{% for i, text, picked in rows %}
+<div class="pickrow{% if not picked %} off{% endif %}">
+  <input type="checkbox" name="{{ kind }}" value="{{ i }}" id="{{ kind }}{{ i }}" {{ 'checked' if picked }}>
+  <label for="{{ kind }}{{ i }}">{{ text }}</label>
+  {% if picked %}<span class="mv"><button class="ghost" type="submit" name="move" value="{{ kind }}:{{ i }}:up" title="Move up" aria-label="Move up">↑</button>
+    <button class="ghost" type="submit" name="move" value="{{ kind }}:{{ i }}:down" title="Move down" aria-label="Move down">↓</button></span>{% endif %}
+</div>
+{% endfor %}
+{% endmacro %}
+{% block body %}
+<div class="tabs"><a class="tab" href="/cv">CV and profile</a><a class="tab" href="/cv/versions">My CV versions</a><a class="tab active" href="/cv/profiles">My profiles</a></div>
+<p><a href="/cv/profiles">← My profiles</a></p>
+{% if err %}<div class="banner">{{ err }}</div>{% endif %}
+{% if new %}<div class="banner">Profile created. It shows everything of your main profile for now: choose below what it shows, and the words it searches.</div>
+{% elif saved %}<div class="banner">Saved.
+  {% if removed > 0 %}New jobs that no profile asks for any more were removed from the list: {{ removed }}.{% endif %}
+  {% if scan %}A new search has started for the added words.{% endif %}</div>{% endif %}
+<form method="post" action="/cv/profiles/{{ p.id }}">
+  <button class="nodefault" type="submit" tabindex="-1" aria-hidden="true">Save</button>
+  <div class="card">
+    <h2 style="margin-top:0">{{ p.name }}</h2>
+    <div class="row">
+      <div><label>Name of the profile</label><input name="name" value="{{ p.name }}" maxlength="40" required></div>
+      <div><label>Title line (under your name)</label><input name="headline" value="{{ p.headline }}" maxlength="140" placeholder="e.g. Interior designer"></div>
+    </div>
+    <label>Summary</label>
+    <textarea name="summary" rows="5" spellcheck="true">{{ p.summary }}</textarea>
+    <p class="muted" style="margin:4px 0 0">Your name, contact details, photo and every fact (jobs, employers, dates, the wording of each point) come from your main profile and can't be changed here.
+      The title line and the summary are used as you write them here.
+      {% if translated %}Your profile also exists in other languages ({{ translated | join(", ") }}): the same choices apply to those versions, but this title line and summary are not translated, so a CV in another language than the one you write them in will have them as written.{% endif %}</p>
+  </div>
+
+  <div class="card" id="expertise">
+    <strong>Skills shown</strong> <span class="muted">· tick the ones to show; the arrows set the order</span>
+    {{ lines("expertise", ch.expertise) }}
+    {% if not ch.expertise %}<p class="muted">Your main profile lists no skills.</p>{% endif %}
+  </div>
+
+  <div class="card" id="experience">
+    <strong>Jobs shown</strong> <span class="muted">· tick the jobs to show and the points of each; the arrows set the order</span>
+    {% for e in ch.experience %}
+    <div class="pickrow{% if not e.picked %} off{% endif %}">
+      <input type="checkbox" name="experience" value="{{ e.i }}" id="experience{{ e.i }}" {{ 'checked' if e.picked }}>
+      <label for="experience{{ e.i }}"><b>{{ e.title }}</b>{% if e.where %} — {{ e.where }}{% endif %} <span class="muted">{{ e.dates }}</span></label>
+      {% if e.picked %}<span class="mv"><button class="ghost" type="submit" name="move" value="experience:{{ e.i }}:up" title="Move up" aria-label="Move up">↑</button>
+        <button class="ghost" type="submit" name="move" value="experience:{{ e.i }}:down" title="Move down" aria-label="Move down">↓</button></span>{% endif %}
+    </div>
+    {% if e.bullets %}<div class="pickgroup">{% for i, text, picked in e.bullets %}
+      <div class="pickrow{% if not picked %} off{% endif %}">
+        <input type="checkbox" name="b{{ e.i }}" value="{{ i }}" id="b{{ e.i }}-{{ i }}" {{ 'checked' if picked }}>
+        <label for="b{{ e.i }}-{{ i }}">{{ text }}</label>
+        {% if picked %}<span class="mv"><button class="ghost" type="submit" name="move" value="b:{{ e.i }}:{{ i }}:up" title="Move up" aria-label="Move up">↑</button>
+          <button class="ghost" type="submit" name="move" value="b:{{ e.i }}:{{ i }}:down" title="Move down" aria-label="Move down">↓</button></span>{% endif %}
+      </div>{% endfor %}</div>{% endif %}
+    {% else %}<p class="muted">Your main profile lists no jobs.</p>{% endfor %}
+  </div>
+
+  <div class="card" id="education">
+    <strong>Education shown</strong>
+    {{ lines("education", ch.education) }}
+    {% if not ch.education %}<p class="muted">Your main profile lists no education.</p>{% endif %}
+  </div>
+  <div class="card" id="extras">
+    <strong>Extras shown</strong> <span class="muted">· languages, tools, licences...</span>
+    {{ lines("extras", ch.extras) }}
+    {% if not ch.extras %}<p class="muted">Your main profile lists nothing here.</p>{% endif %}
+  </div>
+
+  <div class="card" id="search">
+    <h2 style="margin-top:0">What this profile searches</h2>
+    <p class="muted">Added to the search of your main profile (Settings), so the scan looks for the words of all your profiles. One entry per line.</p>
+    <div class="row">
+      <div><label>Search terms (typed into the job sites)</label><textarea name="terms" rows="5">{{ p.terms | join("\n") }}</textarea></div>
+      <div><label>Title words (a job title must contain one)</label><textarea name="titles" rows="5">{{ p.titles | join("\n") }}</textarea>
+        <p class="muted" style="margin:2px 0 0">“dessinat*” also finds dessinateur, dessinatrice.</p></div>
+    </div>
+    <div class="row">
+      <div><label>Skills that score for this profile</label><textarea name="skills" rows="6">{{ p.skills | join("\n") }}</textarea>
+        <p class="muted" style="margin:2px 0 0">It started as a copy of the skills of your main profile.</p></div>
+      <div><label>Words to avoid (they push a job down)</label><textarea name="avoid" rows="6">{{ p.avoid | join("\n") }}</textarea></div>
+    </div>
+  </div>
+  <p><button type="submit">Save</button>
+    <a class="btn ghost" href="/cv/profiles/{{ p.id }}.pdf" target="_blank" rel="noopener">Open the CV of this profile ↗</a>
+    <span class="muted">(as last saved)</span></p>
+</form>
+<form method="post" action="/cv/profiles/{{ p.id }}/delete" onsubmit="return confirm('Delete this profile? Its jobs go back to your main profile or to their next profile; nothing else is lost.')">
+  <button class="ghost" type="submit">Delete this profile</button>
+</form>
+{% endblock %}

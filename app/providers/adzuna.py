@@ -1,6 +1,6 @@
 import httpx
 
-from .. import config, filters, scanlog
+from .. import config, filters, scanlog, profiles
 from ..http import Http
 from ..normalize import content_hash
 
@@ -14,7 +14,7 @@ def fetch():
         return []
 
     out = []
-    terms = config.SEARCH_TERMS or [""]
+    terms = profiles.search_terms() or [""]
     url = BASE.format(country=config.ADZUNA_COUNTRY)
 
     with Http(timeout=30, min_gap=0.5) as client:

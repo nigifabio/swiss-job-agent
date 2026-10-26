@@ -48,11 +48,11 @@ GROUPS = [
 ]
 
 
-def _groups():
+def _groups(kws, avoided):
     extra = [(k,) for k in (t.strip().lower() for t in os.environ.get("SKILL_LEXICON", "").split(",")) if k]
     from . import roles
-    cv = [tuple(roles.spellings_for(k, roles.LANGS)) for k in prefs.skills()]
-    avoid = [(k,) for k in prefs.avoided()]
+    cv = [tuple(roles.spellings_for(k, roles.LANGS)) for k in kws]
+    avoid = [(k,) for k in avoided]
     return GROUPS + extra + cv + avoid
 
 
@@ -61,12 +61,15 @@ def _pattern(term):
     return r"(?<!\w)" + re.escape(term.rstrip("*")) + end
 
 
-def plan():
+def plan(kws=None, avoided=None):
     """What analyse() looks for, worked out once: (regex or None, terms, {term: (skill, class)}).
-    Pass it to analyse() when reading many postings in a row."""
-    kws, avoid = prefs.skills(), [k.rstrip("*") for k in prefs.avoided()]
+    Pass it to analyse() when reading many postings in a row. The skills and avoided words are the main
+    profile's, or those of another profile when given."""
+    kws = prefs.skills() if kws is None else kws
+    avoided = prefs.avoided() if avoided is None else avoided
+    avoid = [k.rstrip("*") for k in avoided]
     cv_terms = [k.rstrip("*") for k in kws]
-    groups, term_group = _groups(), {}
+    groups, term_group = _groups(kws, avoided), {}
     for g in groups:
         if any(t.rstrip("*") in avoid for t in g):
             cls = "avoid"

@@ -85,6 +85,34 @@ A fix that widens the search starts a scan right away, so similar postings come 
 - **CV page → CV from keywords**: paste a posting's requirements; keywords your profile supports get a
   Key skills line and move matching bullets up; unsupported ones are listed, never added.
 
+## Several profiles: one CV per kind of job
+
+Looking for more than one kind of job (say draughtsperson, interior designer and receptionist)? **CV → My profiles** lets you
+add up to **3 more profiles** next to your main one (4 in all), each with a role name.
+
+- **A profile is a view of your main profile, not a copy.** Your name, contact details, photo and every fact (jobs, employers,
+  dates, the wording of each point, education, extras) always come from the main profile, so nothing can be invented. A profile
+  only chooses and orders which skills, which jobs, which points of each job and which education and extras lines to show,
+  and has its own **title line** and **summary**. On its edit page, tick what to show and use the arrows to set the order.
+  A list left as "everything" keeps showing new items you add to your main profile; a list you chose does not until you tick them.
+  Translated versions of your profile follow the same choices; the title line and the summary are used as you wrote them.
+- **A profile also widens the search** with its own search terms, title words (a job title must contain one), skills that
+  score (it starts as a copy of your main skills) and words to avoid. The scan looks for the words of all your profiles. Place,
+  languages, work rate, company exclusions, sources and the scan interval are shared by all profiles.
+- **Every job is tagged** with each profile it fits (a title word or a search term of that profile occurs in the title). It is
+  scored against each of them with that profile's skills; the profile where it scores highest is its **main tag**, and its score is
+  the job's score. Jobs that fit none (typed in by hand, say) are tagged with the main profile. Changing a profile's skills or words
+  tags and scores the open jobs again at once.
+- **The job list** shows chips on top ("All · Main profile · Interior designer…") that keep the jobs carrying that tag, whether
+  it is their main tag or not, together with the search and the other filters. Cards and the job page show the tags.
+- **On the job page** you can change the main tag by hand (select and button; "Back to automatic" gives it back to the highest
+  score). **Write the CV** and **Write cover letter** use the profile of the job's main tag.
+- **Improve** has a profile choice: it then reads the jobs tagged with that profile against that profile's own skills.
+- Deleting a profile sends its jobs back to the main profile or to their next tag. New jobs that only that profile asked for are
+  removed from the list (reason: changed settings); jobs you shortlisted or applied to are never touched.
+
+With only the main profile nothing of this shows.
+
 ## Settings
 
 **Settings** (top menu) holds the search itself: search terms, titles to keep or skip, towns,

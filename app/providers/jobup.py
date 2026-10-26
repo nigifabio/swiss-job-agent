@@ -10,7 +10,7 @@ API shape (verified 2026): GET https://www.<site>/api/v1/public/search
 """
 import os
 
-from .. import config, filters, scanlog
+from .. import config, filters, scanlog, profiles
 from ..http import Http
 from ..normalize import content_hash
 
@@ -38,7 +38,7 @@ def _url(site, d):
 
 def fetch():
     out, seen = [], set()
-    terms = config.SEARCH_TERMS or [""]
+    terms = profiles.search_terms() or [""]
     with Http(timeout=20, headers=HEADERS, min_gap=GAP) as client:
         for site in SITES:
             base = f"https://www.{site}/api/v1/public/search"

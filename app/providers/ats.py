@@ -21,7 +21,7 @@ import re
 import json
 import xml.etree.ElementTree as ET
 
-from .. import config, enrich, filters, scanlog, store
+from .. import config, enrich, filters, scanlog, store, profiles
 from ..http import Http
 from ..normalize import content_hash
 
@@ -216,7 +216,7 @@ def _successfactors(client, slug, company, out, known=frozenset()):
     links = set()
     # the keyword search also matches the place ("Vaud"): the person's regions bring the local jobs of
     # employers with thousands of postings
-    terms = [t for t in list(config.WHERE) + list(config.SEARCH_TERMS) if t.strip()][:SF_TERMS]
+    terms = [t for t in list(config.WHERE) + list(profiles.search_terms()) if t.strip()][:SF_TERMS]
     for n, kw in enumerate([""] + terms):
         params = {"locale": locale}
         if kw:

@@ -16,7 +16,7 @@ Verified fields 2026-09-24:
 """
 import os
 
-from .. import config, enrich, filters, scanlog
+from .. import config, enrich, filters, scanlog, profiles
 from ..http import Http
 from ..normalize import content_hash
 
@@ -53,7 +53,7 @@ def _job(out, seen, source, title, company, regions, desc_html, url, posted):
 
 def _remotive(client, out, seen):
     n0 = len(out)
-    for term in config.SEARCH_TERMS or [""]:
+    for term in profiles.search_terms() or [""]:
         data = client.json("https://remotive.com/api/remote-jobs", params={"search": term, "limit": 50})
         if "jobs" not in data:
             raise ValueError("unexpected response shape (no 'jobs'); the API may have changed")

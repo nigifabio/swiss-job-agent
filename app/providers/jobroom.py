@@ -13,7 +13,7 @@ body {keywords[], cantonCodes[], onlineSince, displayRestricted, ...} ->
 """
 import os
 
-from .. import config, enrich, filters, scanlog
+from .. import config, enrich, filters, scanlog, profiles
 from ..http import Http
 from ..normalize import content_hash
 
@@ -49,7 +49,7 @@ def _pick(descs):
 def fetch():
     out, seen = [], set()
     codes = cantons()
-    terms = config.SEARCH_TERMS or [""]
+    terms = profiles.search_terms() or [""]
     with Http(timeout=25, headers=HEADERS, min_gap=0.7) as client:
         for term in terms:
             for page in range(PAGES):

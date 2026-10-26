@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="tabs"><a class="tab" href="/cv">CV and profile</a><a class="tab" href="/cv/versions">My CV versions</a><a class="tab active" href="/cv/profiles">My profiles</a></div>
+{% if err %}<div class="banner">{{ err }}</div>{% endif %}
+{% if saved %}<div class="banner">Saved.</div>{% endif %}
+{% if removed > 0 %}<div class="banner">New jobs that no profile asks for any more were removed from the list: {{ removed }}.</div>{% endif %}
+<div class="card">
+  <h2 style="margin-top:0">My profiles</h2>
+  <p class="muted">Looking for more than one kind of job, say a draughtsperson, an interior designer and a receptionist? Add a profile for each, up to {{ limit }} in all with your main one.
+    A profile shows the same facts as your main profile, nothing is invented: it only chooses which skills, jobs, points and lines to show and in which order,
+    with its own title line and summary. It also widens the search with its own search terms, title words, skills and words to avoid.
+    Place, languages, work rate, exclusions and sources stay the same for all profiles.</p>
+  <p class="muted" style="margin-bottom:0">A job that fits several profiles carries all their tags; the one where it scores highest is its main tag, and the CV and the letter of that job are written with that profile.</p>
+</div>
+{% if not profile %}
+<p class="muted">No candidate profile yet.</p>
+{% else %}
+<div class="card">
+  <strong>{{ pnames[0] }}</strong> <span class="muted">· {{ count[0] }} open job{{ 's' if count[0] != 1 }} · the profile you keep under <a href="/cv">CV and profile</a></span>
+  {% if profile.headline %}<div class="muted">{{ profile.headline }}</div>{% endif %}
+</div>
+{% for p in extra %}
+<div class="card" id="p{{ p.id }}">
+  <div class="row" style="align-items:flex-end">
+    <div><strong>{{ p.name }}</strong> <span class="muted">· {{ count[p.id] }} open job{{ 's' if count[p.id] != 1 }}</span>
+      {% if p.headline %}<div class="muted">{{ p.headline }}</div>{% endif %}</div>
+  </div>
+  <div class="actions">
+    <a class="btn small" href="/cv/profiles/{{ p.id }}">Edit</a>
+    <a class="btn small ghost" href="/cv/profiles/{{ p.id }}.pdf" target="_blank" rel="noopener">Open its CV ↗</a>
+    <form method="post" action="/cv/profiles/{{ p.id }}/rename" style="display:flex;gap:6px;align-items:center">
+      <input name="name" value="{{ p.name }}" maxlength="40" required aria-label="Name of the profile" style="width:180px">
+      <button class="small ghost" type="submit">Rename</button>
+    </form>
+    <form method="post" action="/cv/profiles/{{ p.id }}/delete" onsubmit="return confirm('Delete this profile? Its jobs go back to your main profile or to their next profile; nothing else is lost.')">
+      <button class="small ghost" type="submit">Delete</button>
+    </form>
+  </div>
+</div>
+{% endfor %}
+<div class="card">
+  {% if can_add %}
+  <form method="post" action="/cv/profiles" class="row" style="align-items:flex-end">
+    <div><label>Name of a new profile (the kind of job)</label><input name="name" maxlength="40" required placeholder="e.g. Dessinatrice, Interior designer, Reception"></div>
+    <div style="flex:0 0 auto"><button type="submit">+ New profile from my main profile</button></div>
+  </form>
+  {% else %}<p class="muted" style="margin:0">You have {{ limit }} profiles, the most there can be. Delete one to add another.</p>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

@@ -831,11 +831,103 @@ _POSTING = [
     ('A change that widens your search starts a scan, so similar postings come in. <a href="/settings">All settings</a>', 'Un changement qui élargit votre recherche lance une recherche, pour que des annonces similaires arrivent. <a href="/settings">Tous les réglages</a>', 'Eine Änderung, die Ihre Suche erweitert, startet eine Suche, damit ähnliche Inserate hereinkommen. <a href="/settings">Alle Einstellungen</a>'),
 ]
 
+# additional profiles ("roles")
+_CV += [
+    ('>My profiles</a>', '>Mes profils</a>', '>Meine Profile</a>'),
+]
+
+_VERSIONS += [
+    ('>My profiles</a>', '>Mes profils</a>', '>Meine Profile</a>'),
+]
+
+_DASHBOARD += [
+    ('>All</a>', '>Tous</a>', '>Alle</a>'),
+]
+
+_DETAIL += [
+    ('<span class="muted">Profiles:</span>', '<span class="muted">Profils :</span>', '<span class="muted">Profile:</span>'),
+    ('aria-label="Main tag"', 'aria-label="Étiquette principale"', 'aria-label="Haupt-Etikett"'),
+    ('>Change the main tag</button>', ">Changer l'étiquette principale</button>", '>Haupt-Etikett ändern</button>'),
+    ('title="Let the highest score decide again">Back to automatic</button>', 'title="Laisser de nouveau le score le plus élevé décider">Retour à l\'automatique</button>', 'title="Wieder die höchste Punktzahl entscheiden lassen">Zurück zu automatisch</button>'),
+    ('The CV and the letter of this job are written with the profile of its main tag.', 'Le CV et la lettre de cette offre sont écrits avec le profil de son étiquette principale.', 'Lebenslauf und Brief dieser Stelle werden mit dem Profil ihres Haupt-Etiketts geschrieben.'),
+    ('Written with the profile “{{ ptags(job)[0][1] }}”.', 'Écrit avec le profil « {{ ptags(job)[0][1] }} ».', 'Mit dem Profil «{{ ptags(job)[0][1] }}» geschrieben.'),
+]
+
+_IMPROVE += [
+    ('aria-label="Profile"><option value="">All profiles (your main profile\'s skills)</option>', 'aria-label="Profil"><option value="">Tous les profils (compétences de votre profil principal)</option>', 'aria-label="Profil"><option value="">Alle Profile (Kompetenzen Ihres Hauptprofils)</option>'),
+    ('Choose a profile to see what the jobs found for it ask for, against its own skills.', 'Choisissez un profil pour voir ce que demandent les offres trouvées pour lui, par rapport à ses propres compétences.', 'Wählen Sie ein Profil, um zu sehen, was die dafür gefundenen Stellen verlangen, gemessen an dessen eigenen Kompetenzen.'),
+]
+
+_PROFILES = [
+    ('>CV and profile</a>', '>CV et profil</a>', '>Lebenslauf und Profil</a>'),
+    ('>My CV versions</a>', '>Mes versions de CV</a>', '>Meine Lebenslauf-Versionen</a>'),
+    ('>My profiles</a>', '>Mes profils</a>', '>Meine Profile</a>'),
+    ('<div class="banner">Saved.</div>', '<div class="banner">Enregistré.</div>', '<div class="banner">Gespeichert.</div>'),
+    ('<div class="banner">New jobs that no profile asks for any more were removed from the list: {{ removed }}.</div>', '<div class="banner">Offres nouvelles qu\'aucun profil ne demande plus, retirées de la liste : {{ removed }}.</div>', '<div class="banner">Neue Stellen, die kein Profil mehr verlangt, wurden aus der Liste entfernt: {{ removed }}.</div>'),
+    ('<h2 style="margin-top:0">My profiles</h2>', '<h2 style="margin-top:0">Mes profils</h2>', '<h2 style="margin-top:0">Meine Profile</h2>'),
+    ('Looking for more than one kind of job, say a draughtsperson, an interior designer and a receptionist? Add a profile for each, up to {{ limit }} in all with your main one. A profile shows the same facts as your main profile, nothing is invented: it only chooses which skills, jobs, points and lines to show and in which order, with its own title line and summary. It also widens the search with its own search terms, title words, skills and words to avoid. Place, languages, work rate, exclusions and sources stay the same for all profiles.', "Vous cherchez plusieurs types de poste, par exemple dessinatrice, architecte d'intérieur et réceptionniste ? Ajoutez un profil pour chacun, jusqu'à {{ limit }} au total avec votre profil principal. Un profil présente les mêmes faits que votre profil principal, rien n'est inventé : il choisit seulement les compétences, emplois, points et lignes à montrer et dans quel ordre, avec sa propre ligne de titre et son propre résumé. Il élargit aussi la recherche avec ses propres termes de recherche, mots de titre, compétences et mots à éviter. Le lieu, les langues, le taux d'activité, les exclusions et les sources restent les mêmes pour tous les profils.", 'Sie suchen mehr als eine Art von Stelle, etwa Zeichnerin, Innenarchitektin und Empfangsmitarbeiterin? Fügen Sie für jede ein Profil hinzu, insgesamt bis zu {{ limit }} mit Ihrem Hauptprofil. Ein Profil zeigt dieselben Fakten wie Ihr Hauptprofil, nichts wird erfunden: Es wählt nur aus, welche Kompetenzen, Stellen, Punkte und Zeilen in welcher Reihenfolge gezeigt werden, mit eigener Titelzeile und eigenem Kurzprofil. Es erweitert auch die Suche mit eigenen Suchbegriffen, Titelwörtern, Kompetenzen und zu meidenden Wörtern. Ort, Sprachen, Pensum, Ausschlüsse und Quellen bleiben für alle Profile gleich.'),
+    ('A job that fits several profiles carries all their tags; the one where it scores highest is its main tag, and the CV and the letter of that job are written with that profile.', 'Une offre qui convient à plusieurs profils porte toutes leurs étiquettes ; celle où elle obtient le meilleur score est son étiquette principale, et le CV et la lettre de cette offre sont écrits avec ce profil.', 'Eine Stelle, die zu mehreren Profilen passt, trägt alle deren Etiketten; bei dem sie am besten abschneidet, ist ihr Haupt-Etikett, und Lebenslauf und Brief dieser Stelle werden mit diesem Profil geschrieben.'),
+    ('<p class="muted">No candidate profile yet.</p>', '<p class="muted">Pas encore de profil.</p>', '<p class="muted">Noch kein Profil.</p>'),
+    ('· {{ count[0] }} open job{{ \'s\' if count[0] != 1 }} · the profile you keep under <a href="/cv">CV and profile</a></span>', '· {{ count[0] }} offre{{ \'s\' if count[0] != 1 }} ouverte{{ \'s\' if count[0] != 1 }} · le profil que vous tenez sous <a href="/cv">CV et profil</a></span>', '· {{ count[0] }} offene Stelle{{ \'n\' if count[0] != 1 }} · das Profil, das Sie unter <a href="/cv">Lebenslauf und Profil</a> pflegen</span>'),
+    ("· {{ count[p.id] }} open job{{ 's' if count[p.id] != 1 }}</span>", "· {{ count[p.id] }} offre{{ 's' if count[p.id] != 1 }} ouverte{{ 's' if count[p.id] != 1 }}</span>", "· {{ count[p.id] }} offene Stelle{{ 'n' if count[p.id] != 1 }}</span>"),
+    ('>Edit</a>', '>Modifier</a>', '>Bearbeiten</a>'),
+    ('>Open its CV ↗</a>', '>Ouvrir son CV ↗</a>', '>Seinen Lebenslauf öffnen ↗</a>'),
+    ('aria-label="Name of the profile"', 'aria-label="Nom du profil"', 'aria-label="Name des Profils"'),
+    ('>Rename</button>', '>Renommer</button>', '>Umbenennen</button>'),
+    ("confirm('Delete this profile? Its jobs go back to your main profile or to their next profile; nothing else is lost.')", "confirm('Supprimer ce profil ? Ses offres retournent à votre profil principal ou à leur profil suivant ; rien d\\'autre n\\'est perdu.')", "confirm('Dieses Profil löschen? Seine Stellen gehen zurück an Ihr Hauptprofil oder an ihr nächstes Profil; sonst geht nichts verloren.')"),
+    ('>Delete</button>', '>Supprimer</button>', '>Löschen</button>'),
+    ('<label>Name of a new profile (the kind of job)</label>', "<label>Nom d'un nouveau profil (le type de poste)</label>", '<label>Name eines neuen Profils (die Art der Stelle)</label>'),
+    ('placeholder="e.g. Dessinatrice, Interior designer, Reception"', 'placeholder="p. ex. Dessinatrice, Architecte d\'intérieur, Réception"', 'placeholder="z. B. Zeichnerin, Innenarchitektin, Empfang"'),
+    ('+ New profile from my main profile</button>', '+ Nouveau profil à partir de mon profil principal</button>', '+ Neues Profil aus meinem Hauptprofil</button>'),
+    ('You have {{ limit }} profiles, the most there can be. Delete one to add another.', 'Vous avez {{ limit }} profils, le maximum possible. Supprimez-en un pour en ajouter un autre.', 'Sie haben {{ limit }} Profile, mehr sind nicht möglich. Löschen Sie eines, um ein weiteres hinzuzufügen.'),
+]
+
+_PROFILE_EDIT = [
+    ('>CV and profile</a>', '>CV et profil</a>', '>Lebenslauf und Profil</a>'),
+    ('>My CV versions</a>', '>Mes versions de CV</a>', '>Meine Lebenslauf-Versionen</a>'),
+    ('>My profiles</a>', '>Mes profils</a>', '>Meine Profile</a>'),
+    ('>← My profiles</a>', '>← Mes profils</a>', '>← Meine Profile</a>'),
+    ('Profile created. It shows everything of your main profile for now: choose below what it shows, and the words it searches.', "Profil créé. Pour l'instant il montre tout votre profil principal : choisissez ci-dessous ce qu'il montre, et les mots qu'il recherche.", 'Profil erstellt. Vorerst zeigt es alles aus Ihrem Hauptprofil: Wählen Sie unten, was es zeigt und welche Wörter es sucht.'),
+    ('<div class="banner">Saved.', '<div class="banner">Enregistré.', '<div class="banner">Gespeichert.'),
+    ('New jobs that no profile asks for any more were removed from the list: {{ removed }}.', "Offres nouvelles qu'aucun profil ne demande plus, retirées de la liste : {{ removed }}.", 'Neue Stellen, die kein Profil mehr verlangt, wurden aus der Liste entfernt: {{ removed }}.'),
+    ('A new search has started for the added words.', 'Une nouvelle recherche a démarré pour les mots ajoutés.', 'Für die hinzugefügten Wörter wurde eine neue Suche gestartet.'),
+    ('>Save</button>', '>Enregistrer</button>', '>Speichern</button>'),
+    ('<label>Name of the profile</label>', '<label>Nom du profil</label>', '<label>Name des Profils</label>'),
+    ('<label>Title line (under your name)</label>', '<label>Ligne de titre (sous votre nom)</label>', '<label>Titelzeile (unter Ihrem Namen)</label>'),
+    ('placeholder="e.g. Interior designer"', 'placeholder="p. ex. Architecte d\'intérieur"', 'placeholder="z. B. Innenarchitektin"'),
+    ('<label>Summary</label>', '<label>Résumé</label>', '<label>Kurzprofil</label>'),
+    ("Your name, contact details, photo and every fact (jobs, employers, dates, the wording of each point) come from your main profile and can't be changed here. The title line and the summary are used as you write them here.", 'Votre nom, vos coordonnées, votre photo et chaque fait (emplois, employeurs, dates, formulation de chaque point) viennent de votre profil principal et ne peuvent pas être modifiés ici. La ligne de titre et le résumé sont utilisés tels que vous les écrivez ici.', 'Ihr Name, Ihre Kontaktangaben, Ihr Foto und jeder Fakt (Stellen, Arbeitgeber, Daten, Wortlaut jedes Punkts) stammen aus Ihrem Hauptprofil und können hier nicht geändert werden. Titelzeile und Kurzprofil werden so verwendet, wie Sie sie hier schreiben.'),
+    ('Your profile also exists in other languages ({{ translated | join(", ") }}): the same choices apply to those versions, but this title line and summary are not translated, so a CV in another language than the one you write them in will have them as written.', 'Votre profil existe aussi dans d\'autres langues ({{ translated | join(", ") }}) : les mêmes choix s\'appliquent à ces versions, mais cette ligne de titre et ce résumé ne sont pas traduits, donc un CV dans une autre langue que celle où vous les écrivez les aura tels quels.', 'Ihr Profil gibt es auch in anderen Sprachen ({{ translated | join(", ") }}): Dieselbe Auswahl gilt für diese Versionen, aber Titelzeile und Kurzprofil werden nicht übersetzt, ein Lebenslauf in einer anderen Sprache als der, in der Sie sie schreiben, enthält sie also unverändert.'),
+    ('<strong>Skills shown</strong> <span class="muted">· tick the ones to show; the arrows set the order</span>', '<strong>Compétences montrées</strong> <span class="muted">· cochez celles à montrer ; les flèches fixent l\'ordre</span>', '<strong>Gezeigte Kompetenzen</strong> <span class="muted">· Anhaken, was gezeigt werden soll; die Pfeile bestimmen die Reihenfolge</span>'),
+    ('title="Move up" aria-label="Move up"', 'title="Monter" aria-label="Monter"', 'title="Nach oben" aria-label="Nach oben"'),
+    ('title="Move down" aria-label="Move down"', 'title="Descendre" aria-label="Descendre"', 'title="Nach unten" aria-label="Nach unten"'),
+    ('Your main profile lists no skills.', 'Votre profil principal ne liste aucune compétence.', 'Ihr Hauptprofil führt keine Kompetenzen auf.'),
+    ('<strong>Jobs shown</strong> <span class="muted">· tick the jobs to show and the points of each; the arrows set the order</span>', '<strong>Emplois montrés</strong> <span class="muted">· cochez les emplois à montrer et les points de chacun ; les flèches fixent l\'ordre</span>', '<strong>Gezeigte Stellen</strong> <span class="muted">· Anhaken, welche Stellen und welche Punkte jeder Stelle gezeigt werden; die Pfeile bestimmen die Reihenfolge</span>'),
+    ('Your main profile lists no jobs.', 'Votre profil principal ne liste aucun emploi.', 'Ihr Hauptprofil führt keine Stellen auf.'),
+    ('<strong>Education shown</strong>', '<strong>Formation montrée</strong>', '<strong>Gezeigte Ausbildung</strong>'),
+    ('Your main profile lists no education.', 'Votre profil principal ne liste aucune formation.', 'Ihr Hauptprofil führt keine Ausbildung auf.'),
+    ('<strong>Extras shown</strong> <span class="muted">· languages, tools, licences...</span>', '<strong>Compléments montrés</strong> <span class="muted">· langues, outils, permis...</span>', '<strong>Gezeigte Zusätze</strong> <span class="muted">· Sprachen, Werkzeuge, Ausweise...</span>'),
+    ('Your main profile lists nothing here.', 'Votre profil principal ne liste rien ici.', 'Ihr Hauptprofil führt hier nichts auf.'),
+    ('<h2 style="margin-top:0">What this profile searches</h2>', '<h2 style="margin-top:0">Ce que ce profil recherche</h2>', '<h2 style="margin-top:0">Was dieses Profil sucht</h2>'),
+    ('Added to the search of your main profile (Settings), so the scan looks for the words of all your profiles. One entry per line.', "S'ajoute à la recherche de votre profil principal (Réglages) : la recherche cherche donc les mots de tous vos profils. Une entrée par ligne.", 'Wird zur Suche Ihres Hauptprofils (Einstellungen) hinzugefügt, die Suche berücksichtigt also die Wörter aller Ihrer Profile. Ein Eintrag pro Zeile.'),
+    ('<label>Search terms (typed into the job sites)</label>', "<label>Termes de recherche (saisis sur les sites d'emploi)</label>", '<label>Suchbegriffe (auf den Stellenseiten eingegeben)</label>'),
+    ('<label>Title words (a job title must contain one)</label>', "<label>Mots de titre (le titre d'une offre doit en contenir un)</label>", '<label>Titelwörter (ein Stellentitel muss eines enthalten)</label>'),
+    ('“dessinat*” also finds dessinateur, dessinatrice.', '« dessinat* » trouve aussi dessinateur, dessinatrice.', '«dessinat*» findet auch dessinateur, dessinatrice.'),
+    ('<label>Skills that score for this profile</label>', '<label>Compétences qui comptent pour ce profil</label>', '<label>Kompetenzen, die für dieses Profil zählen</label>'),
+    ('It started as a copy of the skills of your main profile.', "Au départ, c'est une copie des compétences de votre profil principal.", 'Zu Beginn ist es eine Kopie der Kompetenzen Ihres Hauptprofils.'),
+    ('<label>Words to avoid (they push a job down)</label>', '<label>Mots à éviter (ils font descendre une offre)</label>', '<label>Zu meidende Wörter (sie schieben eine Stelle nach unten)</label>'),
+    ('>Open the CV of this profile ↗</a>', '>Ouvrir le CV de ce profil ↗</a>', '>Lebenslauf dieses Profils öffnen ↗</a>'),
+    ('(as last saved)', "(tel qu'enregistré en dernier)", '(wie zuletzt gespeichert)'),
+    ("confirm('Delete this profile? Its jobs go back to your main profile or to their next profile; nothing else is lost.')", "confirm('Supprimer ce profil ? Ses offres retournent à votre profil principal ou à leur profil suivant ; rien d\\'autre n\\'est perdu.')", "confirm('Dieses Profil löschen? Seine Stellen gehen zurück an Ihr Hauptprofil oder an ihr nächstes Profil; sonst geht nichts verloren.')"),
+    ('>Delete this profile</button>', '>Supprimer ce profil</button>', '>Dieses Profil löschen</button>'),
+]
+
 TEMPLATES = {
     "base.html": _BASE, "_apply_prompt.html": _APPLY_PROMPT, "_chip.html": _CHIP, "dashboard.html": _DASHBOARD,
     "detail.html": _DETAIL, "add.html": _ADD, "posting.html": _POSTING, "report.html": _REPORT, "stats.html": _STATS, "cv.html": _CV,
     "settings.html": _SETTINGS, "_settings_form.html": _SETTINGS_FORM, "onboarding.html": _ONBOARDING,
     "week.html": _WEEK, "translate.html": _TRANSLATE, "versions.html": _VERSIONS, "improve.html": _IMPROVE,
+    "profiles.html": _PROFILES, "profile_edit.html": _PROFILE_EDIT,
 }
 
 STRINGS = {   # English -> (French, German); Italian is added below
@@ -1015,6 +1107,19 @@ STRINGS = {   # English -> (French, German); Italian is added below
     "Experienced (2-7 years)": ("Expérimenté (2 à 7 ans)", "Erfahren (2–7 Jahre)"),
     "Senior / expert": ("Senior / expert", "Senior / Expertin, Experte"),
     "Lead / manager / head of": ("Responsable / cadre / direction", "Leitung / Führung"),
+    # additional profiles (profiles.py, web.py)
+    'Main profile':
+        ('Profil principal',
+         'Hauptprofil'),
+    'You have reached the limit: {n} profiles in all, the main one included. Delete one to add another.':
+        ('Limite atteinte : {n} profils au total, le principal compris. Supprimez-en un pour en ajouter un autre.',
+         'Limit erreicht: {n} Profile insgesamt, das Hauptprofil eingeschlossen. Löschen Sie eines, um ein weiteres hinzuzufügen.'),
+    'Give the profile a name.':
+        ('Donnez un nom au profil.',
+         'Geben Sie dem Profil einen Namen.'),
+    'A profile with this name exists already.':
+        ('Un profil portant ce nom existe déjà.',
+         'Ein Profil mit diesem Namen gibt es schon.'),
 }
 
 

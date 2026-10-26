@@ -122,6 +122,9 @@ def _seed(env):
     env.store.update_status(j2, "applied")
     env.store.update_status(j2, "rejected")
     env.store.add_manual({"title": "Architect via recruiter", "company": "Gamma", "url": "javascript:alert(1)"})
+    pid = env.profiles.create("Designer", PROFILE)           # a second profile: its pages, tags, chips and forms are crawled too
+    env.profiles.update(pid, titles=["engineer"], terms=["designer"], skills=["ci/cd"])
+    env.fetch.rescore_all()
     env.tailor.build(env.store.get_job(j1), PROFILE)
     env.tailor.build_custom(PROFILE, ["terraform"])
 

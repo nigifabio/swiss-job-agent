@@ -4,7 +4,7 @@ import datetime
 import functools
 import unicodedata
 
-from . import commute, config, filters, places, roles, store
+from . import commute, config, filters, places, profiles, roles, store
 
 DAYS = (1, 3, 7, 30)
 KM = (5, 10, 20, 30, 50)
@@ -20,11 +20,15 @@ def _roles(title):
     return tuple(roles.match_title(title or "")[:2])        # a title can be two roles at most ("sales assistant")
 
 
+def _words():
+    return list(config.TITLE_KEYWORDS) + [w for w in profiles.extra_title_words() if w not in config.TITLE_KEYWORDS]
+
+
 def _own(title):
     """The person's own title words (Settings: "a job title must contain one of") found in a title, as
     "kw:<word>": their search in their words ("dessinat*", "bim"), next to the catalogue's roles."""
     t = (title or "").lower()
-    return tuple("kw:" + k for k in config.TITLE_KEYWORDS if filters._hit(k, t))
+    return tuple("kw:" + k for k in _words() if filters._hit(k, t))
 
 
 def _kinds(title):
@@ -42,8 +46,9 @@ def distance(job, home_place):
     return round(places._km(home_place, p)) if p else None
 
 
-def apply(rows, q="", role="", days=0, km=0, sort="best", lang="en"):
-    """(rows to show, what the filter bar needs). Each row gets "km"."""
+def apply(rows, q="", role="", days=0, km=0, sort="best", lang="en", profile=""):
+    """(rows to show, what the filter bar needs). Each row gets "km". profile: the id of a profile, to show
+    the jobs tagged with it (any of their tags, not only the main one)."""
     home = _place(commute.home())
     for j in rows:
         j["km"] = distance(j, home)
@@ -51,12 +56,18 @@ def apply(rows, q="", role="", days=0, km=0, sort="best", lang="en"):
     for j in rows:
         for rid in _kinds(j.get("title")):
             count[rid] = count.get(rid, 0) + 1
-    role = role if roles.get(role) or (role.startswith("kw:") and role[3:] in config.TITLE_KEYWORDS) else ""
+    role = role if roles.get(role) or (role.startswith("kw:") and role[3:] in _words()) else ""
     days = days if days in DAYS else 0
     km = km if km in KM and home else 0
     sort = sort if sort in SORTS and (sort != "nearest" or home) else "best"
     words = _fold(" ".join((q or "").split())[:80]).split()
+    tagged = {j["id"]: profiles.tags(j) for j in rows}
+    chips = [{"id": pid, "name": name, "n": sum(1 for t in tagged.values() if pid in t)}
+             for pid, name in profiles.names().items()] if profiles.multiple() else []
+    profile = int(profile) if str(profile).isdigit() and int(profile) in profiles.ids() and chips else None
     out = rows
+    if profile is not None:
+        out = [j for j in out if profile in tagged[j["id"]]]
     if words:
         def text(j):
             return _fold(" ".join(str(j.get(k) or "") for k in ("title", "company", "location", "description", "source")))
@@ -74,6 +85,6 @@ def apply(rows, q="", role="", days=0, km=0, sort="best", lang="en"):
         out = sorted(out, key=lambda j: (j["km"] is None, j["km"] or 0))
     options = sorted(((rid[3:].rstrip("*") + ("…" if rid.endswith("*") else "") if rid.startswith("kw:")
                        else roles.label(roles.get(rid), lang), rid, n) for rid, n in count.items()), key=lambda r: (-r[2], r[0]))
-    on = bool(words or role or days or km)
-    return out, {"q": " ".join((q or "").split())[:80], "role": role, "days": days, "km": km, "sort": sort, "roles": options,
+    on = bool(words or role or days or km or profile is not None)
+    return out, {"q": " ".join((q or "").split())[:80], "role": role, "profile": profile, "profiles": chips, "days": days, "km": km, "sort": sort, "roles": options,
                  "home": bool(home), "on": on, "total": len(rows), "show": on or sort != "best" or len(rows) > 3}

@@ -6,7 +6,7 @@ Plain counting over the postings still in play; nothing is sent anywhere and not
 import re
 from collections import Counter
 
-from . import config, docs, listfilter, prefs, requirements, roles, skills, store
+from . import config, docs, listfilter, prefs, profiles, requirements, roles, skills, store
 
 LEVELS = [("native", r"langue maternelle|maternelle|native|muttersprach\w*|madrelingua"),
           ("fluent", r"courant\w*|fluent|fliessend|verhandlungssicher|fluente|excellent\w*|sehr gut\w*|ottim\w+|parfait\w*|ma[iî]tris\w+"),
@@ -35,18 +35,24 @@ def _level(text, start):
     return ""
 
 
-def analyse(kind="", lang="en"):
+def analyse(kind="", lang="en", profile=None):
+    """profile: None = every posting against the main profile's skills; a profile id = the postings tagged
+    with that profile (any of their tags), against that profile's skills."""
     jobs = store.open_jobs()
-    key = (len(jobs), jobs[0]["id"] if jobs else 0, tuple(prefs.skills()), tuple(prefs.avoided()), tuple(prefs.ignored()),
-           tuple(config.TITLE_KEYWORDS), kind, lang)
+    if profile is not None:
+        jobs = [j for j in jobs if profile in profiles.tags(j)]
+    mine, avoid = (prefs.skills(), prefs.avoided()) if profile is None else (profiles.skills_of(profile), profiles.avoid_of(profile))
+    key = (len(jobs), jobs[0]["id"] if jobs else 0, tuple(mine), tuple(avoid), tuple(prefs.ignored()),
+           tuple(config.TITLE_KEYWORDS), kind, lang, profile)
     if _cache.get("key") != key:
-        _cache.update(key=key, value=_analyse(jobs, kind, lang))
+        _cache.update(key=key, value=_analyse(jobs, kind, lang, mine, avoid))
     return _cache["value"]
 
 
-def _analyse(jobs, kind, lang="en"):
+def _analyse(jobs, kind, lang="en", mine_skills=None, avoided=None):
+    mine_skills = prefs.skills() if mine_skills is None else mine_skills
     terms = [(t.rstrip("*").lower(), re.compile(skills._pattern(t), re.IGNORECASE), name, cls)
-             for t, (name, cls) in skills.plan()[2].items() if cls in ("miss", "have")]
+             for t, (name, cls) in skills.plan(mine_skills, avoided)[2].items() if cls in ("miss", "have")]
     ignored = set(prefs.ignored())
     kinds_all = Counter()
     for j in jobs:
@@ -97,7 +103,7 @@ def _analyse(jobs, kind, lang="en"):
             if j.get("score") is not None:
                 pk["score"].append(j["score"])
     n = len(mine) or 1
-    my_langs = {s.rstrip("*").lower() for s in prefs.skills()}
+    my_langs = {s.rstrip("*").lower() for s in mine_skills}
 
     def label(k):
         return (k[3:].rstrip("*") + ("…" if k.endswith("*") else "")) if k.startswith("kw:") else roles.label(roles.get(k), lang)

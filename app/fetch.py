@@ -5,7 +5,7 @@ from contextlib import contextmanager
 import json
 
 from .store import init_db, upsert_jobs, rescore, set_meta, get_meta, now
-from . import config, filters, prefs, scanlog
+from . import config, filters, prefs, profiles, scanlog
 from .providers import adzuna, ats, careerjet, jobroom, jobup, jooble, mailalerts, pool, remote
 
 # name in PROVIDERS -> module. Keyed/mailbox ones stay silent until configured.
@@ -16,16 +16,49 @@ MODULES = {"ats": ats, "jobup": jobup, "jobroom": jobroom, "remote": remote, "ad
 AVOID_PENALTY = 25     # points per avoided word a posting mentions
 
 
-def score_job(job):
-    sc = filters.score(job)
+def score_job(job, skills=None, avoid=None):
+    """(score, why) of a posting against a skill list and avoided words: the main profile's by default."""
+    skills = prefs.skills() if skills is None else skills
+    avoid = prefs.avoided() if avoid is None else avoid
+    sc = filters.score(job, skills)
     if sc is None:
         return None, None
-    hits, bad = filters.matched(job), filters.avoided_hits(job)
+    hits, bad = filters.matched(job, skills), filters.avoided_hits(job, avoid)
     why = ("matches: " + ", ".join(hits)) if hits else "no CV keyword matches"
     if bad:
         sc = max(0, sc - AVOID_PENALTY * len(bad))
         why += " · avoid: " + ", ".join(bad)
     return sc, why
+
+
+def tag_job(job, locked=None):
+    """A posting's tags and score. Every profile whose title words or search terms occur in the title
+    matches; none matching (typed in by hand, found through the shared pool...) means the main profile.
+    The matching profile with the highest score is the main tag and its score is the job's (a tie goes to
+    the oldest profile); `locked` is a profile the person chose by hand for it. Returns a dict:
+    score, why, profile (main tag), profiles ("0,2": every tag, the main one first), locked (0/1)."""
+    ids = profiles.matching(job.get("title")) or [profiles.MAIN]
+    if locked is not None and profiles.exists(locked):
+        ids = sorted(set(ids) | {locked})
+    else:
+        locked = None
+    results = {pid: score_job(job, profiles.skills_of(pid), profiles.avoid_of(pid)) for pid in ids}
+    main = locked if locked is not None else max(ids, key=lambda pid: (-1 if results[pid][0] is None else results[pid][0], -pid))
+    ordered = [main] + [pid for pid in ids if pid != main]
+    return {"score": results[main][0], "why": results[main][1], "profile": main,
+            "profiles": ",".join(map(str, ordered)), "locked": int(locked is not None)}
+
+
+def retag_job(job):
+    """For store.rescore: (score, why, profile, profiles, locked) of an open job, keeping the person's own choice
+    of main tag when that profile still exists."""
+    t = tag_job(job, job.get("profile") if job.get("profile_locked") else None)
+    return t["score"], t["why"], t["profile"], t["profiles"], t["locked"]
+
+
+def rescore_all():
+    """Tag and score again every open job: after a change of profiles, of their search words or of the skills."""
+    return rescore(retag_job)
 
 
 LOCK_PATH = os.path.join(os.path.dirname(config.DB_PATH) or ".", "fetch.lock")
@@ -61,6 +94,7 @@ def run():
         init_db()
         config.refresh_settings()   # pick up settings saved in the web app
         prefs.invalidate()          # pick up skill clicks made in the web app
+        profiles.invalidate()       # ... and profile changes
         set_meta(scan_started_at=now())
         scanlog.start()
         new = _run()
@@ -99,7 +133,8 @@ def _keep(jobs):
     jobs = [j for j in jobs if filters.company_ok(j.get("company")) and filters.rate_ok(j.get("title"))]
     for job in jobs:
         job["title"] = " ".join((job.get("title") or "").split())
-        job["score"], job["score_rationale"] = score_job(job)
+        t = tag_job(job)
+        job["score"], job["score_rationale"], job["profile"], job["profiles"] = t["score"], t["why"], t["profile"], t["profiles"]
     return jobs
 
 
@@ -144,6 +179,7 @@ if __name__ == "__main__":
     if "--rescore" in sys.argv:
         init_db()
         prefs.invalidate()
-        print(f"[fetch] rescored {rescore(score_job)} jobs")
+        profiles.invalidate()
+        print(f"[fetch] rescored {rescore_all()} jobs")
     else:
         run()

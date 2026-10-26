@@ -170,8 +170,8 @@ def _surface_one(term, job):
 
 
 def _skills_for(job, lang, n):
-    from . import prefs
-    kws = [k for k in prefs.skills() if k.rstrip("*") in filters.matched(job)]
+    done = filters.matched(job)           # (the skills of the profile the job is tagged with)
+    kws = [k for k in filters._skills(job) if k.rstrip("*") in done]
     out = []
     for k in kws:
         w = surface(k, job)

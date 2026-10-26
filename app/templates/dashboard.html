@@ -72,9 +72,13 @@
   {% endfor %}
 </div>
 
+{% if f.profiles and not view %}
+<div class="pchips"><a class="pchip {% if f.profile is none %}active{% endif %}" href="{{ f.all_href }}">All</a>
+  {% for c in f.profiles %}<a class="pchip {% if f.profile == c.id %}active{% endif %}" href="{{ c.href }}">{{ c.name }} ({{ c.n }})</a>{% endfor %}</div>
+{% endif %}
 {% if f.show and not view %}
 <form method="get" action="/jobs" class="filterbar">
-  <input type="hidden" name="status" value="{{ status }}">
+  <input type="hidden" name="status" value="{{ status }}">{% if f.profile is not none %}<input type="hidden" name="profile" value="{{ f.profile }}">{% endif %}
   <input type="search" name="q" value="{{ f.q }}" placeholder="Keyword: title, company, skill…" aria-label="Keyword">
   <select name="role" aria-label="Role"><option value="">All roles</option>
     {% for label, rid, n in f.roles %}<option value="{{ rid }}" {{ 'selected' if rid == f.role }}>{{ label }} ({{ n }})</option>{% endfor %}</select>
@@ -110,6 +114,7 @@
       {% if bulk and not view %}<input type="checkbox" class="pick" name="ids" value="{{ j.id }}" form="bulk" aria-label="Select this job">{% endif %}
       <a href="/job/{{ j.id }}"><strong>{{ j.title or "(untitled)" }}</strong></a>
       {% if j.fresh %}<span class="fresh">new</span>{% endif %}
+      {% if multi_profiles %}{% for id, name in ptags(j) %}<span class="ptag{% if loop.first %} main{% endif %}">{{ name }}</span>{% endfor %}{% endif %}
       {% if j.score is not none %}<span class="muted">· score {{ j.score }}</span>{% endif %}
       {% if j.origin == "manual" %}<span class="muted">· added by hand</span>{% endif %}
     </div>

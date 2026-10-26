@@ -125,6 +125,9 @@ in its own SQLite database (volume `jobplatform_pool`; public data only, rebuilt
 - A workspace sends **what it searches** (terms, regions, places, languages), never who its owner is, and gets the postings
   found since its last pull. It then applies its own title, place, language, company and work-rate rules, ranks and tracks
   as before. Nothing personal goes to the collector.
+- **Profiles widen what a workspace asks.** A person's additional profiles (see the user guide) have their own search terms and
+  title words: the workspace sends the union of the terms of all its profiles, and a change of any profile's terms or title
+  words starts that workspace's pull again from the whole pool. The collector itself knows nothing about profiles.
 - The collector crawls the union of what was asked in the last 21 days, every `COLLECT_HOURS` (6), and within a minute
   when a search arrives that nobody had asked for.
 - **Fallback:** until the collector has crawled a workspace's search, and whenever it doesn't answer, the workspace crawls

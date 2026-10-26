@@ -20,7 +20,7 @@
 </div>
 {% endmacro %}
 {% block body %}
-<div class="tabs"><a class="tab" href="/cv">CV and profile</a><a class="tab active" href="/cv/versions">My CV versions</a></div>
+<div class="tabs"><a class="tab" href="/cv">CV and profile</a><a class="tab active" href="/cv/versions">My CV versions</a><a class="tab" href="/cv/profiles">My profiles</a></div>
 {% if saved == "1" %}<div class="banner">Saved.</div>{% elif saved == "0" %}<div class="banner">Not saved: give it a name that isn't used yet (at most {{ limit }} versions).</div>{% endif %}
 <div class="card">
   <h2 style="margin-top:0">My CV versions</h2>

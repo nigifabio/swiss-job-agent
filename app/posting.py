@@ -14,7 +14,7 @@ from urllib.parse import urljoin, urlsplit
 
 import httpx
 
-from . import config, enrich, filters, lang, normalize, places, roles, skills
+from . import config, enrich, filters, lang, normalize, places, profiles, roles, skills
 from .commute import town
 
 TRANSPORT = None                # tests: httpx.MockTransport(handler)
@@ -277,13 +277,13 @@ def advice(job):
     gone = [k for k in config.TITLE_EXCLUDE if filters._hit(k, low)]
     if gone:
         problems.append({"kind": "title_exclude", "words": gone, "fixes": [("remove", "TITLE_EXCLUDE", k, k) for k in gone]})
-    if config.TITLE_KEYWORDS and not any(filters._hit(k, low) for k in config.TITLE_KEYWORDS):
+    if config.TITLE_KEYWORDS and not any(filters._hit(k, low) for k in list(config.TITLE_KEYWORDS) + profiles.extra_title_words()):
         problems.append({"kind": "title_word", "fixes": [("add", "TITLE_KEYWORDS", c, label) for c, label in title_candidates(title)]})
     blocked = [k for k in config.COMPANY_EXCLUDE if filters._hit(k, company.lower())]
     if blocked:
         problems.append({"kind": "company", "words": blocked, "fixes": [("remove", "COMPANY_EXCLUDE", k, k) for k in blocked]})
     clean = normalize.clean_title(title)
-    if config.SEARCH_TERMS and clean and not any(filters._hit(t.lower(), clean.lower()) for t in config.SEARCH_TERMS):
+    if config.SEARCH_TERMS and clean and not any(filters._hit(t.lower(), clean.lower()) for t in profiles.search_terms()):
         term = search_term(title)
         problems.append({"kind": "search_term", "term": term, "fixes": [("add", "SEARCH_TERMS", term, term)] if term else []})
     if not filters.location_ok(location, desc):

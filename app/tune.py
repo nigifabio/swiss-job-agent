@@ -57,7 +57,9 @@ def change(action, name, value):
 
 
 def apply():
-    """Discard the jobs in "new" that no longer pass the title, company, work-rate and place settings."""
+    """Discard the jobs in "new" that no longer pass the title, company, work-rate and place settings.
+    The title rule holds every profile's title words (filters.title_ok): adding a profile never removes a job,
+    and removing one removes only the jobs that no profile still asks for."""
     n = 0
     for j in store.list_jobs("new"):
         if j.get("origin") == "manual":

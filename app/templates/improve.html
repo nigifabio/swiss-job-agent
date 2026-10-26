@@ -1,8 +1,17 @@
 {% extends "base.html" %}
 {% block body %}
 <h2 style="margin-top:0">Improve <span class="muted">· what the {{ a.total }} jobs found for you ask for</span></h2>
+{% if multi_profiles %}
+<form method="get" action="/improve" class="filterbar">
+  {% if a.kind %}<input type="hidden" name="kind" value="{{ a.kind }}">{% endif %}
+  <select name="profile" aria-label="Profile"><option value="">All profiles (your main profile's skills)</option>
+    {% for id, name in pnames.items() %}<option value="{{ id }}" {{ 'selected' if id == pid }}>{{ name }}</option>{% endfor %}</select>
+  <span class="muted">Choose a profile to see what the jobs found for it ask for, against its own skills.</span>
+</form>
+{% endif %}
 {% if a.kinds | length > 1 %}
 <form method="get" action="/improve" class="filterbar">
+  {% if pid is not none %}<input type="hidden" name="profile" value="{{ pid }}">{% endif %}
   <select name="kind" aria-label="Kind of job"><option value="">All kinds of job ({{ a.all }})</option>
     {% for label, key, n in a.kinds %}<option value="{{ key }}" {{ 'selected' if key == a.kind }}>{{ label }} ({{ n }})</option>{% endfor %}</select>
   <span class="muted">Choose a kind of job to see what that one asks for.</span>
@@ -40,7 +49,7 @@
       <td class="muted">{{ m.kinds | join(", ") }}</td>
       <td>{% for j in m.jobs %}<a href="/job/{{ j.id }}">{{ j.title | truncate(46) }}</a>{% if not loop.last %}<br>{% endif %}{% endfor %}</td>
       <td style="white-space:nowrap">
-        <form method="post" action="/skills" class="chip-actions"><input type="hidden" name="term" value="{{ m.skill }}"><input type="hidden" name="next" value="/improve{{ '?kind=' ~ a.kind if a.kind }}#missing">
+        <form method="post" action="/skills" class="chip-actions"><input type="hidden" name="term" value="{{ m.skill }}"><input type="hidden" name="next" value="/improve{{ qs }}#missing">{% if pid %}<input type="hidden" name="profile" value="{{ pid }}">{% endif %}
           <button name="action" value="have" title="I have this skill: count it from now on">+ I have it</button>
           <button name="action" value="ignore" title="Stop suggesting this word">not relevant</button></form>
         <div><a href="https://duckduckgo.com/?q={{ ('formation continue ' ~ m.skill ~ ' Suisse site:orientation.ch OR site:berufsberatung.ch') | urlencode }}" target="_blank" rel="noopener">find a course ↗</a></div>
@@ -90,7 +99,7 @@
 <div class="card">
   <strong>🧭 By kind of job</strong> <span class="muted">· where you match best, and what each kind asks that you miss</span>
   <table class="data" style="margin-top:6px"><tr><th>Kind of job</th><th>Jobs</th><th>Average match</th><th>Missing most</th></tr>
-    {% for k in a.by_kind %}<tr><td><a href="/improve?kind={{ k.key | urlencode }}">{{ k.label }}</a></td><td>{{ k.n }}</td>
+    {% for k in a.by_kind %}<tr><td><a href="/improve?kind={{ k.key | urlencode }}{% if pid is not none %}&amp;profile={{ pid }}{% endif %}">{{ k.label }}</a></td><td>{{ k.n }}</td>
       <td>{{ k.score if k.score is not none else "–" }}</td>
       <td class="muted">{% for s, c in k.miss %}{{ s }} ({{ c }}){% if not loop.last %}, {% endif %}{% endfor %}</td></tr>{% endfor %}
   </table>

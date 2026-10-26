@@ -48,7 +48,10 @@ CREATE TABLE IF NOT EXISTS jobs (
   commute_min     INTEGER,
   interview_at    TEXT,
   docs            TEXT,
-  cv_text         TEXT
+  cv_text         TEXT,
+  profile         INTEGER DEFAULT 0,
+  profiles        TEXT,
+  profile_locked  INTEGER DEFAULT 0
 );
 CREATE TABLE IF NOT EXISTS status_history (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -113,6 +116,7 @@ MIGRATIONS = [
     ("dimmed", "INTEGER DEFAULT 0"), ("discard_reason", "TEXT"),
     ("orp_deadline", "TEXT"), ("followed_up_at", "TEXT"), ("url_checked_at", "TEXT"), ("closed_at", "TEXT"),
     ("commute_min", "INTEGER"), ("interview_at", "TEXT"), ("docs", "TEXT"), ("cv_text", "TEXT"),
+    ("profile", "INTEGER DEFAULT 0"), ("profiles", "TEXT"), ("profile_locked", "INTEGER DEFAULT 0"),    # main tag, every tag, chosen by hand
 ]
 
 # Why a posting was discarded (the list's "Why?" menu). Read on the Stats page to tune the search:
@@ -171,25 +175,36 @@ def upsert_jobs(jobs):
             cur = c.execute(
                 """INSERT OR IGNORE INTO jobs (content_hash, source, title, company, location,
                    description, url, salary, posted_at, status, origin, score, score_rationale,
-                   created_at, loose_key)
-                   VALUES (?,?,?,?,?,?,?,?,?,'new','scraped',?,?,?,?)""",
+                   created_at, loose_key, profile, profiles)
+                   VALUES (?,?,?,?,?,?,?,?,?,'new','scraped',?,?,?,?,?,?)""",
                 (job["content_hash"], job.get("source"), job.get("title"), job.get("company"),
                  job.get("location"), job.get("description"), job.get("url"), job.get("salary"),
-                 job.get("posted_at"), job.get("score"), job.get("score_rationale"), now(), lk),
+                 job.get("posted_at"), job.get("score"), job.get("score_rationale"), now(), lk,
+                 job.get("profile") or 0, job.get("profiles")),
             )
             new += cur.rowcount
     return new
 
 
 def rescore(fn):
-    """Re-apply fn(job) -> (score, rationale) to every open job, e.g. after SCORE_KEYWORDS change."""
+    """Re-apply fn(job) to every open job, e.g. after SCORE_KEYWORDS change. fn returns (score, rationale), or
+    (score, rationale, profile, profiles, locked) when it also tags the job (see fetch.retag_job)."""
     with conn() as c:
-        rows = c.execute("SELECT id, title, description FROM jobs "
+        rows = c.execute("SELECT id, title, description, profile, profile_locked FROM jobs "
                          "WHERE status NOT IN ('rejected','discarded')").fetchall()
         for r in rows:
-            sc, why = fn(dict(r))
-            c.execute("UPDATE jobs SET score=?, score_rationale=? WHERE id=?", (sc, why, r["id"]))
+            res = fn(dict(r))
+            c.execute("UPDATE jobs SET score=?, score_rationale=? WHERE id=?", (res[0], res[1], r["id"]))
+            if len(res) > 2:
+                c.execute("UPDATE jobs SET profile=?, profiles=?, profile_locked=? WHERE id=?", (*res[2:], r["id"]))
     return len(rows)
+
+
+def set_tag(jid, score, why, profile, profiles, locked):
+    """The tags and score of one job (its main tag changed by hand, say)."""
+    with conn() as c:
+        c.execute("UPDATE jobs SET score=?, score_rationale=?, profile=?, profiles=?, profile_locked=? WHERE id=?",
+                  (score, why, profile, profiles, locked, jid))
 
 
 def add_manual(f):
@@ -198,11 +213,12 @@ def add_manual(f):
     with conn() as c:
         cur = c.execute(
             """INSERT INTO jobs (content_hash, source, title, company, location,
-               description, url, status, origin, created_at, score, score_rationale, loose_key)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+               description, url, status, origin, created_at, score, score_rationale, loose_key, profile, profiles)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (ch, f.get("source", "manual"), f.get("title"), f.get("company"),
              f.get("location"), f.get("description"), f.get("url"), status,
-             f.get("origin", "manual"), now(), f.get("score"), f.get("score_rationale"), f.get("loose_key")),
+             f.get("origin", "manual"), now(), f.get("score"), f.get("score_rationale"), f.get("loose_key"),
+             f.get("profile") or 0, f.get("profiles")),
         )
         jid = cur.lastrowid
         c.execute("INSERT INTO status_history (job_id, status, changed_at) VALUES (?,?,?)",
@@ -295,7 +311,7 @@ def open_jobs(limit=600):
     """Postings still in play (not refused, not discarded), newest first: what the person's market asks for."""
     with conn() as c:
         return [dict(r) for r in c.execute(
-            "SELECT id, title, description, status, score, created_at FROM jobs WHERE status NOT IN ('rejected','discarded') "
+            "SELECT id, title, description, status, score, created_at, profile, profiles FROM jobs WHERE status NOT IN ('rejected','discarded') "
             "AND COALESCE(dimmed,0)=0 ORDER BY id DESC LIMIT ?", (limit,)).fetchall()]
 
 

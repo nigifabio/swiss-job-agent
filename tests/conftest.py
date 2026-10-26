@@ -4,7 +4,7 @@ import json
 import httpx
 import pytest
 
-MODULES = ["config", "normalize", "http", "scanlog", "filters", "store", "prefs", "skills", "enrich", "compose", "tailor", "letter",
+MODULES = ["config", "normalize", "http", "scanlog", "filters", "store", "prefs", "profiles", "skills", "enrich", "compose", "tailor", "letter",
            "commute", "requirements", "closed", "tune", "prep", "locales_it", "locales", "i18n", "report", "twins", "listfilter", "suggest", "docs", "strength", "weekly", "agenda", "game", "improve", "providers.adzuna", "providers.ats", "providers.jobup", "providers.jobroom",
            "providers.remote", "providers.careerjet", "providers.jooble", "providers.mailalerts", "providers.pool", "fetch", "collector", "auth",
            "scheduler", "roles", "places", "importers.extract", "importers.cvparse", "importers.linkedin", "onboard", "posting",
