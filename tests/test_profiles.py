@@ -249,7 +249,7 @@ def test_a_job_is_tagged_with_every_matching_profile_and_the_best_score_is_its_m
     none = tag({"title": "Receptionist", "description": "CAD"})
     assert none["profile"] == 0 and none["profiles"] == "0"                     # nothing matches: the main profile
     tie = tag({"title": "Cloud Architect", "description": "nothing here"})
-    assert tie["profile"] == 0                                                  # a tie goes to the oldest profile
+    assert tie["profile"] == pid and tie["profiles"] == f"{pid},0"              # a tie: the role, more specific than the main profile
 
 
 def test_each_profile_scores_with_its_own_skills_and_avoided_words(env, monkeypatch):
@@ -286,7 +286,9 @@ def test_jobs_are_tagged_again_when_profiles_change_and_when_one_is_deleted(env,
     # the person edits the skills of the profile: scores and tags follow at once
     c.post(f"/cv/profiles/{pid}", data={"name": "Designer", "headline": "x", "summary": "y", "titles": "designer\narchitect", "terms": "interior designer", "skills": "aws\nazure", "avoid": ""})
     assert env.store.get_job(a)["profile"] == 0 or env.store.get_job(a)["score"] == 0       # CAD no longer scores for the profile
-    assert env.store.get_job(b)["profile"] == 0
+    jb = env.store.get_job(b)
+    main_score, role_score = env.fetch.score_job(jb)[0], env.fetch.score_job(jb, ["aws", "azure"], [])[0]
+    assert jb["profile"] == (0 if main_score > role_score else pid)              # the higher score leads; a tie goes to the role
     # delete the profile: its jobs go back to the main profile
     env.store.set_tag(a, 50, "x", pid, f"{pid},0", 0)
     r = c.post(f"/cv/profiles/{pid}/delete", follow_redirects=False)

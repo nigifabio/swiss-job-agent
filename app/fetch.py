@@ -34,8 +34,9 @@ def score_job(job, skills=None, avoid=None):
 def tag_job(job, locked=None):
     """A posting's tags and score. Every profile whose title words or search terms occur in the title
     matches; none matching (typed in by hand, found through the shared pool...) means the main profile.
-    The matching profile with the highest score is the main tag and its score is the job's (a tie goes to
-    the oldest profile); `locked` is a profile the person chose by hand for it. Returns a dict:
+    The matching profile with the highest score is the main tag and its score is the job's (on a tie a role
+    wins over the main profile, which matches broadly, then the oldest role); `locked` is a profile the person
+    chose by hand for it. Returns a dict:
     score, why, profile (main tag), profiles ("0,2": every tag, the main one first), locked (0/1)."""
     ids = profiles.matching(job.get("title")) or [profiles.MAIN]
     if locked is not None and profiles.exists(locked):
@@ -43,7 +44,8 @@ def tag_job(job, locked=None):
     else:
         locked = None
     results = {pid: score_job(job, profiles.skills_of(pid), profiles.avoid_of(pid)) for pid in ids}
-    main = locked if locked is not None else max(ids, key=lambda pid: (-1 if results[pid][0] is None else results[pid][0], -pid))
+    main = locked if locked is not None else max(ids, key=lambda pid: (-1 if results[pid][0] is None else results[pid][0],
+                                                                         pid != profiles.MAIN, -pid))
     ordered = [main] + [pid for pid in ids if pid != main]
     return {"score": results[main][0], "why": results[main][1], "profile": main,
             "profiles": ",".join(map(str, ordered)), "locked": int(locked is not None)}
